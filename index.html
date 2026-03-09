@@ -33,7 +33,8 @@
         </section>
         
         <section id="tab-planner" class="app-tab">
-            <div class="central-column">
+            <div class="central-column" style="height: 100%; display: flex; flex-direction: column; position: relative; overflow: hidden;">
+                
                 <div class="tab-header">
                     <h2 class="tab-title">Planner</h2>
                     <div class="date-navigator">
@@ -43,12 +44,41 @@
                     </div>
                 </div>
 
-                <button id="manageSubjectsBtn" class="btn-secondary" style="width: 100%; border-radius: 15px; border: 1px solid var(--color-glass-border);">
+                <button id="manageSubjectsBtn" class="btn-secondary" style="width: 100%; border-radius: 15px; border: 1px solid var(--color-glass-border); margin-bottom: 10px;">
                     + Manage Custom Subjects
                 </button>
 
-                <div class="agenda-list" id="agendaList">
+                <div class="glass-panel mini-calendar-wrapper">
+                    <div class="cal-header">
+                        <span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span><span>S</span>
                     </div>
+                    <div class="cal-grid" id="miniCalGrid">
+                        </div>
+                </div>
+
+                <div class="planner-progress" id="plannerProgressBlock">
+                    <div class="progress-header">
+                        <span>Monthly Completion</span>
+                        <span id="plannerProgressText">0%</span>
+                    </div>
+                    <div class="progress-track">
+                        <div class="progress-fill" id="plannerProgressBar"></div>
+                    </div>
+                </div>
+
+                <div class="bottom-sheet glass-panel" id="agendaBottomSheet">
+                    <div class="sheet-drag-handle"></div>
+                    <div class="sheet-header">
+                        <h3 id="sheetDateDisplay">Select a Date</h3>
+                        <div class="sheet-actions">
+                            <button id="sheetEditBtn" class="icon-btn" title="Edit Target">✎</button>
+                            <button id="sheetCompleteBtn" class="icon-btn" title="Mark Complete">✓</button>
+                        </div>
+                    </div>
+                    <div class="sheet-content" id="sheetContent">
+                        </div>
+                </div>
+
             </div>
         </section>
 
