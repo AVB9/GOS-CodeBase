@@ -10,6 +10,7 @@
     <script src="JS/home.js" defer></script>
     <script src="JS/todo.js" defer></script>
     <script src="JS/settings.js" defer></script>
+    <script src="JS/planner.js" defer></script>
 </head>
 <body>
     <main id="app-container">
@@ -33,7 +34,21 @@
         
         <section id="tab-planner" class="app-tab">
             <div class="central-column">
-                <h2 class="tab-title">Planner</h2>
+                <div class="tab-header">
+                    <h2 class="tab-title">Planner</h2>
+                    <div class="date-navigator">
+                        <button id="plannerPrevMonth" class="icon-btn">‹</button>
+                        <span id="plannerMonthDisplay" class="date-display">March</span>
+                        <button id="plannerNextMonth" class="icon-btn">›</button>
+                    </div>
+                </div>
+
+                <button id="manageSubjectsBtn" class="btn-secondary" style="width: 100%; border-radius: 15px; border: 1px solid var(--color-glass-border);">
+                    + Manage Custom Subjects
+                </button>
+
+                <div class="agenda-list" id="agendaList">
+                    </div>
             </div>
         </section>
 
@@ -171,6 +186,41 @@
             <div class="modal-buttons">
                 <button id="closeGoalModalBtn" class="btn-secondary">Cancel</button>
                 <button id="saveGoalBtn" class="btn-primary">Save Goal</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="targetModalOverlay" class="modal-overlay" style="display: none;">
+        <div class="modal-box glass-panel">
+            <h2 id="targetModalTitle">Plan Target</h2>
+            <div style="display: flex; flex-direction: column; gap: 15px; margin-bottom: 20px;">
+                <select id="targetSubjectSelect" class="settings-input"></select>
+                <input type="text" id="targetTopicInput" placeholder="Enter topic or chapter..." />
+            </div>
+            <div class="modal-buttons">
+                <button id="clearTargetBtn" class="btn-secondary" style="color: var(--color-text-muted); margin-right: auto;">Clear</button>
+                <button id="closeTargetModalBtn" class="btn-secondary">Cancel</button>
+                <button id="saveTargetBtn" class="btn-primary">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="subjectModalOverlay" class="modal-overlay" style="display: none;">
+        <div class="modal-box glass-panel">
+            <h2>Your Subjects</h2>
+            <div id="subjectList" class="subject-manager-list">
+                </div>
+            
+            <hr class="settings-divider" style="margin: 15px 0;">
+            
+            <div style="display: flex; gap: 10px; margin-bottom: 20px; align-items: center;">
+                <input type="color" id="newSubjectColor" value="#ff3b3b" style="width: 40px; height: 40px; border: none; border-radius: 8px; cursor: pointer; background: transparent; padding: 0;" />
+                <input type="text" id="newSubjectName" placeholder="New subject name..." style="flex: 1;" />
+                <button id="addSubjectBtn" class="btn-primary" style="padding: 10px;">Add</button>
+            </div>
+            
+            <div class="modal-buttons">
+                <button id="closeSubjectModalBtn" class="btn-primary" style="width: 100%;">Done</button>
             </div>
         </div>
     </div>
