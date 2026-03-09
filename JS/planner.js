@@ -22,7 +22,7 @@ function initPlannerTab() {
     const getSubjects = () => JSON.parse(localStorage.getItem('plannerSubjects')) || defaultSubjects;
     const saveSubjects = (subs) => localStorage.setItem('plannerSubjects', JSON.stringify(subs));
     
-    // Targets are now arrays of hourly tasks: { "2026-03-10": [{ id, time, subjectId, topic }] }
+    // Targets: { "2026-03-10": [{ id, subjectId, topic }] } (Time removed)
     const getTargets = () => JSON.parse(localStorage.getItem('plannerTargets')) || {};
     const saveTargets = (targs) => { localStorage.setItem('plannerTargets', JSON.stringify(targs)); window.updateHomeWidget(); };
 
@@ -97,17 +97,19 @@ function initPlannerTab() {
             
             const dayName = dateObj.toLocaleDateString('en-US', { weekday: 'short' });
             
-            let cardContentHTML = `<span class="agenda-empty" style="color: var(--color-text-muted); font-style: italic;">Tap to set timeline</span>`;
+            let cardContentHTML = `<span class="agenda-empty" style="color: var(--color-text-muted); font-style: italic;">Tap to plan this day</span>`;
             
             if (dayTasks.length > 0) {
-                // Render mini timeline on the card
+                // Render session playlist on the card without times
                 cardContentHTML = `<div style="display:flex; flex-direction:column; gap:8px;">` + 
-                    dayTasks.sort((a,b) => a.time.localeCompare(b.time)).map(t => {
+                    dayTasks.map((t, index) => {
                         const sub = subjects.find(s => s.id === t.subjectId) || subjects[0];
-                        return `<div style="display:flex; gap:8px; align-items:center;">
-                            <span style="font-size:0.75rem; color:var(--color-text-muted);">${t.time}</span>
-                            <span class="subject-tag" style="background-color:${sub.color}; font-size:0.6rem; padding: 2px 6px;">${sub.name}</span>
-                            <span class="daily-card-topic" style="font-size:0.85rem;">${t.topic}</span>
+                        return `<div style="display:flex; gap:8px; align-items:flex-start;">
+                            <span style="font-size:0.75rem; color:var(--color-text-muted); min-width: 15px; margin-top: 2px;">${index + 1}.</span>
+                            <div style="display:flex; flex-direction:column; gap: 4px;">
+                                <span class="subject-tag" style="background-color:${sub.color};">${sub.name}</span>
+                                <span class="daily-card-topic" style="font-size:0.9rem; white-space: normal;">${t.topic}</span>
+                            </div>
                         </div>`;
                     }).join('') + `</div>`;
             } else if (completed.includes(dateKey)) {
@@ -141,7 +143,6 @@ function initPlannerTab() {
                 saveCompleted(compArr);
                 renderCalendarAndCards(); 
 
-                // Smooth scroll back to today after 400ms
                 if (dateKey !== todayStr) {
                     setTimeout(() => {
                         const todayCard = document.getElementById(`card-${todayStr}`);
@@ -153,14 +154,13 @@ function initPlannerTab() {
             sliderEl.appendChild(card);
         }
 
-        // Auto-scroll to today on initial load
         setTimeout(() => {
             const todayCard = document.getElementById(`card-${todayStr}`);
             if(todayCard) todayCard.scrollIntoView({ behavior: 'auto', block: 'nearest', inline: 'center' });
         }, 100);
     };
 
-    // --- BOTTOM SHEET LOGIC (INLINE TIMELINE) ---
+    // --- BOTTOM SHEET LOGIC (SESSION PLAYLIST) ---
     const openBottomSheet = (dateStr, dateObj) => {
         activeSelectedDateStr = dateStr;
         sheetDateDisplay.textContent = dateObj.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
@@ -176,32 +176,32 @@ function initPlannerTab() {
         const subjects = getSubjects();
         const dayTasks = targets[activeSelectedDateStr] || [];
 
+        // Simplified UI without time inputs
         let html = `
-            <div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px;">
-                <div style="display: flex; gap: 8px;">
-                    <input type="time" id="hourlyTime" class="settings-input" style="padding: 10px; width: auto; flex: 1;">
-                    <select id="hourlySubject" class="settings-input" style="padding: 10px; width: auto; flex: 2;">
-                        ${subjects.map(s => `<option value="${s.id}">${s.name}</option>`).join('')}
-                    </select>
-                </div>
-                <div style="display: flex; gap: 8px;">
-                    <input type="text" id="hourlyTopic" class="settings-input" style="padding: 10px; flex: 1;" placeholder="Enter task topic...">
-                    <button id="addHourlyBtn" class="btn-primary" style="padding: 10px 20px;">Add</button>
+            <div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 25px; background: rgba(0,0,0,0.2); padding: 15px; border-radius: 15px; border: 1px solid var(--color-glass-border);">
+                <select id="hourlySubject" class="settings-input" style="padding: 12px 15px; width: 100%;">
+                    ${subjects.map(s => `<option value="${s.id}">${s.name}</option>`).join('')}
+                </select>
+                <div style="display: flex; gap: 10px;">
+                    <input type="text" id="hourlyTopic" class="settings-input" style="padding: 12px 15px; flex: 1;" placeholder="What to study? (e.g., Kinematics)">
+                    <button id="addHourlyBtn" class="btn-primary" style="padding: 12px 25px;">Add</button>
                 </div>
             </div>
             <div id="hourlyTaskList" style="display: flex; flex-direction: column; gap: 10px;">
         `;
 
         if (dayTasks.length === 0) {
-            html += `<div class="agenda-empty" style="text-align:center; margin-top: 20px;">No timeline set for this day.</div>`;
+            html += `<div class="agenda-empty" style="text-align:center; margin-top: 10px;">No sessions planned yet.</div>`;
         } else {
-            dayTasks.sort((a,b) => a.time.localeCompare(b.time)).forEach(task => {
+            dayTasks.forEach((task, index) => {
                 const sub = subjects.find(s => s.id === task.subjectId) || subjects[0];
                 html += `
-                    <div style="display: flex; gap: 10px; align-items: center; background: rgba(0,0,0,0.2); padding: 12px; border-radius: 12px; border: 1px solid var(--color-glass-border);">
-                        <div style="font-weight: 700; font-size: 0.95rem; color: var(--color-text-muted); min-width: 50px;">${task.time}</div>
-                        <div class="subject-tag" style="background-color: ${sub.color};">${sub.name}</div>
-                        <div style="flex: 1; font-size: 0.95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${task.topic}</div>
+                    <div style="display: flex; gap: 15px; align-items: center; background: rgba(255,255,255,0.03); padding: 15px; border-radius: 15px; border: 1px solid var(--color-glass-border);">
+                        <div style="font-weight: 800; font-size: 1.1rem; color: var(--color-text-muted); opacity: 0.5;">${index + 1}</div>
+                        <div style="display: flex; flex-direction: column; gap: 5px; flex: 1; overflow: hidden;">
+                            <span class="subject-tag" style="background-color: ${sub.color};">${sub.name}</span>
+                            <span style="font-size: 0.95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--color-text);">${task.topic}</span>
+                        </div>
                         <button class="icon-btn delete-hourly-btn" data-id="${task.id}" style="color: var(--color-text-muted); font-size: 1.5rem; padding: 0 5px;">×</button>
                     </div>
                 `;
@@ -212,21 +212,20 @@ function initPlannerTab() {
 
         // Attach Add Event
         document.getElementById('addHourlyBtn').addEventListener('click', () => {
-            const tInput = document.getElementById('hourlyTime').value;
             const sInput = document.getElementById('hourlySubject').value;
             const textInput = document.getElementById('hourlyTopic').value.trim();
 
-            if (!tInput || !textInput) {
-                alert("Please select a time and enter a topic.");
+            if (!textInput) {
+                alert("Please enter a topic to study.");
                 return;
             }
 
             const targets = getTargets();
             if (!targets[activeSelectedDateStr]) targets[activeSelectedDateStr] = [];
             
+            // Push to the array (no time needed, order dictates sequence)
             targets[activeSelectedDateStr].push({
                 id: 'task_' + Date.now(),
-                time: tInput,
                 subjectId: sInput,
                 topic: textInput
             });
@@ -293,15 +292,15 @@ function initPlannerTab() {
         const dayTasks = targets[todayStr] || [];
 
         if (dayTasks.length > 0) {
-            targetValue.style.display = 'none'; // Hide big text
+            targetValue.style.display = 'none'; 
             
-            targetSubText.innerHTML = `<div style="display:flex; flex-direction:column; gap:8px; margin-top: 5px;">` + 
-                dayTasks.sort((a,b) => a.time.localeCompare(b.time)).slice(0, 3).map(t => {
+            targetSubText.innerHTML = `<div style="display:flex; flex-direction:column; gap:10px; margin-top: 5px;">` + 
+                dayTasks.slice(0, 3).map((t, index) => {
                     const sub = subjects.find(s => s.id === t.subjectId) || subjects[0];
-                    return `<div style="display:flex; gap:8px; align-items:center;">
-                        <span style="font-size:0.8rem; font-weight: 600; color:var(--color-text-muted);">${t.time}</span>
-                        <span class="subject-tag" style="background-color:${sub.color}; font-size:0.65rem; padding: 2px 6px;">${sub.name}</span>
-                        <span style="font-size:0.9rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color: var(--color-text);">${t.topic}</span>
+                    return `<div style="display:flex; gap:10px; align-items:center;">
+                        <span style="font-size:0.8rem; font-weight: 800; color:var(--color-text-muted); opacity: 0.6;">${index + 1}.</span>
+                        <span class="subject-tag" style="background-color:${sub.color}; font-size:0.65rem;">${sub.name}</span>
+                        <span style="font-size:0.95rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color: var(--color-text);">${t.topic}</span>
                     </div>`;
                 }).join('') + `</div>`;
         } else {
