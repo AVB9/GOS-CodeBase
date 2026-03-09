@@ -26,7 +26,8 @@ body {
     background-color: var(--color-bg);
     color: var(--color-text);
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    overflow: hidden; 
+    overscroll-behavior-y: auto; /* Explicitly allows pull-to-refresh */
+    /* overflow: hidden; -> REMOVED to allow viewport scrolling */
 }
 
 h1, h2, h3 { color: var(--color-text); }
@@ -35,31 +36,19 @@ button { font-family: inherit; }
 /* =================================================================
    3. GLOBAL LAYOUT ARCHITECTURE
    ================================================================= */
-#app-container { height: 100vh; width: 100vw; position: relative; }
+#app-container { 
+    min-height: 100vh; /* Lets the container grow dynamically */
+    width: 100%; 
+    position: relative; 
+}
 
 .app-tab {
     display: none;
-    height: 100%;
-    overflow-y: auto;
+    /* height: 100%; overflow-y: auto; -> REMOVED so the body handles the scroll */
     padding: 20px var(--app-padding) var(--nav-height) var(--app-padding); 
 }
 
 .app-tab.active { display: block; animation: fadeIn 0.3s ease-in-out; }
-
-@keyframes fadeIn {
-    from { opacity: 0; transform: translateY(5px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-
-/* The standard constrained column for all tabs */
-.central-column {
-    width: 100%;
-    max-width: var(--max-mobile-width);
-    margin: 0 auto;
-    display: flex;
-    flex-direction: column;
-    gap: 15px;
-}
 
 /* =================================================================
    4. REUSABLE UTILITIES (Glass, Buttons, Swipes)
@@ -366,10 +355,11 @@ button { font-family: inherit; }
 .settings-input-row {
     display: flex;
     gap: 10px;
+    flex-wrap: wrap; /* Allows the button to drop below if no room */
 }
 
 .settings-input-row input {
-    flex: 1;
+    flex: 1 1 200px; /* Tells input to take space, but minimum 200px before wrapping */
     padding: 12px 15px;
     background: rgba(0, 0, 0, 0.3);
     border: 1px solid var(--color-glass-border);
@@ -379,7 +369,10 @@ button { font-family: inherit; }
     outline: none;
 }
 
-.settings-input-row input:focus { border-color: var(--color-primary); }
+.settings-input-row button {
+    flex: 1 1 auto; /* Allows button to fill the width when stacked */
+    white-space: nowrap;
+}
 
 .settings-action-btn {
     width: 100%;

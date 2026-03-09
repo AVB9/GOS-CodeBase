@@ -50,27 +50,26 @@ function initSmartUI() {
     if (!bottomNav) return;
 
     // A. Scroll Logic (Hides when scrolling down, reveals when scrolling up)
-    document.querySelectorAll('.app-tab').forEach(tab => {
-        tab.addEventListener('scroll', (e) => {
-            const currentScrollY = e.target.scrollTop;
-            
-            // Only trigger if scrolling past the top edge to prevent bouncing glitches
-            if (currentScrollY > lastScrollY && currentScrollY > 40) {
-                // Scrolling Down -> Hide Nav
-                bottomNav.classList.add('nav-hidden');
-                if (floatingTodoInput && floatingTodoInput.classList.contains('active')) {
-                    floatingTodoInput.classList.add('keyboard-active'); // Drop input down
-                }
-            } else if (currentScrollY < lastScrollY) {
-                // Scrolling Up -> Show Nav
-                bottomNav.classList.remove('nav-hidden');
-                if (floatingTodoInput) {
-                    floatingTodoInput.classList.remove('keyboard-active'); // Lift input up
-                }
+    // A. Scroll Logic (Hides when scrolling down, reveals when scrolling up)
+    window.addEventListener('scroll', () => {
+        // Use window.scrollY because the body is now doing the scrolling
+        const currentScrollY = window.scrollY;
+        
+        if (currentScrollY > lastScrollY && currentScrollY > 40) {
+            // Scrolling Down -> Hide Nav
+            bottomNav.classList.add('nav-hidden');
+            if (floatingTodoInput && floatingTodoInput.classList.contains('active')) {
+                floatingTodoInput.classList.add('keyboard-active');
             }
-            lastScrollY = currentScrollY;
-        }, { passive: true });
-    });
+        } else if (currentScrollY < lastScrollY) {
+            // Scrolling Up -> Show Nav
+            bottomNav.classList.remove('nav-hidden');
+            if (floatingTodoInput) {
+                floatingTodoInput.classList.remove('keyboard-active');
+            }
+        }
+        lastScrollY = currentScrollY;
+    }, { passive: true });
 
     // B. Keyboard & Viewport Logic (With Legacy Fallback)
     const baseWindowHeight = window.innerHeight;
