@@ -50,6 +50,16 @@ button { font-family: inherit; }
 
 .app-tab.active { display: block; animation: fadeIn 0.3s ease-in-out; }
 
+/* The standard constrained column for all tabs */
+.central-column {
+    width: 100%;
+    max-width: var(--max-mobile-width);
+    margin: 0 auto; /* THIS IS THE LINE THAT CENTERS THE APP */
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
 /* =================================================================
    4. REUSABLE UTILITIES (Glass, Buttons, Swipes)
    ================================================================= */
