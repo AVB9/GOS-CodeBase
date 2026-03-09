@@ -1,0 +1,413 @@
+/* =================================================================
+   1. CORE VARIABLES (The Source of Truth)
+   ================================================================= */
+:root {
+    --color-bg: #0a0a0a;
+    --color-surface: #1a1a1a;
+    --color-text: #ffffff;
+    --color-text-muted: #888888;
+    --color-primary: #ff3b3b;
+    --color-glass-bg: rgba(30, 30, 30, 0.45);
+    --color-glass-border: rgba(255, 255, 255, 0.08);
+    
+    /* Global Layout Metrics */
+    --max-mobile-width: 480px;
+    --max-desktop-width: 650px;
+    --app-padding: 15px;
+    --nav-height: 120px;
+}
+
+/* =================================================================
+   2. BASE RESET & TYPOGRAPHY
+   ================================================================= */
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+body {
+    background-color: var(--color-bg);
+    color: var(--color-text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    overflow: hidden; 
+}
+
+h1, h2, h3 { color: var(--color-text); }
+button { font-family: inherit; }
+
+/* =================================================================
+   3. GLOBAL LAYOUT ARCHITECTURE
+   ================================================================= */
+#app-container { height: 100vh; width: 100vw; position: relative; }
+
+.app-tab {
+    display: none;
+    height: 100%;
+    overflow-y: auto;
+    padding: 20px var(--app-padding) var(--nav-height) var(--app-padding); 
+}
+
+.app-tab.active { display: block; animation: fadeIn 0.3s ease-in-out; }
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(5px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* The standard constrained column for all tabs */
+.central-column {
+    width: 100%;
+    max-width: var(--max-mobile-width);
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+/* =================================================================
+   4. REUSABLE UTILITIES (Glass, Buttons, Swipes)
+   ================================================================= */
+.glass-panel {
+    background: var(--color-glass-bg);
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
+    border: 1px solid var(--color-glass-border);
+    border-radius: 20px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+
+.icon-btn {
+    background: none;
+    border: none;
+    color: var(--color-text-muted);
+    font-size: 1.5rem;
+    cursor: pointer;
+    padding: 0 5px;
+    transition: color 0.2s;
+}
+
+.icon-btn:hover { color: var(--color-text); }
+
+.btn-primary {
+    background: var(--color-primary);
+    color: var(--color-text);
+    border: none;
+    border-radius: 10px;
+    padding: 10px 20px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.btn-secondary {
+    background: transparent;
+    color: var(--color-text-muted);
+    border: none;
+    padding: 10px 20px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+/* Global Swipe Container */
+.swipe-container {
+    width: 100%;
+    min-height: 60vh; /* Ensures touch area exists even if empty */
+    touch-action: pan-y; /* Allows vertical scrolling, traps horizontal swipes */
+}
+
+/* =================================================================
+   5. UI COMPONENTS (Bento Cards, Navigators)
+   ================================================================= */
+.bento-card {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    min-width: 0; 
+    overflow: hidden;
+    padding: 20px;
+    min-height: 110px;
+    cursor: pointer;
+    transition: transform 0.2s ease, background 0.2s ease;
+}
+
+.bento-card:active { transform: scale(0.97); background: rgba(255, 255, 255, 0.05); }
+
+.bento-title { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px; color: var(--color-text-muted); margin-bottom: 8px; }
+.bento-value { font-size: 2.5rem; font-weight: 800; color: var(--color-primary); line-height: 1; margin-bottom: 8px; }
+.bento-sub { font-size: 0.85rem; color: var(--color-text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* Global Date Navigator (Used in Todo and Journal) */
+.tab-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 5px; }
+.tab-title { font-size: 1.8rem; font-weight: 700; color: var(--color-text); }
+.date-navigator {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    background: var(--color-surface);
+    padding: 6px 15px;
+    border-radius: 20px;
+    border: 1px solid var(--color-glass-border);
+}
+.date-display { font-weight: 600; font-size: 0.95rem; min-width: 80px; text-align: center; color: var(--color-text); }
+
+/* =================================================================
+   6. TAB-SPECIFIC OVERRIDES
+   ================================================================= */
+/* Home */
+.home-grid { display: grid; grid-template-columns: 1fr; gap: 15px; width: 100%; }
+
+/* Naked Greeting Header */
+.greeting-header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 20px 10px 15px 10px;
+    gap: 12px;
+}
+.greeting-header .greeting-icon svg { width: 45px; height: 45px; stroke: var(--color-primary); }
+.greeting-header .greeting-text h2 { font-size: clamp(1rem, 4.5vw, 1.6rem); font-weight: 700; margin-bottom: 5px; color: var(--color-text); }
+.greeting-header .greeting-text p { font-size: 0.95rem; color: var(--color-text-muted); font-weight: 500; letter-spacing: 1px; text-transform: uppercase; }
+
+/* Todo */
+/* Floating Smart Todo Input */
+.todo-input-group { 
+    position: fixed; 
+    bottom: 110px; /* Increased gap for breathing room above the nav pill */
+    left: 50%; 
+    width: calc(100% - 30px);
+    max-width: 500px;
+    display: flex; 
+    flex-direction: row; 
+    align-items: center;
+    padding: 8px 10px 8px 20px; /* Asymmetrical padding to balance the circular button */
+    gap: 10px; 
+    z-index: 990;
+    border-radius: 50px !important; /* Forces capsule shape to match nav pill */
+    
+    /* Animation States */
+    transform: translateX(-50%) translateY(20px);
+    opacity: 0; 
+    pointer-events: none; 
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.todo-input-group.active { 
+    opacity: 1; 
+    pointer-events: auto; 
+    transform: translateX(-50%) translateY(0);
+}
+
+.todo-input-group.keyboard-active {
+    bottom: 30px; /* Drops down to replace the vanished nav pill */
+}
+
+.todo-input-group input { flex: 1; background: transparent; border: none; color: var(--color-text); font-size: 1rem; outline: none; }
+.todo-input-group button { 
+    border-radius: 50%; 
+    width: 40px; 
+    height: 40px; 
+    display: flex; 
+    align-items: center; 
+    justify-content: center; 
+    padding: 0; 
+    flex-shrink: 0; 
+    transition: transform 0.2s ease;
+}
+
+.todo-input-group button:active {
+    transform: scale(0.9);
+}
+.todo-list { list-style: none; display: flex; flex-direction: column; gap: 10px; }
+.todo-item { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 15px; padding: 15px; display: flex; align-items: center; gap: 15px; }
+.todo-checkbox { width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--color-text-muted); appearance: none; -webkit-appearance: none; outline: none; cursor: pointer; position: relative; flex-shrink: 0; }
+.todo-checkbox:checked { background-color: var(--color-primary); border-color: var(--color-primary); }
+.todo-checkbox:checked::after { content: '✓'; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: white; font-size: 12px; font-weight: bold; }
+.todo-text { flex: 1; font-size: 1rem; transition: color 0.3s ease; }
+.todo-item.done .todo-text { color: var(--color-text-muted); text-decoration: line-through; }
+.todo-delete { background: none; border: none; color: var(--color-text-muted); font-size: 1.5rem; cursor: pointer; padding: 0 5px; }
+.todo-item.dragging { opacity: 0.6; transform: scale(0.98); border-color: var(--color-primary); z-index: 100; }
+
+/* Journal */
+.journal-textarea {
+    width: 100%;
+    flex: 1;
+    background: transparent;
+    border: none;
+    color: var(--color-text);
+    font-size: 1.1rem;
+    line-height: 1.6;
+    resize: none; 
+    outline: none;
+    font-family: inherit;
+    padding: 10px 5px;
+}
+
+.journal-textarea::placeholder {
+    color: var(--color-text-muted);
+    opacity: 0.5;
+    font-style: italic;
+    font-weight: 400;
+}
+
+/* =================================================================
+   7. MODALS
+   ================================================================= */
+.modal-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(5px); z-index: 9999; display: flex; align-items: center; justify-content: center; }
+.modal-box { width: 90%; max-width: 350px; padding: 25px; }
+.modal-box h2 { font-size: 1.2rem; margin-bottom: 15px; }
+.modal-box input { width: 100%; padding: 12px 15px; background: var(--color-bg); border: 1px solid var(--color-border); color: var(--color-text); border-radius: 10px; margin-bottom: 20px; font-size: 1rem; outline: none; }
+.modal-box input:focus { border-color: var(--color-primary); }
+.modal-box input[type="date"] { color-scheme: dark; }
+.modal-buttons { display: flex; justify-content: flex-end; gap: 10px; }
+
+/* =================================================================
+   8. BOTTOM NAVIGATION PILL
+   ================================================================= */
+.bottom-pill-nav {
+    position: fixed; 
+    bottom: 30px; 
+    left: 50%; 
+    transform: translateX(-50%);
+    display: flex; 
+    gap: 8px; 
+    padding: 8px 16px; 
+    border-radius: 50px; 
+    z-index: 1000;
+    
+    /* Restoring the Frosted Glass Effect */
+    background: var(--color-glass-bg);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid var(--color-glass-border);
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+}
+
+/* Update this block in Section 8 */
+.bottom-pill-nav {
+    position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%);
+    display: flex; gap: 8px; padding: 8px 16px; border-radius: 50px; z-index: 1000;
+    background: var(--color-glass-bg);
+    backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+    border: 1px solid var(--color-glass-border);
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+    
+    /* ADD THESE TWO LINES FOR SMART HIDING */
+    transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.bottom-pill-nav.nav-hidden {
+    transform: translate(-50%, 150px); /* Slides the pill down below the screen */
+}
+
+.bottom-pill-btn { background: transparent; border: none; color: var(--color-text-muted); padding: 12px; border-radius: 50%; cursor: pointer; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); display: flex; align-items: center; justify-content: center; }
+.bottom-pill-btn svg { transition: all 0.3s ease; }
+.bottom-pill-btn.active { background: rgba(255, 255, 255, 0.08); transform: translateY(-3px); }
+.bottom-pill-btn.active svg { stroke: var(--color-primary); }
+
+/* =================================================================
+   9. PC / DESKTOP RESPONSIVENESS
+   ================================================================= */
+@media (min-width: 768px) {
+    .central-column { max-width: var(--max-desktop-width); gap: 25px; }
+    .home-grid { grid-template-columns: repeat(2, 1fr); gap: 25px; }
+    .bento-card { min-height: 130px; padding: 25px; }
+    .greeting-widget { padding: 30px; }
+    .todo-input-group { max-width: 500px; margin: 0 auto; width: 100%; }
+    .todo-list { max-width: 550px; margin: 0 auto; width: 100%; }
+    .tab-title { font-size: 2.2rem; }
+    .greeting-text h2 { font-size: 1.8rem; }
+    .bento-value { font-size: 2.8rem; }
+}
+
+/* =================================================================
+   10. ULTRA-SMALL MOBILE RESPONSIVENESS (Galaxy S20, iPhone SE)
+   ================================================================= */
+@media (max-width: 380px) {
+    .home-grid { 
+        grid-template-columns: 1fr; /* Forces the grid to stack vertically */
+        gap: 10px; 
+    }
+    .bento-card { padding: 15px; min-height: 95px; }
+    .bento-value { font-size: 2rem; }
+    .greeting-widget { padding: 15px; gap: 10px; }
+    .greeting-text h2 { font-size: 1.2rem; }
+}
+
+/* =================================================================
+   11. SETTINGS TAB STYLES
+   ================================================================= */
+.settings-card {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    padding: 25px;
+    margin-bottom: 5px;
+}
+
+.settings-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--color-text);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 5px;
+}
+
+.settings-group {
+    display: flex;
+    grid-template-columns: 1fr;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.settings-group label {
+    font-size: 0.9rem;
+    color: var(--color-text-muted);
+}
+
+.settings-input-row {
+    display: flex;
+    gap: 10px;
+}
+
+.settings-input-row input {
+    flex: 1;
+    padding: 12px 15px;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid var(--color-glass-border);
+    color: var(--color-text);
+    border-radius: 10px;
+    font-size: 1rem;
+    outline: none;
+}
+
+.settings-input-row input:focus { border-color: var(--color-primary); }
+
+.settings-action-btn {
+    width: 100%;
+    text-align: center;
+    border: 1px solid var(--color-glass-border);
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.btn-danger {
+    background: rgba(255, 59, 59, 0.1);
+    color: var(--color-primary);
+    border: 1px solid rgba(255, 59, 59, 0.3);
+    padding: 10px 20px;
+    border-radius: 10px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s ease;
+}
+
+.btn-danger:hover { background: rgba(255, 59, 59, 0.2); }
+.settings-divider { border: 0; border-top: 1px solid var(--color-glass-border); margin: 5px 0; }
+
+/* CSS Toggle Switch */
+.toggle-group { flex-direction: row; justify-content: space-between; align-items: center; }
+.switch { position: relative; display: inline-block; width: 50px; height: 26px; }
+.switch input { opacity: 0; width: 0; height: 0; }
+.slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(255, 255, 255, 0.1); transition: .4s; border-radius: 34px; }
+.slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 4px; bottom: 4px; background-color: var(--color-text-muted); transition: .4s; border-radius: 50%; }
+input:checked + .slider { background-color: var(--color-primary); }
+input:checked + .slider:before { transform: translateX(24px); background-color: white; }
