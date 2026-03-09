@@ -443,28 +443,81 @@ input:checked + .slider:before { transform: translateX(24px); background-color: 
 .cal-day.selected { border: 2px solid var(--color-text); }
 .cal-day.today { color: var(--color-primary); font-weight: 800; }
 
-/* Progress Bar */
-.planner-progress { margin-top: 5px; padding: 0 5px; }
-.progress-header { display: flex; justify-content: space-between; font-size: 0.85rem; color: var(--color-text-muted); margin-bottom: 8px; font-weight: 600; text-transform: uppercase; }
-.progress-track { height: 12px; background: rgba(0, 0, 0, 0.4); border-radius: 10px; border: 1px solid var(--color-glass-border); overflow: hidden; }
-.progress-fill { height: 100%; width: 0%; background: linear-gradient(90deg, #1fcc61, #2ae073); border-radius: 10px; transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1); }
+/* Daily Cards Slider */
+.daily-slider-container {
+    display: flex;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    gap: 15px;
+    padding: 10px 5px;
+    scrollbar-width: none; /* Firefox */
+    transition: opacity 0.3s ease, transform 0.3s ease;
+}
 
-/* Bottom Sheet */
+.daily-slider-container::-webkit-scrollbar { display: none; } /* Chrome/Safari */
+
+.daily-slider-container.hidden {
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(20px);
+}
+
+.daily-card {
+    min-width: 85%;
+    scroll-snap-align: center;
+    background: var(--color-surface);
+    border: 1px solid var(--color-glass-border);
+    border-radius: 20px;
+    padding: 20px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+
+.daily-card:active { transform: scale(0.97); }
+
+.daily-card.completed { 
+    border-color: #1fcc61; 
+    background: rgba(31, 204, 97, 0.08); 
+}
+
+.daily-card-date {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    border-right: 1px solid var(--color-glass-border);
+    padding-right: 20px;
+    min-width: 80px;
+}
+
+.daily-card-day { font-size: 0.9rem; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 1px; }
+.daily-card-num { font-size: 2.5rem; font-weight: 800; line-height: 1; color: var(--color-text); margin-top: 5px; }
+.daily-card-content { display: flex; flex-direction: column; gap: 8px; flex: 1; overflow: hidden; }
+.daily-card-topic { font-size: 1rem; color: var(--color-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* Bottom Sheet (Fixed to slide from exact bottom) */
 .bottom-sheet {
-    position: absolute; bottom: 0; left: 0; width: 100%;
-    height: 50%; /* Takes up bottom half */
+    position: fixed; /* Anchors to screen instead of container */
+    bottom: 0; 
+    left: 0; 
+    width: 100%;
+    height: auto; 
+    max-height: 50vh;
     background: var(--color-surface);
     border-radius: 30px 30px 0 0;
     border: 1px solid var(--color-glass-border);
     border-bottom: none;
-    padding: 10px 20px 20px 20px;
+    padding: 10px 20px 30px 20px;
     display: flex; flex-direction: column;
-    z-index: 900;
+    z-index: 2000; /* Stays above nav pill */
     
     /* Animation settings */
-    transform: translateY(110%);
-    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    touch-action: none; /* Prevents whole screen scrolling while dragging */
+    transform: translateY(100%); /* Starts completely off-screen */
+    transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    touch-action: none;
 }
 
 .bottom-sheet.active { transform: translateY(0); }
@@ -473,8 +526,4 @@ input:checked + .slider:before { transform: translateX(24px); background-color: 
 .sheet-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid var(--color-glass-border); padding-bottom: 10px; }
 .sheet-header h3 { font-size: 1.2rem; margin: 0; }
 .sheet-actions { display: flex; gap: 10px; }
-
-/* Complete Button State */
-.btn-complete-active { color: #1fcc61 !important; transform: scale(1.1); text-shadow: 0 0 10px rgba(31, 204, 97, 0.4); }
-
-.sheet-content { flex: 1; display: flex; flex-direction: column; gap: 10px; overflow-y: auto; }
+.sheet-content { flex: 1; display: flex; flex-direction: column; gap: 10px; overflow-y: auto; padding-bottom: 20px; }

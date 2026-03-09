@@ -4,18 +4,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
 function initPlannerTab() {
     const gridEl = document.getElementById('miniCalGrid');
+    const sliderEl = document.getElementById('dailySlider');
     const monthDisplay = document.getElementById('plannerMonthDisplay');
     const sheet = document.getElementById('agendaBottomSheet');
     const sheetContent = document.getElementById('sheetContent');
     const sheetDateDisplay = document.getElementById('sheetDateDisplay');
-    const completeBtn = document.getElementById('sheetCompleteBtn');
     const editBtn = document.getElementById('sheetEditBtn');
-    
-    // Progress
-    const progressBar = document.getElementById('plannerProgressBar');
-    const progressText = document.getElementById('plannerProgressText');
+    const bottomNav = document.getElementById('bottomNav');
 
-    if (!gridEl) return;
+    if (!gridEl || !sliderEl) return;
 
     let currentViewDate = new Date();
     currentViewDate.setDate(1); 
@@ -39,11 +36,14 @@ function initPlannerTab() {
         return `${y}-${m}-${d}`;
     };
 
-    // --- RENDER MINI CALENDAR ---
-    const renderCalendar = () => {
+    // --- RENDER MINI CALENDAR & DAILY CARDS ---
+    const renderCalendarAndCards = () => {
         gridEl.innerHTML = '';
+        sliderEl.innerHTML = '';
+        
         const targets = getTargets();
         const completed = getCompleted();
+        const subjects = getSubjects();
         
         const year = currentViewDate.getFullYear();
         const month = currentViewDate.getMonth();
@@ -51,24 +51,22 @@ function initPlannerTab() {
         
         const daysInMonth = new Date(year, month + 1, 0).getDate();
         let startDay = new Date(year, month, 1).getDay();
-        if (startDay === 0) startDay = 7; // Make Monday = 1, Sunday = 7
+        if (startDay === 0) startDay = 7; 
 
         const todayStr = getDateKey(new Date());
 
-        // Fill empty spaces before 1st of month
+        // Fill empty spaces for Calendar
         for(let i = 1; i < startDay; i++) {
             const empty = document.createElement('div');
             empty.className = 'cal-day empty';
             gridEl.appendChild(empty);
         }
 
-        let tasksThisMonth = 0;
-        let completedThisMonth = 0;
-
         for (let d = 1; d <= daysInMonth; d++) {
             const dateObj = new Date(year, month, d);
             const dateKey = getDateKey(dateObj);
             
+            // 1. Build Calendar Cell
             const cell = document.createElement('div');
             cell.className = 'cal-day';
             cell.textContent = d;
@@ -76,43 +74,78 @@ function initPlannerTab() {
             if (dateKey === todayStr) cell.classList.add('today');
             if (dateKey === activeSelectedDateStr) cell.classList.add('selected');
 
-            // Data checks
-            if (targets[dateKey]) {
-                cell.classList.add('has-task');
-                tasksThisMonth++;
-            }
-            if (completed.includes(dateKey)) {
-                cell.classList.add('completed');
-                if (targets[dateKey]) completedThisMonth++;
-            }
+            if (targets[dateKey]) cell.classList.add('has-task');
+            if (completed.includes(dateKey)) cell.classList.add('completed');
 
             cell.addEventListener('click', () => {
-                // Remove selected class from others
                 document.querySelectorAll('.cal-day').forEach(el => el.classList.remove('selected'));
                 cell.classList.add('selected');
+                
+                // Snap slider to the clicked date
+                const targetCard = document.getElementById(`card-${dateKey}`);
+                if(targetCard) targetCard.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+                
                 openBottomSheet(dateKey, dateObj);
             });
-
             gridEl.appendChild(cell);
+
+            // 2. Build Daily Slider Card
+            const card = document.createElement('div');
+            card.className = `daily-card ${completed.includes(dateKey) ? 'completed' : ''}`;
+            card.id = `card-${dateKey}`;
+            
+            const dayName = dateObj.toLocaleDateString('en-US', { weekday: 'short' });
+            const data = targets[dateKey];
+            
+            let cardContentHTML = `<span class="agenda-empty" style="color: var(--color-text-muted); font-style: italic;">Tap to mark complete</span>`;
+            
+            if (data) {
+                const subjectObj = subjects.find(s => s.id === data.subjectId) || subjects[0];
+                cardContentHTML = `
+                    <div class="subject-tag" style="background-color: ${subjectObj.color};">${subjectObj.name}</div>
+                    <div class="daily-card-topic">${data.topic || 'No topic details'}</div>
+                `;
+            } else if (completed.includes(dateKey)) {
+                cardContentHTML = `<span style="color: #1fcc61; font-weight: bold;">Completed</span>`;
+            }
+
+            card.innerHTML = `
+                <div class="daily-card-date">
+                    <span class="daily-card-day">${dayName}</span>
+                    <span class="daily-card-num">${d}</span>
+                </div>
+                <div class="daily-card-content">
+                    ${cardContentHTML}
+                </div>
+            `;
+
+            // Card Click = Toggle Complete
+            card.addEventListener('click', () => {
+                let compArr = getCompleted();
+                if (compArr.includes(dateKey)) {
+                    compArr = compArr.filter(id => id !== dateKey);
+                } else {
+                    compArr.push(dateKey);
+                    // Confetti trigger if you want!
+                    if (navigator.vibrate) navigator.vibrate(50);
+                }
+                saveCompleted(compArr);
+                renderCalendarAndCards(); // Refresh UI
+            });
+
+            sliderEl.appendChild(card);
         }
 
-        updateProgressBar(completedThisMonth, tasksThisMonth);
-    };
-
-    const updateProgressBar = (done, total) => {
-        if (total === 0) {
-            progressBar.style.width = '0%';
-            progressText.textContent = '0%';
-        } else {
-            const pct = Math.round((done / total) * 100);
-            progressBar.style.width = `${pct}%`;
-            progressText.textContent = `${pct}%`;
-        }
+        // Auto-scroll to today on initial load
+        setTimeout(() => {
+            const todayCard = document.getElementById(`card-${todayStr}`);
+            if(todayCard) todayCard.scrollIntoView({ behavior: 'auto', block: 'nearest', inline: 'center' });
+        }, 100);
     };
 
     // --- MONTH NAVIGATION ---
-    document.getElementById('plannerPrevMonth').addEventListener('click', () => { currentViewDate.setMonth(currentViewDate.getMonth() - 1); renderCalendar(); });
-    document.getElementById('plannerNextMonth').addEventListener('click', () => { currentViewDate.setMonth(currentViewDate.getMonth() + 1); renderCalendar(); });
+    document.getElementById('plannerPrevMonth').addEventListener('click', () => { currentViewDate.setMonth(currentViewDate.getMonth() - 1); renderCalendarAndCards(); });
+    document.getElementById('plannerNextMonth').addEventListener('click', () => { currentViewDate.setMonth(currentViewDate.getMonth() + 1); renderCalendarAndCards(); });
 
     // --- BOTTOM SHEET LOGIC ---
     const openBottomSheet = (dateStr, dateObj) => {
@@ -121,49 +154,36 @@ function initPlannerTab() {
         
         const targets = getTargets();
         const subjects = getSubjects();
-        const completed = getCompleted();
         const data = targets[dateStr];
-
-        // Update Complete Button State
-        if (completed.includes(dateStr)) {
-            completeBtn.classList.add('btn-complete-active');
-        } else {
-            completeBtn.classList.remove('btn-complete-active');
-        }
 
         if (data) {
             const subjectObj = subjects.find(s => s.id === data.subjectId) || subjects[0];
             sheetContent.innerHTML = `
-                <div class="subject-tag" style="background-color: ${subjectObj.color}; font-size: 0.8rem; padding: 5px 10px;">${subjectObj.name}</div>
-                <div style="font-size: 1.1rem; color: var(--color-text); margin-top: 10px;">${data.topic || 'No topic details provided.'}</div>
+                <div class="subject-tag" style="background-color: ${subjectObj.color}; padding: 6px 12px; font-size: 0.9rem;">${subjectObj.name}</div>
+                <div style="font-size: 1.1rem; color: var(--color-text); margin-top: 15px; line-height: 1.5;">${data.topic || 'No topic details provided.'}</div>
             `;
         } else {
-            sheetContent.innerHTML = `<div class="agenda-empty" style="text-align:center; margin-top: 20px;">No target set for this day. Tap edit to add one.</div>`;
+            sheetContent.innerHTML = `<div class="agenda-empty" style="text-align:center; margin-top: 20px;">No target set. Tap edit to add one.</div>`;
         }
 
+        // HIDE Nav Pill and Slider, SHOW Bottom Sheet
+        if (bottomNav) bottomNav.classList.add('nav-hidden');
+        sliderEl.classList.add('hidden');
         sheet.classList.add('active');
     };
 
-    // Complete Button Action
-    completeBtn.addEventListener('click', () => {
-        if (!activeSelectedDateStr) return;
-        let completed = getCompleted();
+    const closeBottomSheet = () => {
+        sheet.classList.remove('active');
+        sheet.style.transform = ''; // Reset physics
+        document.querySelectorAll('.cal-day').forEach(el => el.classList.remove('selected'));
         
-        if (completed.includes(activeSelectedDateStr)) {
-            completed = completed.filter(d => d !== activeSelectedDateStr);
-        } else {
-            completed.push(activeSelectedDateStr);
-        }
-        
-        saveCompleted(completed);
-        openBottomSheet(activeSelectedDateStr, new Date(activeSelectedDateStr)); // Refresh sheet
-        renderCalendar(); // Refresh dots/colors
-    });
+        // SHOW Nav Pill and Slider
+        if (bottomNav) bottomNav.classList.remove('nav-hidden');
+        sliderEl.classList.remove('hidden');
+    };
 
-    // Edit Button Action (Triggers your existing target modal)
     editBtn.addEventListener('click', () => {
         const targets = getTargets();
-        // Uses the globally available function from our previous implementation
         if (window.openTargetModalRaw) {
             window.openTargetModalRaw(activeSelectedDateStr, new Date(activeSelectedDateStr), targets[activeSelectedDateStr]);
         }
@@ -173,33 +193,25 @@ function initPlannerTab() {
     let startY = 0;
     let currentY = 0;
     
-    sheet.addEventListener('touchstart', (e) => {
-        startY = e.touches[0].clientY;
-    }, { passive: true });
-
+    sheet.addEventListener('touchstart', (e) => { startY = e.touches[0].clientY; }, { passive: true });
     sheet.addEventListener('touchmove', (e) => {
         currentY = e.touches[0].clientY;
         const deltaY = currentY - startY;
-        if (deltaY > 0) { // Only allow dragging down
+        if (deltaY > 0) {
             sheet.style.transform = `translateY(${deltaY}px)`;
             sheet.style.transition = 'none';
         }
     });
-
     sheet.addEventListener('touchend', () => {
-        sheet.style.transition = 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
-        if (currentY - startY > 100) {
-            // Dragged far enough down -> Close it
-            sheet.classList.remove('active');
-            sheet.style.transform = '';
-            document.querySelectorAll('.cal-day').forEach(el => el.classList.remove('selected'));
+        sheet.style.transition = 'transform 0.4s cubic-bezier(0.4, 0, 0.2, 1)';
+        if (currentY - startY > 80) {
+            closeBottomSheet(); // Dragged down enough to close
         } else {
-            // Snap back up
-            sheet.style.transform = '';
+            sheet.style.transform = ''; // Snap back
         }
     });
 
-    // We need to slightly adjust our previous modal opener to be globally accessible
+    // Update Global Modal Saver
     window.openTargetModalRaw = (dateStr, dateObj, existingData) => {
         const targetModal = document.getElementById('targetModalOverlay');
         const selectEl = document.getElementById('targetSubjectSelect');
@@ -217,7 +229,6 @@ function initPlannerTab() {
         
         targetModal.style.display = 'flex';
         
-        // We temporarily hijack the save button logic to work seamlessly with the new architecture
         const saveBtn = document.getElementById('saveTargetBtn');
         const newSave = saveBtn.cloneNode(true);
         saveBtn.parentNode.replaceChild(newSave, saveBtn);
@@ -227,11 +238,11 @@ function initPlannerTab() {
             targets[dateStr] = { subjectId: selectEl.value, topic: topicInput.value.trim() };
             saveTargets(targets);
             targetModal.style.display = 'none';
-            renderCalendar();
-            openBottomSheet(dateStr, dateObj); // Update the sheet we are looking at
+            renderCalendarAndCards();
+            openBottomSheet(dateStr, dateObj); 
         });
     };
 
     // Boot
-    renderCalendar();
+    renderCalendarAndCards();
 }
