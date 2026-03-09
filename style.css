@@ -110,6 +110,13 @@ button { font-family: inherit; }
     touch-action: pan-y; /* Allows vertical scrolling, traps horizontal swipes */
 }
 
+.subject-tag {
+    font-size: 0.7rem; font-weight: 700; padding: 3px 8px;
+    border-radius: 50px; /* Perfectly rounded corners */
+    width: fit-content; text-transform: uppercase; letter-spacing: 0.5px;
+    color: #ffffff; text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+}
+
 /* =================================================================
    5. UI COMPONENTS (Bento Cards, Navigators)
    ================================================================= */
@@ -464,13 +471,14 @@ input:checked + .slider:before { transform: translateX(24px); background-color: 
 
 .daily-card {
     min-width: 85%;
+    min-height: 180px; 
     scroll-snap-align: center;
     background: var(--color-surface);
     border: 1px solid var(--color-glass-border);
     border-radius: 20px;
     padding: 20px;
     display: flex;
-    align-items: center;
+    align-items: flex-start; 
     gap: 20px;
     cursor: pointer;
     transition: all 0.2s ease;
@@ -500,12 +508,9 @@ input:checked + .slider:before { transform: translateX(24px); background-color: 
 
 /* Bottom Sheet (Fixed to slide from exact bottom) */
 .bottom-sheet {
-    position: fixed; /* Anchors to screen instead of container */
-    bottom: 0; 
-    left: 0; 
-    width: 100%;
-    height: auto; 
-    max-height: 50vh;
+    position: fixed; bottom: 0; left: 0; width: 100%;
+    height: 85vh; /* Slides up much higher */
+    max-height: 85vh;
     background: var(--color-surface);
     border-radius: 30px 30px 0 0;
     border: 1px solid var(--color-glass-border);

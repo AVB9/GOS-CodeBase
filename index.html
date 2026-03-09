@@ -61,12 +61,9 @@
 
                 <div class="bottom-sheet glass-panel" id="agendaBottomSheet">
                     <div class="sheet-drag-handle"></div>
-                    <div class="sheet-header">
+                    <div class="sheet-header" style="justify-content: center; position: relative;">
                         <h3 id="sheetDateDisplay">Select a Date</h3>
-                        <div class="sheet-actions">
-                            <button id="sheetEditBtn" class="icon-btn" title="Edit Target">✎ Edit</button>
                         </div>
-                    </div>
                     <div class="sheet-content" id="sheetContent">
                         </div>
                 </div>
@@ -129,9 +126,17 @@
                     <div class="settings-group">
                         <label>Display Name (For Greeting)</label>
                         <div class="settings-input-row">
-                            <input type="text" id="settingsNameInput" placeholder="giruuuu... :)" />  
+                            <input type="text" id="settingsNameInput" placeholder="jiruuuu... :)" />  
                             <button id="saveNameBtn" class="btn-primary">Save</button>
                         </div>
+                    </div>
+                </div>
+
+                <div class="glass-panel settings-card">
+                    <h3 class="settings-title">Planner</h3>
+                    <div class="settings-group">
+                        <label>Customize your study subjects and their colors.</label>
+                        <button id="manageSubjectsBtn" class="btn-secondary settings-action-btn">Manage Custom Subjects</button>
                     </div>
                 </div>
 
