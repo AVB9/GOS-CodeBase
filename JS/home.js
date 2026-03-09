@@ -14,7 +14,7 @@ function setupGreeting() {
     if (!greetingEl || !iconEl) return; 
 
 
-    const savedName = localStorage.getItem('userDisplayName') || 'giruuuu... :)';
+    const savedName = localStorage.getItem('userDisplayName') || 'giruuuu';
     const greetings = [
         `How are you ${savedName}... :)`,         
         `Kashi ahes ${savedName}... :)`,          
