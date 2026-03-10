@@ -457,16 +457,49 @@ input:checked + .slider:before { transform: translateX(24px); background-color: 
 /* -------------------------------------------------------------
    DAILY CARDS SLIDER
    ------------------------------------------------------------- */
+.slider-wrapper {
+    position: relative;
+    width: 100%;
+    margin-top: 5px;
+}
+
+/* The subtle background overlays */
+.slider-wrapper::before,
+.slider-wrapper::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 25px; /* Width of the fade */
+    z-index: 10;
+    pointer-events: none; /* Allows user to still swipe through the fade */
+}
+
+/* Fades from the exact background color to transparent */
+.slider-wrapper::before {
+    left: 0;
+    background: linear-gradient(to right, var(--color-bg) 5%, transparent 100%);
+}
+
+.slider-wrapper::after {
+    right: 0;
+    background: linear-gradient(to left, var(--color-bg) 5%, transparent 100%);
+}
+
 .daily-slider-container {
     display: flex;
     overflow-x: auto;
     scroll-snap-type: x mandatory;
     scroll-behavior: smooth;
     gap: 15px;
-    padding: 10px 5px;
+    padding: 10px 25px; /* Ensures the active card rests safely past the fade */
     scrollbar-width: none; 
     transition: opacity 0.3s ease, transform 0.3s ease;
+    /* The old mask-image lines have been removed! */
 }
+
+.daily-slider-container::-webkit-scrollbar { display: none; }
+.daily-slider-container.hidden { opacity: 0; pointer-events: none; transform: translateY(20px); }
 
 .daily-slider-container::-webkit-scrollbar { display: none; }
 .daily-slider-container.hidden { opacity: 0; pointer-events: none; transform: translateY(20px); }
