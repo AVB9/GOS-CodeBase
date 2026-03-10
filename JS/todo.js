@@ -10,14 +10,12 @@ function initTodoTab() {
     const prevBtn = document.getElementById('todoPrevDay');
     const nextBtn = document.getElementById('todoNextDay');
     const dateDisplay = document.getElementById('todoDateDisplay');
-    const swipeContainer = document.getElementById('todoSwipeContainer');
 
     if (!input || !addBtn || !listEl || !dateDisplay) return;
 
     let currentDate = new Date();
     let tasks = [];
 
-    // Helper: Dynamic Storage Key
     const getDateKey = (date) => {
         const y = date.getFullYear();
         const m = String(date.getMonth() + 1).padStart(2, '0');
@@ -25,7 +23,6 @@ function initTodoTab() {
         return `todo_${y}-${m}-${d}`;
     };
 
-    // Helper: Display Date
     const updateDateDisplay = () => {
         const today = new Date();
         today.setHours(0, 0, 0, 0);
@@ -49,7 +46,6 @@ function initTodoTab() {
         localStorage.setItem(getDateKey(currentDate), JSON.stringify(tasks));
     };
 
-    // Array Rebuilder (called after physical DOM drag-and-drop)
     const updateArrayOrderFromDOM = () => {
         const newArray = [];
         listEl.querySelectorAll('.todo-item').forEach(item => {
@@ -79,7 +75,6 @@ function initTodoTab() {
                 <button class="todo-delete">×</button>
             `;
 
-            // Standard Interactions
             li.querySelector('.todo-checkbox').addEventListener('change', (e) => {
                 tasks[index].done = e.target.checked;
                 saveTasks();
@@ -92,14 +87,10 @@ function initTodoTab() {
                 renderTasks();
             });
 
-            // ==========================================
-            // LONG-PRESS DRAG & DROP LOGIC
-            // ==========================================
             let holdTimer;
             let isDragging = false;
 
             li.addEventListener('touchstart', () => {
-                // Wait 400ms before picking up the item
                 holdTimer = setTimeout(() => {
                     isDragging = true;
                     li.classList.add('dragging');
@@ -108,13 +99,8 @@ function initTodoTab() {
             }, { passive: true });
 
             li.addEventListener('touchmove', (e) => {
-                if (!isDragging) {
-                    // If they move finger before 400ms, cancel the grab (allows horizontal swipe to work)
-                    clearTimeout(holdTimer);
-                    return;
-                }
-                
-                e.preventDefault(); // Prevents screen scrolling while dragging
+                if (!isDragging) { clearTimeout(holdTimer); return; }
+                e.preventDefault(); 
                 
                 const touch = e.touches[0];
                 const target = document.elementFromPoint(touch.clientX, touch.clientY);
@@ -146,7 +132,6 @@ function initTodoTab() {
         });
     };
 
-    // Add Task
     const addTask = () => {
         const text = input.value.trim();
         if (text) {
@@ -154,37 +139,39 @@ function initTodoTab() {
             input.value = '';
             saveTasks();
             renderTasks();
-            
-            // Scroll to bottom so they can see the new task
             window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
         }
     };
 
     addBtn.addEventListener('click', addTask);
-    input.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') addTask();
-    });
+    input.addEventListener('keypress', (e) => { if (e.key === 'Enter') addTask(); });
 
-    // Date Navigation
+    // --- CORE DATE LOGIC EXPOSED TO GLOBAL WINDOW ---
     const changeDate = (days) => {
         currentDate.setDate(currentDate.getDate() + days);
         loadTasks();
     };
 
+    // Make these accessible to app.js for swipes and modal!
+    window.todoNextDay = () => changeDate(1);
+    window.todoPrevDay = () => changeDate(-1);
+    
+    // Exact date jumper for the modal
+    window.todoSetDate = (dateObj) => { 
+        currentDate = new Date(dateObj); 
+        loadTasks(); 
+    };
+    
+    // Returns current date in YYYY-MM-DD format for the modal input
+    window.todoGetDateStr = () => {
+        const y = currentDate.getFullYear();
+        const m = String(currentDate.getMonth() + 1).padStart(2, '0');
+        const d = String(currentDate.getDate()).padStart(2, '0');
+        return `${y}-${m}-${d}`;
+    };
+
     prevBtn.addEventListener('click', () => changeDate(-1));
     nextBtn.addEventListener('click', () => changeDate(1));
-
-    // Horizontal Swipe to Change Days
-    let touchStartX = 0;
-    swipeContainer.addEventListener('touchstart', (e) => {
-        touchStartX = e.changedTouches[0].screenX;
-    }, { passive: true });
-
-    swipeContainer.addEventListener('touchend', (e) => {
-        const touchEndX = e.changedTouches[0].screenX;
-        if (touchEndX < touchStartX - 50) changeDate(1);  // Swipe Left
-        if (touchEndX > touchStartX + 50) changeDate(-1); // Swipe Right
-    }, { passive: true });
 
     loadTasks();
 }

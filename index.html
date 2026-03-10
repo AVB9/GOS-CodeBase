@@ -11,6 +11,7 @@
     <script src="JS/todo.js" defer></script>
     <script src="JS/settings.js" defer></script>
     <script src="JS/planner.js" defer></script>
+    <script src="JS/journal.js" defer></script>
 </head>
 <body>
     <main id="app-container">
@@ -19,7 +20,7 @@
             <div class="central-column" style="height: 100%; display: flex; flex-direction: column;">
                 <div class="tab-header">
                     <h2 class="tab-title">Journal</h2>
-                    <div class="date-navigator">
+                    <div class="date-navigator" id="journalDateNav">
                         <button id="journalPrevDay" class="icon-btn">‹</button>
                         <span id="journalDateDisplay" class="date-display">Today</span>
                         <button id="journalNextDay" class="icon-btn">›</button>
@@ -118,7 +119,7 @@
             <div class="central-column">
                 <div class="tab-header">
                     <h2 class="tab-title">TODO</h2>
-                    <div class="date-navigator">
+                    <div class="date-navigator" id="todoDateNav">
                         <button id="todoPrevDay" class="icon-btn">‹</button>
                         <span id="todoDateDisplay" class="date-display">Today</span>
                         <button id="todoNextDay" class="icon-btn">›</button>
