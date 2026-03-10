@@ -55,26 +55,37 @@
                 <div class="daily-slider-container" id="dailySlider">
                     </div>
 
+                <div style="display: flex; justify-content: center; margin-top: 5px; min-height: 40px;">
+                    <button id="returnTodayBtn" class="return-today-btn hidden">Today</button>
+                </div>
+
+
+
+                <div class="daily-slider-container" id="dailySlider">
+                    </div>
+
+                <div style="display: flex; justify-content: center; margin-top: 5px; min-height: 40px;">
+                    <button id="returnTodayBtn" class="return-today-btn hidden">Today</button>
+                </div>
+
                 <div class="bottom-sheet glass-panel" id="agendaBottomSheet">
                     
                     <div class="sheet-swipe-zone" id="sheetDragZone">
                         <div class="sheet-drag-handle"></div>
-                        <div class="sheet-header" style="justify-content: center; padding-bottom: 15px; border-bottom: 1px solid var(--color-glass-border); margin-bottom: 20px;">
+                        <div class="sheet-header" style="justify-content: center; padding-bottom: 15px; border-bottom: 1px solid var(--color-glass-border); margin-bottom: 15px;">
                             <h3 id="sheetDateDisplay" style="font-size: 1.15rem; font-weight: 600; color: var(--color-text);">Select a Date</h3>
                         </div>
                     </div>
                     
                     <div class="sheet-content" id="sheetContent">
                         
-                        <label style="font-size: 0.75rem; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; display: block; font-weight: 700;">1. Select Subject</label>
-                        <div id="subjectPillsContainer" class="subject-pills-wrapper" style="margin-bottom: 25px;"></div>
+                        <div id="subjectPillsContainer" class="subject-pills-wrapper" style="margin-bottom: 15px;"></div>
                         
-                        <label style="font-size: 0.75rem; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; display: block; font-weight: 700;">2. Set Target</label>
-                        <textarea id="targetTopicInput" class="settings-input" placeholder="What exactly do you want to accomplish?" rows="3" style="resize: none; width: 100%; border-radius: 12px; padding: 15px; background: rgba(0,0,0,0.3); font-family: inherit; margin-bottom: 15px;"></textarea>
+                        <textarea id="targetTopicInput" class="settings-input target-textarea" placeholder="What exactly do you want to accomplish?" rows="3"></textarea>
                         
                         <div style="display: flex; gap: 12px; padding-bottom: 10px;">
                             <button id="clearTargetBtn" class="btn-secondary" style="flex: 1; border: 1px solid var(--color-glass-border); background: rgba(255,255,255,0.05); border-radius: 12px;">Clear</button>
-                            <button id="saveTargetBtn" class="btn-primary" style="flex: 2; border-radius: 12px; font-weight: 700; font-size: 1.05rem;">Save Target</button>
+                            <button id="saveTargetBtn" class="btn-primary" style="flex: 2; border-radius: 12px; font-weight: 700; font-size: 1.05rem;">Save</button>
                         </div>
 
                     </div>

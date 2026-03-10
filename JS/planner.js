@@ -13,6 +13,9 @@ function initPlannerTab() {
     const sheetDateDisplay = document.getElementById('sheetDateDisplay');
     const bottomNav = document.getElementById('bottomNav');
     
+    const returnTodayBtn = document.getElementById('returnTodayBtn');
+    let todayObserver = null;
+    
     const pillsContainer = document.getElementById('subjectPillsContainer');
     const topicInput = document.getElementById('targetTopicInput');
 
@@ -83,7 +86,6 @@ function initPlannerTab() {
 
             const dayTask = targets[dateKey];
             
-            // Apply new aesthetic CSS states
             if (dayTask) cell.classList.add('has-task');
             if (completed.includes(dateKey)) cell.classList.add('completed');
 
@@ -141,12 +143,10 @@ function initPlannerTab() {
                 }
                 saveCompleted(compArr);
                 
-                // Freeze the exact scroll position
                 const currentScroll = sliderEl.scrollLeft;
-                renderCalendarAndCards(true); // Pass true to skip auto-scroll
+                renderCalendarAndCards(true); 
                 sliderEl.scrollLeft = currentScroll;
                 
-                // Keep UI snapped exactly on the clicked card
                 setTimeout(() => {
                     const currentCard = document.getElementById(`card-${dateKey}`);
                     if(currentCard) currentCard.scrollIntoView({ behavior: 'auto', block: 'nearest', inline: 'center' });
@@ -156,6 +156,25 @@ function initPlannerTab() {
             sliderEl.appendChild(card);
         }
 
+        // --- SMART "TODAY" BUTTON LOGIC ---
+        if (todayObserver) todayObserver.disconnect();
+        
+        const isCurrentMonth = (year === todayObjReal.getFullYear() && month === todayObjReal.getMonth());
+
+        if (!isCurrentMonth) {
+            returnTodayBtn.classList.remove('hidden');
+        } else {
+            const todayCard = document.getElementById(`card-${todayStr}`);
+            if (todayCard) {
+                todayObserver = new IntersectionObserver((entries) => {
+                    if (entries[0].isIntersecting) returnTodayBtn.classList.add('hidden');
+                    else returnTodayBtn.classList.remove('hidden');
+                }, { root: sliderEl, threshold: 0.1 });
+                todayObserver.observe(todayCard);
+            }
+        }
+
+        // Original Auto-Scroll
         if (!skipAutoScroll) {
             setTimeout(() => {
                 const todayCard = document.getElementById(`card-${todayStr}`);
@@ -167,7 +186,7 @@ function initPlannerTab() {
     // --- BOTTOM SHEET LOGIC ---
     const openBottomSheet = (dateStr, dateObj) => {
         activeSelectedDateStr = dateStr;
-        sheetDateDisplay.textContent = `Plan: ${dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
+        sheetDateDisplay.textContent = `${dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
         
         const targets = getTargets();
         const existingData = targets[dateStr];
@@ -303,6 +322,13 @@ function initPlannerTab() {
     // --- BUTTON NAV ---
     document.getElementById('plannerPrevMonth').addEventListener('click', () => { currentViewDate.setMonth(currentViewDate.getMonth() - 1); renderCalendarAndCards(true); });
     document.getElementById('plannerNextMonth').addEventListener('click', () => { currentViewDate.setMonth(currentViewDate.getMonth() + 1); renderCalendarAndCards(true); });
+
+    returnTodayBtn.addEventListener('click', () => {
+        currentViewDate = new Date();
+        currentViewDate.setDate(1); 
+        renderCalendarAndCards(false); 
+        if (navigator.vibrate) navigator.vibrate(50);
+    });
 
     // Boot
     renderCalendarAndCards();

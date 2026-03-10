@@ -428,7 +428,7 @@ input:checked + .slider:before { transform: translateX(24px); background-color: 
 .mini-calendar-wrapper { 
     padding: 15px; 
     margin-bottom: 15px; 
-    touch-action: pan-y; /* Crucial: Allows vertical scroll, but traps horizontal swipes */
+    touch-action: pan-y; 
 }
 
 .cal-header { display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; font-size: 0.8rem; color: var(--color-text-muted); font-weight: 700; margin-bottom: 10px; }
@@ -451,21 +451,8 @@ input:checked + .slider:before { transform: translateX(24px); background-color: 
 .cal-day.selected { border: 2px solid var(--color-text); transform: scale(1.1); }
 
 /* AESTHETIC CALENDAR STATES */
-/* Uncompleted tasks (Subtle Red Alert) */
-.cal-day.has-task { 
-    background: rgba(255, 59, 59, 0.15); 
-    border-color: rgba(255, 59, 59, 0.3); 
-    color: #ff5252; 
-    font-weight: 700; 
-}
-
-/* Completed tasks (Subtle Green Success) */
-.cal-day.completed { 
-    background: rgba(31, 204, 97, 0.15); 
-    border-color: rgba(31, 204, 97, 0.3); 
-    color: #1fcc61; 
-    font-weight: 700; 
-}
+.cal-day.has-task { background: rgba(255, 59, 59, 0.15); border-color: rgba(255, 59, 59, 0.3); color: #ff5252; font-weight: 700; }
+.cal-day.completed { background: rgba(31, 204, 97, 0.15); border-color: rgba(31, 204, 97, 0.3); color: #1fcc61; font-weight: 700; }
 
 /* -------------------------------------------------------------
    DAILY CARDS SLIDER
@@ -493,7 +480,7 @@ input:checked + .slider:before { transform: translateX(24px); background-color: 
     border-radius: 20px;
     padding: 20px;
     display: flex;
-    align-items: stretch; /* Forces exact centering */
+    align-items: stretch; 
     gap: 20px;
     cursor: pointer;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -505,108 +492,73 @@ input:checked + .slider:before { transform: translateX(24px); background-color: 
 .daily-card:active { transform: scale(0.97); }
 
 .daily-card-date {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    border-right: 1px solid var(--color-glass-border);
-    padding-right: 20px;
-    min-width: 80px;
-    height: 100%;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    border-right: 1px solid var(--color-glass-border); padding-right: 20px; min-width: 80px; height: 100%;
 }
-
 .daily-card-day { font-size: 0.9rem; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 1px; }
 .daily-card-num { font-size: 2.5rem; font-weight: 800; line-height: 1; color: var(--color-text); margin-top: 5px; }
 
 .daily-card-content { 
-    display: flex; 
-    flex-direction: column; 
-    justify-content: center;
-    gap: 10px; 
-    flex: 1; 
-    overflow: hidden; 
-    z-index: 2; 
-    position: relative;
+    display: flex; flex-direction: column; justify-content: center; gap: 10px; 
+    flex: 1; overflow: hidden; z-index: 2; position: relative;
 }
+.daily-card-topic { font-size: 1.05rem; color: var(--color-text); white-space: normal; line-height: 1.4; transition: all 0.3s ease; }
 
-.daily-card-topic { 
-    font-size: 1.05rem; 
-    color: var(--color-text); 
-    white-space: normal; 
-    line-height: 1.4;
-    transition: all 0.3s ease;
-}
-
-/* Card Completed Overlays (NEET OS Checkmark) */
+/* Card Completed Overlays */
 .daily-card.completed { border-color: #222; background: rgba(0, 0, 0, 0.3); }
 .daily-card.completed .daily-card-topic { text-decoration: line-through; opacity: 0.4; }
 .daily-card.completed .subject-tag { opacity: 0.5; filter: grayscale(30%); }
 .daily-card.completed::after {
-    content: '✓'; position: absolute; top: 50%; left: 65%;
-    transform: translate(-50%, -50%);
-    font-size: 6rem; color: #3b5c2a; opacity: 0.25; 
-    pointer-events: none; font-weight: bold; z-index: 0;
+    content: '✓'; position: absolute; top: 50%; left: 65%; transform: translate(-50%, -50%);
+    font-size: 6rem; color: #3b5c2a; opacity: 0.25; pointer-events: none; font-weight: bold; z-index: 0;
 }
+
+/* Smart Return to Today Button */
+.return-today-btn {
+    background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
+    border: 1px solid var(--color-glass-border); color: var(--color-text);
+    padding: 8px 30px; border-radius: 50px; font-size: 0.9rem; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 1px; cursor: pointer;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+    opacity: 1; transform: translateY(0); transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.return-today-btn.hidden { opacity: 0; pointer-events: none; transform: translateY(-15px) scale(0.95); }
+.return-today-btn:active { transform: scale(0.92); }
 
 /* -------------------------------------------------------------
    PREMIUM BOTTOM SHEET UI
    ------------------------------------------------------------- */
 .bottom-sheet {
-    position: fixed; bottom: 0; left: 0; width: 100%;
-    height: auto; /* Adapts to content perfectly */
-    max-height: 75vh;
-    background: var(--color-surface);
-    border-radius: 30px 30px 0 0;
-    border: 1px solid var(--color-glass-border);
-    border-bottom: none;
-    padding: 0 25px 25px 25px; /* Adjust padding to rely on swipe zone */
-    display: flex; flex-direction: column;
-    z-index: 2000;
-    
-    transform: translateY(110%);
-    transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-    touch-action: none;
-    box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.6);
+    position: fixed; bottom: 0; left: 0; width: 100%; height: auto; max-height: 75vh;
+    background: var(--color-surface); border-radius: 30px 30px 0 0;
+    border: 1px solid var(--color-glass-border); border-bottom: none;
+    padding: 0 25px 25px 25px; display: flex; flex-direction: column; z-index: 2000;
+    transform: translateY(110%); transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    touch-action: none; box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.6);
 }
-
 .bottom-sheet.active { transform: translateY(0); }
 
-/* The new massive touch area for closing */
-.sheet-swipe-zone {
-    width: 100%;
-    padding-top: 15px;
-    cursor: grab;
-}
+.sheet-swipe-zone { width: 100%; padding-top: 15px; cursor: grab; }
 .sheet-swipe-zone:active { cursor: grabbing; }
-
 .sheet-drag-handle { width: 45px; height: 5px; background: rgba(255, 255, 255, 0.25); border-radius: 10px; margin: 0 auto 15px auto; }
-.sheet-header { display: flex; justify-content: space-between; align-items: center; }
+.sheet-content { flex: 1; display: flex; flex-direction: column; overflow-y: auto; padding-bottom: 20px; }
 
-/* Non-clipping Pills */
-.subject-pills-wrapper {
-    display: flex;
-    flex-wrap: wrap; /* Fixes the clipping! */
-    gap: 10px;
-    margin-bottom: 5px;
+/* Fixing the Text Area text color */
+.target-textarea {
+    resize: none; width: 100%; border-radius: 12px; padding: 15px; 
+    background: rgba(0,0,0,0.3); font-family: inherit; margin-bottom: 15px;
+    color: var(--color-text) !important; /* Fixes black text */
+    caret-color: var(--color-primary); /* Sets cursor color */
 }
 
+/* Non-clipping Brick Pills */
+.subject-pills-wrapper { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 15px; }
 .subject-pill {
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid var(--color-glass-border);
-    color: var(--color-text-muted);
-    padding: 10px 18px;
-    border-radius: 50px;
-    font-size: 0.85rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    background: rgba(255, 255, 255, 0.05); border: 1px solid var(--color-glass-border);
+    color: var(--color-text-muted); padding: 8px 16px; border-radius: 50px;
+    font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: all 0.2s ease;
 }
-
-.subject-pill.active {
-    color: #ffffff !important;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
-    transform: scale(1.05);
-}
+.subject-pill.active { color: #ffffff !important; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3); transform: scale(1.05); }
 
 /* =================================================================
    13. UI POLISH (MODALS & COLOR PICKERS)
