@@ -485,20 +485,34 @@ input:checked + .slider:before { transform: translateX(24px); background-color: 
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
 }
 
-.daily-card:active { transform: scale(0.97); }
-
-.daily-card.completed { 
-    border-color: #1fcc61; 
-    background: rgba(31, 204, 97, 0.08); 
+.daily-card {
+    min-width: 85%;
+    min-height: 120px; /* Reduced height for single-task look */
+    scroll-snap-align: center;
+    background: var(--color-surface);
+    border: 1px solid var(--color-glass-border);
+    border-radius: 20px;
+    padding: 20px;
+    display: flex;
+    align-items: center; /* Centers content vertically */
+    gap: 20px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
 }
+
+.daily-card:active { transform: scale(0.97); }
+.daily-card.completed { border-color: #1fcc61; background: rgba(31, 204, 97, 0.08); }
 
 .daily-card-date {
     display: flex;
     flex-direction: column;
     align-items: center;
+    justify-content: center; /* Forces exact centering */
     border-right: 1px solid var(--color-glass-border);
     padding-right: 20px;
     min-width: 80px;
+    height: 100%;
 }
 
 .daily-card-day { font-size: 0.9rem; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 1px; }
@@ -532,3 +546,75 @@ input:checked + .slider:before { transform: translateX(24px); background-color: 
 .sheet-header h3 { font-size: 1.2rem; margin: 0; }
 .sheet-actions { display: flex; gap: 10px; }
 .sheet-content { flex: 1; display: flex; flex-direction: column; gap: 10px; overflow-y: auto; padding-bottom: 20px; }
+
+/* Subject Pills for Bottom Sheet */
+.subject-pills-wrapper {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 5px;
+}
+
+.subject-pill {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--color-glass-border);
+    color: var(--color-text-muted);
+    padding: 8px 16px;
+    border-radius: 50px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.subject-pill.active {
+    color: #ffffff;
+    /* The background color is injected via JS to match her custom subject color */
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+    transform: scale(1.05);
+}
+
+/* =================================================================
+   13. UI POLISH (MODALS & COLOR PICKERS)
+   ================================================================= */
+.add-subject-row {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+/* Hack to make the native color picker look like a premium circle */
+.color-picker-wrapper {
+    width: 45px;
+    height: 45px;
+    border-radius: 50%;
+    overflow: hidden;
+    border: 2px solid var(--color-glass-border);
+    flex-shrink: 0;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+}
+
+.color-input {
+    width: 150%;
+    height: 150%;
+    transform: translate(-20%, -20%);
+    cursor: pointer;
+    border: none;
+    padding: 0;
+    background: transparent;
+}
+
+/* Enhancing the Subject List inside the modal */
+.subject-manager-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.05);
+    padding: 12px 15px;
+    border-radius: 12px;
+    border: 1px solid var(--color-glass-border);
+    margin-bottom: 8px;
+    transition: background 0.2s;
+}
+
+.subject-manager-item:active { background: rgba(255, 255, 255, 0.1); }

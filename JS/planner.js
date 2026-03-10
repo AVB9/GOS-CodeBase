@@ -4,25 +4,29 @@ document.addEventListener('DOMContentLoaded', () => {
 
 function initPlannerTab() {
     const gridEl = document.getElementById('miniCalGrid');
+    const calWrapper = document.querySelector('.mini-calendar-wrapper');
     const sliderEl = document.getElementById('dailySlider');
     const monthDisplay = document.getElementById('plannerMonthDisplay');
     const sheet = document.getElementById('agendaBottomSheet');
-    const sheetContent = document.getElementById('sheetContent');
+    const dragHandle = document.getElementById('sheetDragHandle');
     const sheetDateDisplay = document.getElementById('sheetDateDisplay');
     const bottomNav = document.getElementById('bottomNav');
+    
+    // Target Inputs
+    const pillsContainer = document.getElementById('subjectPillsContainer');
+    const topicInput = document.getElementById('targetTopicInput');
 
     if (!gridEl || !sliderEl) return;
 
     let currentViewDate = new Date();
     currentViewDate.setDate(1); 
     let activeSelectedDateStr = null;
+    let currentSheetSubjectId = null; // NEW: Tracks the active pill
 
     // --- DATA HELPERS ---
     const defaultSubjects = [{ id: 'off', name: 'Day Off', color: '#555555' }];
     const getSubjects = () => JSON.parse(localStorage.getItem('plannerSubjects')) || defaultSubjects;
-    const saveSubjects = (subs) => localStorage.setItem('plannerSubjects', JSON.stringify(subs));
     
-    // Targets: { "2026-03-10": [{ id, subjectId, topic }] } (Time removed)
     const getTargets = () => JSON.parse(localStorage.getItem('plannerTargets')) || {};
     const saveTargets = (targs) => { localStorage.setItem('plannerTargets', JSON.stringify(targs)); window.updateHomeWidget(); };
 
@@ -35,6 +39,8 @@ function initPlannerTab() {
         const d = String(date.getDate()).padStart(2, '0');
         return `${y}-${m}-${d}`;
     };
+
+    window.forcePlannerRefresh = () => renderCalendarAndCards();
 
     // --- RENDER MINI CALENDAR & DAILY CARDS ---
     const renderCalendarAndCards = () => {
@@ -75,8 +81,8 @@ function initPlannerTab() {
             if (dateKey === todayStr) cell.classList.add('today');
             if (dateKey === activeSelectedDateStr) cell.classList.add('selected');
 
-            const dayTasks = targets[dateKey] || [];
-            if (dayTasks.length > 0) cell.classList.add('has-task');
+            const dayTask = targets[dateKey];
+            if (dayTask) cell.classList.add('has-task');
             if (completed.includes(dateKey)) cell.classList.add('completed');
 
             cell.addEventListener('click', () => {
@@ -99,19 +105,14 @@ function initPlannerTab() {
             
             let cardContentHTML = `<span class="agenda-empty" style="color: var(--color-text-muted); font-style: italic;">Tap to plan this day</span>`;
             
-            if (dayTasks.length > 0) {
-                // Render session playlist on the card without times
-                cardContentHTML = `<div style="display:flex; flex-direction:column; gap:8px;">` + 
-                    dayTasks.map((t, index) => {
-                        const sub = subjects.find(s => s.id === t.subjectId) || subjects[0];
-                        return `<div style="display:flex; gap:8px; align-items:flex-start;">
-                            <span style="font-size:0.75rem; color:var(--color-text-muted); min-width: 15px; margin-top: 2px;">${index + 1}.</span>
-                            <div style="display:flex; flex-direction:column; gap: 4px;">
-                                <span class="subject-tag" style="background-color:${sub.color};">${sub.name}</span>
-                                <span class="daily-card-topic" style="font-size:0.9rem; white-space: normal;">${t.topic}</span>
-                            </div>
-                        </div>`;
-                    }).join('') + `</div>`;
+            if (dayTask) {
+                const sub = subjects.find(s => s.id === dayTask.subjectId) || subjects[0];
+                cardContentHTML = `
+                    <div style="display:flex; flex-direction:column; gap: 6px;">
+                        <span class="subject-tag" style="background-color:${sub.color};">${sub.name}</span>
+                        <span class="daily-card-topic" style="font-size:1.05rem; white-space: normal;">${dayTask.topic || 'No topic details'}</span>
+                    </div>
+                `;
             } else if (completed.includes(dateKey)) {
                 cardContentHTML = `<span style="color: #1fcc61; font-weight: bold;">Day Marked Complete</span>`;
             }
@@ -126,7 +127,7 @@ function initPlannerTab() {
                 </div>
             `;
 
-            // Card Click = Toggle Complete (If not future)
+            // Card Click = Toggle Complete
             card.addEventListener('click', () => {
                 if (dateObj > todayObjReal) {
                     alert("Cannot mark future days as complete.");
@@ -160,95 +161,65 @@ function initPlannerTab() {
         }, 100);
     };
 
-    // --- BOTTOM SHEET LOGIC (SESSION PLAYLIST) ---
+    // --- BOTTOM SHEET LOGIC ---
     const openBottomSheet = (dateStr, dateObj) => {
         activeSelectedDateStr = dateStr;
         sheetDateDisplay.textContent = dateObj.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
-        renderSheetContent();
+        
+        const targets = getTargets();
+        const existingData = targets[dateStr];
+        const subjects = getSubjects();
+
+        // 1. Determine which subject should be active
+        currentSheetSubjectId = existingData ? existingData.subjectId : subjects[0].id;
+
+        // 2. Render Subject Pills
+        pillsContainer.innerHTML = '';
+        subjects.forEach(sub => {
+            const btn = document.createElement('button');
+            btn.className = `subject-pill ${sub.id === currentSheetSubjectId ? 'active' : ''}`;
+            btn.textContent = sub.name;
+            
+            // If active on load, paint it with her custom color
+            if (sub.id === currentSheetSubjectId) {
+                btn.style.backgroundColor = sub.color;
+                btn.style.borderColor = sub.color;
+                btn.style.color = '#ffffff'; // Forces text to be bright white
+            }
+
+            // Handle Tap
+            btn.addEventListener('click', (e) => {
+                e.preventDefault(); // Prevents accidental scrolling or form submission
+                currentSheetSubjectId = sub.id;
+                
+                // Reset all pills
+                pillsContainer.querySelectorAll('.subject-pill').forEach(p => {
+                    p.classList.remove('active');
+                    p.style.backgroundColor = '';
+                    p.style.borderColor = '';
+                    p.style.color = ''; // Reset to default muted color
+                });
+                
+                // Highlight tapped pill
+                btn.classList.add('active');
+                btn.style.backgroundColor = sub.color;
+                btn.style.borderColor = sub.color;
+                btn.style.color = '#ffffff'; // Highlight text
+            });
+            
+            pillsContainer.appendChild(btn);
+        });
+            
+        // 3. Render Topic Text
+        if (existingData) {
+            topicInput.value = existingData.topic || '';
+        } else {
+            topicInput.value = '';
+        }
         
         if (bottomNav) bottomNav.classList.add('nav-hidden');
         sliderEl.classList.add('hidden');
         sheet.classList.add('active');
-    };
-
-    const renderSheetContent = () => {
-        const targets = getTargets();
-        const subjects = getSubjects();
-        const dayTasks = targets[activeSelectedDateStr] || [];
-
-        // Simplified UI without time inputs
-        let html = `
-            <div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 25px; background: rgba(0,0,0,0.2); padding: 15px; border-radius: 15px; border: 1px solid var(--color-glass-border);">
-                <select id="hourlySubject" class="settings-input" style="padding: 12px 15px; width: 100%;">
-                    ${subjects.map(s => `<option value="${s.id}">${s.name}</option>`).join('')}
-                </select>
-                <div style="display: flex; gap: 10px;">
-                    <input type="text" id="hourlyTopic" class="settings-input" style="padding: 12px 15px; flex: 1;" placeholder="What to study? (e.g., Kinematics)">
-                    <button id="addHourlyBtn" class="btn-primary" style="padding: 12px 25px;">Add</button>
-                </div>
-            </div>
-            <div id="hourlyTaskList" style="display: flex; flex-direction: column; gap: 10px;">
-        `;
-
-        if (dayTasks.length === 0) {
-            html += `<div class="agenda-empty" style="text-align:center; margin-top: 10px;">No sessions planned yet.</div>`;
-        } else {
-            dayTasks.forEach((task, index) => {
-                const sub = subjects.find(s => s.id === task.subjectId) || subjects[0];
-                html += `
-                    <div style="display: flex; gap: 15px; align-items: center; background: rgba(255,255,255,0.03); padding: 15px; border-radius: 15px; border: 1px solid var(--color-glass-border);">
-                        <div style="font-weight: 800; font-size: 1.1rem; color: var(--color-text-muted); opacity: 0.5;">${index + 1}</div>
-                        <div style="display: flex; flex-direction: column; gap: 5px; flex: 1; overflow: hidden;">
-                            <span class="subject-tag" style="background-color: ${sub.color};">${sub.name}</span>
-                            <span style="font-size: 0.95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--color-text);">${task.topic}</span>
-                        </div>
-                        <button class="icon-btn delete-hourly-btn" data-id="${task.id}" style="color: var(--color-text-muted); font-size: 1.5rem; padding: 0 5px;">×</button>
-                    </div>
-                `;
-            });
-        }
-        html += `</div>`;
-        sheetContent.innerHTML = html;
-
-        // Attach Add Event
-        document.getElementById('addHourlyBtn').addEventListener('click', () => {
-            const sInput = document.getElementById('hourlySubject').value;
-            const textInput = document.getElementById('hourlyTopic').value.trim();
-
-            if (!textInput) {
-                alert("Please enter a topic to study.");
-                return;
-            }
-
-            const targets = getTargets();
-            if (!targets[activeSelectedDateStr]) targets[activeSelectedDateStr] = [];
-            
-            // Push to the array (no time needed, order dictates sequence)
-            targets[activeSelectedDateStr].push({
-                id: 'task_' + Date.now(),
-                subjectId: sInput,
-                topic: textInput
-            });
-
-            saveTargets(targets);
-            renderSheetContent();
-            renderCalendarAndCards();
-        });
-
-        // Attach Delete Events
-        document.querySelectorAll('.delete-hourly-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const taskId = e.target.getAttribute('data-id');
-                const targets = getTargets();
-                targets[activeSelectedDateStr] = targets[activeSelectedDateStr].filter(t => t.id !== taskId);
-                
-                if (targets[activeSelectedDateStr].length === 0) delete targets[activeSelectedDateStr];
-                
-                saveTargets(targets);
-                renderSheetContent();
-                renderCalendarAndCards();
-            });
-        });
     };
 
     const closeBottomSheet = () => {
@@ -259,26 +230,57 @@ function initPlannerTab() {
         sliderEl.classList.remove('hidden');
     };
 
-    // Sheet Swipe Down Physics
+    // Save and Clear Targets
+    document.getElementById('saveTargetBtn').addEventListener('click', () => {
+        const textInput = topicInput.value.trim();
+        if (!textInput) { alert("Please enter a topic."); return; }
+
+        const targets = getTargets();
+        // Uses the currently tapped pill ID
+        targets[activeSelectedDateStr] = { subjectId: currentSheetSubjectId, topic: textInput };
+        saveTargets(targets);
+        closeBottomSheet();
+        renderCalendarAndCards();
+    });
+
+    document.getElementById('clearTargetBtn').addEventListener('click', () => {
+        const targets = getTargets();
+        delete targets[activeSelectedDateStr];
+        saveTargets(targets);
+        closeBottomSheet();
+        renderCalendarAndCards();
+    });
+
+    // --- DRAG PHYSICS (RESTRICTED TO HANDLE) ---
     let startY = 0;
     let currentY = 0;
-    sheet.addEventListener('touchstart', (e) => { startY = e.touches[0].clientY; }, { passive: true });
-    sheet.addEventListener('touchmove', (e) => {
+    dragHandle.addEventListener('touchstart', (e) => { startY = e.touches[0].clientY; }, { passive: true });
+    dragHandle.addEventListener('touchmove', (e) => {
         currentY = e.touches[0].clientY;
         const deltaY = currentY - startY;
-        if (deltaY > 0 && sheetContent.scrollTop === 0) {
+        if (deltaY > 0) {
             sheet.style.transform = `translateY(${deltaY}px)`;
             sheet.style.transition = 'none';
         }
     });
-    sheet.addEventListener('touchend', () => {
+    dragHandle.addEventListener('touchend', () => {
         sheet.style.transition = 'transform 0.4s cubic-bezier(0.4, 0, 0.2, 1)';
-        if (currentY - startY > 100 && sheetContent.scrollTop === 0) {
-            closeBottomSheet(); 
-        } else {
-            sheet.style.transform = ''; 
-        }
+        if (currentY - startY > 60) closeBottomSheet(); 
+        else sheet.style.transform = ''; 
     });
+
+    // --- MINI CALENDAR SWIPE TO CHANGE MONTH ---
+    let calTouchStartX = 0;
+    calWrapper.addEventListener('touchstart', (e) => { calTouchStartX = e.changedTouches[0].screenX; }, { passive: true });
+    calWrapper.addEventListener('touchend', (e) => {
+        const calTouchEndX = e.changedTouches[0].screenX;
+        if (calTouchEndX < calTouchStartX - 60) {
+            currentViewDate.setMonth(currentViewDate.getMonth() + 1); renderCalendarAndCards(); // Swipe Left -> Next
+        }
+        if (calTouchEndX > calTouchStartX + 60) {
+            currentViewDate.setMonth(currentViewDate.getMonth() - 1); renderCalendarAndCards(); // Swipe Right -> Prev
+        }
+    }, { passive: true });
 
     // --- HOME WIDGET UPDATE LOGIC ---
     window.updateHomeWidget = () => {
@@ -289,29 +291,25 @@ function initPlannerTab() {
         const targets = getTargets();
         const subjects = getSubjects();
         const todayStr = getDateKey(new Date());
-        const dayTasks = targets[todayStr] || [];
+        const dayTask = targets[todayStr];
 
-        if (dayTasks.length > 0) {
-            targetValue.style.display = 'none'; 
-            
-            targetSubText.innerHTML = `<div style="display:flex; flex-direction:column; gap:10px; margin-top: 5px;">` + 
-                dayTasks.slice(0, 3).map((t, index) => {
-                    const sub = subjects.find(s => s.id === t.subjectId) || subjects[0];
-                    return `<div style="display:flex; gap:10px; align-items:center;">
-                        <span style="font-size:0.8rem; font-weight: 800; color:var(--color-text-muted); opacity: 0.6;">${index + 1}.</span>
-                        <span class="subject-tag" style="background-color:${sub.color}; font-size:0.65rem;">${sub.name}</span>
-                        <span style="font-size:0.95rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color: var(--color-text);">${t.topic}</span>
-                    </div>`;
-                }).join('') + `</div>`;
+        if (dayTask) {
+            const sub = subjects.find(s => s.id === dayTask.subjectId) || subjects[0];
+            targetValue.style.display = 'block'; 
+            targetValue.textContent = sub.name;
+            targetValue.style.color = sub.color;
+            targetValue.style.fontSize = '1.8rem';
+            targetSubText.innerHTML = `<div style="font-size: 0.95rem; color: var(--color-text); margin-top: 5px;">${dayTask.topic}</div>`;
         } else {
             targetValue.style.display = 'block';
             targetValue.textContent = '---';
             targetValue.style.color = 'var(--color-primary)';
+            targetValue.style.fontSize = '2.5rem';
             targetSubText.innerHTML = 'No target set for today.';
         }
     };
 
-    // --- MONTH NAVIGATION ---
+    // --- BUTTON NAV ---
     document.getElementById('plannerPrevMonth').addEventListener('click', () => { currentViewDate.setMonth(currentViewDate.getMonth() - 1); renderCalendarAndCards(); });
     document.getElementById('plannerNextMonth').addEventListener('click', () => { currentViewDate.setMonth(currentViewDate.getMonth() + 1); renderCalendarAndCards(); });
 

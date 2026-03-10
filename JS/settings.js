@@ -6,6 +6,7 @@ function initSettingsTab() {
     setupProfileSettings();
     setupThemeSettings();
     setupDataManagement();
+    setupSubjectManager();
 }
 
 function setupProfileSettings() {
@@ -131,6 +132,65 @@ function setupDataManagement() {
         if (confirm("WARNING: This will permanently delete all tasks, journal entries, and settings. This cannot be undone. Are you absolutely sure?")) {
             localStorage.clear();
             window.location.reload();
+        }
+    });
+}
+
+function setupSubjectManager() {
+    const manageBtn = document.getElementById('manageSubjectsBtn');
+    const modal = document.getElementById('subjectModalOverlay');
+    const closeBtn = document.getElementById('closeSubjectModalBtn');
+    const addBtn = document.getElementById('addSubjectBtn');
+    const subList = document.getElementById('subjectList');
+
+    if (!manageBtn || !modal) return;
+
+    const defaultSubjects = [{ id: 'off', name: 'Day Off', color: '#555555' }];
+    const getSubjects = () => JSON.parse(localStorage.getItem('plannerSubjects')) || defaultSubjects;
+    const saveSubjects = (subs) => localStorage.setItem('plannerSubjects', JSON.stringify(subs));
+
+    const renderSubjects = () => {
+        subList.innerHTML = '';
+        getSubjects().forEach(sub => {
+            const div = document.createElement('div');
+            div.className = 'subject-manager-item';
+            div.innerHTML = `
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <div style="width:15px; height:15px; border-radius:50%; background:${sub.color};"></div>
+                    <span>${sub.name}</span>
+                </div>
+                ${sub.id === 'off' ? '' : `<button class="subject-delete-btn" data-id="${sub.id}">×</button>`}
+            `;
+            subList.appendChild(div);
+        });
+
+        document.querySelectorAll('.subject-delete-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const id = e.target.getAttribute('data-id');
+                const newSubs = getSubjects().filter(s => s.id !== id);
+                saveSubjects(newSubs);
+                renderSubjects();
+            });
+        });
+    };
+
+    manageBtn.addEventListener('click', () => { renderSubjects(); modal.style.display = 'flex'; });
+    closeBtn.addEventListener('click', () => { 
+        modal.style.display = 'none'; 
+        // Force planner to refresh if it's already rendered
+        if (typeof window.forcePlannerRefresh === 'function') window.forcePlannerRefresh();
+    });
+
+    addBtn.addEventListener('click', () => {
+        const nameInput = document.getElementById('newSubjectName');
+        const colorInput = document.getElementById('newSubjectColor');
+        const name = nameInput.value.trim();
+        if (name) {
+            const subjects = getSubjects();
+            subjects.push({ id: 'sub_' + Date.now(), name: name, color: colorInput.value });
+            saveSubjects(subjects);
+            nameInput.value = '';
+            renderSubjects();
         }
     });
 }
