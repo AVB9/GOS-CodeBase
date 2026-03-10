@@ -44,7 +44,7 @@
                     </div>
                 </div>
 
-                <div class="glass-panel mini-calendar-wrapper">
+                <div class="glass-panel mini-calendar-wrapper" id="miniCalWrapper">
                     <div class="cal-header">
                         <span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span><span>S</span>
                     </div>
@@ -56,23 +56,27 @@
                     </div>
 
                 <div class="bottom-sheet glass-panel" id="agendaBottomSheet">
-                    <div class="sheet-drag-handle" id="sheetDragHandle"></div>
                     
-                    <div class="sheet-header" style="justify-content: center; position: relative;">
-                        <h3 id="sheetDateDisplay">Select a Date</h3>
+                    <div class="sheet-swipe-zone" id="sheetDragZone">
+                        <div class="sheet-drag-handle"></div>
+                        <div class="sheet-header" style="justify-content: center; padding-bottom: 15px; border-bottom: 1px solid var(--color-glass-border); margin-bottom: 20px;">
+                            <h3 id="sheetDateDisplay" style="font-size: 1.15rem; font-weight: 600; color: var(--color-text);">Select a Date</h3>
+                        </div>
                     </div>
                     
                     <div class="sheet-content" id="sheetContent">
-                        <div style="display: flex; flex-direction: column; gap: 15px; padding: 10px 0;">
-                            
-                            <div id="subjectPillsContainer" class="subject-pills-wrapper"></div>
-                            
-                            <input type="text" id="targetTopicInput" class="settings-input" placeholder="What to study? (e.g., Kinematics)" />
-                            <div style="display: flex; gap: 10px; margin-top: 10px;">
-                                <button id="clearTargetBtn" class="btn-secondary" style="flex: 1; color: var(--color-text-muted);">Clear</button>
-                                <button id="saveTargetBtn" class="btn-primary" style="flex: 2;">Save Target</button>
-                            </div>
+                        
+                        <label style="font-size: 0.75rem; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; display: block; font-weight: 700;">1. Select Subject</label>
+                        <div id="subjectPillsContainer" class="subject-pills-wrapper" style="margin-bottom: 25px;"></div>
+                        
+                        <label style="font-size: 0.75rem; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; display: block; font-weight: 700;">2. Set Target</label>
+                        <textarea id="targetTopicInput" class="settings-input" placeholder="What exactly do you want to accomplish?" rows="3" style="resize: none; width: 100%; border-radius: 12px; padding: 15px; background: rgba(0,0,0,0.3); font-family: inherit; margin-bottom: 15px;"></textarea>
+                        
+                        <div style="display: flex; gap: 12px; padding-bottom: 10px;">
+                            <button id="clearTargetBtn" class="btn-secondary" style="flex: 1; border: 1px solid var(--color-glass-border); background: rgba(255,255,255,0.05); border-radius: 12px;">Clear</button>
+                            <button id="saveTargetBtn" class="btn-primary" style="flex: 2; border-radius: 12px; font-weight: 700; font-size: 1.05rem;">Save Target</button>
                         </div>
+
                     </div>
                 </div>
 

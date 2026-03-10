@@ -423,9 +423,13 @@ input:checked + .slider { background-color: var(--color-primary); }
 input:checked + .slider:before { transform: translateX(24px); background-color: white; }
 
 /* =================================================================
-   12. PLANNER (MINI CALENDAR & BOTTOM SHEET)
+   12. PLANNER (MINI CALENDAR, CARDS, & BOTTOM SHEET)
    ================================================================= */
-.mini-calendar-wrapper { padding: 15px; margin-bottom: 15px; }
+.mini-calendar-wrapper { 
+    padding: 15px; 
+    margin-bottom: 15px; 
+    touch-action: pan-y; /* Crucial: Allows vertical scroll, but traps horizontal swipes */
+}
 
 .cal-header { display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; font-size: 0.8rem; color: var(--color-text-muted); font-weight: 700; margin-bottom: 10px; }
 .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; justify-items: center; }
@@ -438,77 +442,73 @@ input:checked + .slider:before { transform: translateX(24px); background-color: 
     cursor: pointer; position: relative;
     transition: all 0.2s ease;
     color: var(--color-text);
+    border: 1px solid transparent;
 }
 
 .cal-day.empty { visibility: hidden; }
 .cal-day:active { transform: scale(0.9); }
+.cal-day.today { color: var(--color-text); font-weight: 800; border: 1px solid var(--color-text-muted); }
+.cal-day.selected { border: 2px solid var(--color-text); transform: scale(1.1); }
 
-/* Calendar States */
-.cal-day.has-task::after { content: ''; position: absolute; bottom: 3px; width: 4px; height: 4px; border-radius: 50%; background: var(--color-primary); }
-.cal-day.completed { background: #1fcc61; color: #000; font-weight: 700; border: none; }
-.cal-day.completed::after { display: none; } /* Hide dot if completed */
-.cal-day.selected { border: 2px solid var(--color-text); }
-.cal-day.today { color: var(--color-primary); font-weight: 800; }
+/* AESTHETIC CALENDAR STATES */
+/* Uncompleted tasks (Subtle Red Alert) */
+.cal-day.has-task { 
+    background: rgba(255, 59, 59, 0.15); 
+    border-color: rgba(255, 59, 59, 0.3); 
+    color: #ff5252; 
+    font-weight: 700; 
+}
 
-/* Daily Cards Slider */
+/* Completed tasks (Subtle Green Success) */
+.cal-day.completed { 
+    background: rgba(31, 204, 97, 0.15); 
+    border-color: rgba(31, 204, 97, 0.3); 
+    color: #1fcc61; 
+    font-weight: 700; 
+}
+
+/* -------------------------------------------------------------
+   DAILY CARDS SLIDER
+   ------------------------------------------------------------- */
 .daily-slider-container {
     display: flex;
     overflow-x: auto;
     scroll-snap-type: x mandatory;
+    scroll-behavior: smooth;
     gap: 15px;
     padding: 10px 5px;
-    scrollbar-width: none; /* Firefox */
+    scrollbar-width: none; 
     transition: opacity 0.3s ease, transform 0.3s ease;
 }
 
-.daily-slider-container::-webkit-scrollbar { display: none; } /* Chrome/Safari */
-
-.daily-slider-container.hidden {
-    opacity: 0;
-    pointer-events: none;
-    transform: translateY(20px);
-}
+.daily-slider-container::-webkit-scrollbar { display: none; }
+.daily-slider-container.hidden { opacity: 0; pointer-events: none; transform: translateY(20px); }
 
 .daily-card {
     min-width: 85%;
-    min-height: 180px; 
+    min-height: 160px;
     scroll-snap-align: center;
     background: var(--color-surface);
     border: 1px solid var(--color-glass-border);
     border-radius: 20px;
     padding: 20px;
     display: flex;
-    align-items: flex-start; 
+    align-items: stretch; /* Forces exact centering */
     gap: 20px;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-}
-
-.daily-card {
-    min-width: 85%;
-    min-height: 120px; /* Reduced height for single-task look */
-    scroll-snap-align: center;
-    background: var(--color-surface);
-    border: 1px solid var(--color-glass-border);
-    border-radius: 20px;
-    padding: 20px;
-    display: flex;
-    align-items: center; /* Centers content vertically */
-    gap: 20px;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    position: relative;
+    overflow: hidden; 
 }
 
 .daily-card:active { transform: scale(0.97); }
-.daily-card.completed { border-color: #1fcc61; background: rgba(31, 204, 97, 0.08); }
 
 .daily-card-date {
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center; /* Forces exact centering */
+    justify-content: center;
     border-right: 1px solid var(--color-glass-border);
     padding-right: 20px;
     min-width: 80px;
@@ -517,41 +517,76 @@ input:checked + .slider:before { transform: translateX(24px); background-color: 
 
 .daily-card-day { font-size: 0.9rem; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 1px; }
 .daily-card-num { font-size: 2.5rem; font-weight: 800; line-height: 1; color: var(--color-text); margin-top: 5px; }
-.daily-card-content { display: flex; flex-direction: column; gap: 8px; flex: 1; overflow: hidden; }
-.daily-card-topic { font-size: 1rem; color: var(--color-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-/* Bottom Sheet (Fixed to slide from exact bottom) */
+.daily-card-content { 
+    display: flex; 
+    flex-direction: column; 
+    justify-content: center;
+    gap: 10px; 
+    flex: 1; 
+    overflow: hidden; 
+    z-index: 2; 
+    position: relative;
+}
+
+.daily-card-topic { 
+    font-size: 1.05rem; 
+    color: var(--color-text); 
+    white-space: normal; 
+    line-height: 1.4;
+    transition: all 0.3s ease;
+}
+
+/* Card Completed Overlays (NEET OS Checkmark) */
+.daily-card.completed { border-color: #222; background: rgba(0, 0, 0, 0.3); }
+.daily-card.completed .daily-card-topic { text-decoration: line-through; opacity: 0.4; }
+.daily-card.completed .subject-tag { opacity: 0.5; filter: grayscale(30%); }
+.daily-card.completed::after {
+    content: '✓'; position: absolute; top: 50%; left: 65%;
+    transform: translate(-50%, -50%);
+    font-size: 6rem; color: #3b5c2a; opacity: 0.25; 
+    pointer-events: none; font-weight: bold; z-index: 0;
+}
+
+/* -------------------------------------------------------------
+   PREMIUM BOTTOM SHEET UI
+   ------------------------------------------------------------- */
 .bottom-sheet {
     position: fixed; bottom: 0; left: 0; width: 100%;
-    height: 85vh; /* Slides up much higher */
-    max-height: 85vh;
+    height: auto; /* Adapts to content perfectly */
+    max-height: 75vh;
     background: var(--color-surface);
     border-radius: 30px 30px 0 0;
     border: 1px solid var(--color-glass-border);
     border-bottom: none;
-    padding: 10px 20px 30px 20px;
+    padding: 0 25px 25px 25px; /* Adjust padding to rely on swipe zone */
     display: flex; flex-direction: column;
-    z-index: 2000; /* Stays above nav pill */
+    z-index: 2000;
     
-    /* Animation settings */
-    transform: translateY(100%); /* Starts completely off-screen */
+    transform: translateY(110%);
     transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
     touch-action: none;
+    box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.6);
 }
 
 .bottom-sheet.active { transform: translateY(0); }
 
-.sheet-drag-handle { width: 40px; height: 5px; background: rgba(255, 255, 255, 0.2); border-radius: 5px; margin: 0 auto 15px auto; }
-.sheet-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid var(--color-glass-border); padding-bottom: 10px; }
-.sheet-header h3 { font-size: 1.2rem; margin: 0; }
-.sheet-actions { display: flex; gap: 10px; }
-.sheet-content { flex: 1; display: flex; flex-direction: column; gap: 10px; overflow-y: auto; padding-bottom: 20px; }
+/* The new massive touch area for closing */
+.sheet-swipe-zone {
+    width: 100%;
+    padding-top: 15px;
+    cursor: grab;
+}
+.sheet-swipe-zone:active { cursor: grabbing; }
 
-/* Subject Pills for Bottom Sheet */
+.sheet-drag-handle { width: 45px; height: 5px; background: rgba(255, 255, 255, 0.25); border-radius: 10px; margin: 0 auto 15px auto; }
+.sheet-header { display: flex; justify-content: space-between; align-items: center; }
+
+/* Non-clipping Pills */
 .subject-pills-wrapper {
     display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
+    flex-wrap: wrap; /* Fixes the clipping! */
+    gap: 10px;
     margin-bottom: 5px;
 }
 
@@ -559,7 +594,7 @@ input:checked + .slider:before { transform: translateX(24px); background-color: 
     background: rgba(255, 255, 255, 0.05);
     border: 1px solid var(--color-glass-border);
     color: var(--color-text-muted);
-    padding: 8px 16px;
+    padding: 10px 18px;
     border-radius: 50px;
     font-size: 0.85rem;
     font-weight: 600;
@@ -568,8 +603,7 @@ input:checked + .slider:before { transform: translateX(24px); background-color: 
 }
 
 .subject-pill.active {
-    color: #ffffff;
-    /* The background color is injected via JS to match her custom subject color */
+    color: #ffffff !important;
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
     transform: scale(1.05);
 }

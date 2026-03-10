@@ -4,15 +4,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
 function initPlannerTab() {
     const gridEl = document.getElementById('miniCalGrid');
-    const calWrapper = document.querySelector('.mini-calendar-wrapper');
+    const calWrapper = document.getElementById('miniCalWrapper');
     const sliderEl = document.getElementById('dailySlider');
     const monthDisplay = document.getElementById('plannerMonthDisplay');
+    
     const sheet = document.getElementById('agendaBottomSheet');
-    const dragHandle = document.getElementById('sheetDragHandle');
+    const dragZone = document.getElementById('sheetDragZone');
     const sheetDateDisplay = document.getElementById('sheetDateDisplay');
     const bottomNav = document.getElementById('bottomNav');
     
-    // Target Inputs
     const pillsContainer = document.getElementById('subjectPillsContainer');
     const topicInput = document.getElementById('targetTopicInput');
 
@@ -21,7 +21,7 @@ function initPlannerTab() {
     let currentViewDate = new Date();
     currentViewDate.setDate(1); 
     let activeSelectedDateStr = null;
-    let currentSheetSubjectId = null; // NEW: Tracks the active pill
+    let currentSheetSubjectId = null;
 
     // --- DATA HELPERS ---
     const defaultSubjects = [{ id: 'off', name: 'Day Off', color: '#555555' }];
@@ -40,10 +40,10 @@ function initPlannerTab() {
         return `${y}-${m}-${d}`;
     };
 
-    window.forcePlannerRefresh = () => renderCalendarAndCards();
+    window.forcePlannerRefresh = () => renderCalendarAndCards(true);
 
     // --- RENDER MINI CALENDAR & DAILY CARDS ---
-    const renderCalendarAndCards = () => {
+    const renderCalendarAndCards = (skipAutoScroll = false) => {
         gridEl.innerHTML = '';
         sliderEl.innerHTML = '';
         
@@ -82,6 +82,8 @@ function initPlannerTab() {
             if (dateKey === activeSelectedDateStr) cell.classList.add('selected');
 
             const dayTask = targets[dateKey];
+            
+            // Apply new aesthetic CSS states
             if (dayTask) cell.classList.add('has-task');
             if (completed.includes(dateKey)) cell.classList.add('completed');
 
@@ -108,13 +110,13 @@ function initPlannerTab() {
             if (dayTask) {
                 const sub = subjects.find(s => s.id === dayTask.subjectId) || subjects[0];
                 cardContentHTML = `
-                    <div style="display:flex; flex-direction:column; gap: 6px;">
+                    <div style="display:flex; flex-direction:column; gap: 8px;">
                         <span class="subject-tag" style="background-color:${sub.color};">${sub.name}</span>
-                        <span class="daily-card-topic" style="font-size:1.05rem; white-space: normal;">${dayTask.topic || 'No topic details'}</span>
+                        <span class="daily-card-topic">${dayTask.topic || 'No topic details'}</span>
                     </div>
                 `;
             } else if (completed.includes(dateKey)) {
-                cardContentHTML = `<span style="color: #1fcc61; font-weight: bold;">Day Marked Complete</span>`;
+                cardContentHTML = `<span style="color: #1fcc61; font-weight: bold; font-size: 1.1rem;">Day Marked Complete</span>`;
             }
 
             card.innerHTML = `
@@ -129,93 +131,83 @@ function initPlannerTab() {
 
             // Card Click = Toggle Complete
             card.addEventListener('click', () => {
-                if (dateObj > todayObjReal) {
-                    alert("Cannot mark future days as complete.");
-                    return;
-                }
+                if (dateObj > todayObjReal) { alert("Cannot mark future days as complete."); return; }
 
                 let compArr = getCompleted();
-                if (compArr.includes(dateKey)) {
-                    compArr = compArr.filter(id => id !== dateKey);
-                } else {
+                if (compArr.includes(dateKey)) compArr = compArr.filter(id => id !== dateKey);
+                else {
                     compArr.push(dateKey);
                     if (navigator.vibrate) navigator.vibrate(50);
                 }
                 saveCompleted(compArr);
-                renderCalendarAndCards(); 
-
-                if (dateKey !== todayStr) {
-                    setTimeout(() => {
-                        const todayCard = document.getElementById(`card-${todayStr}`);
-                        if(todayCard) todayCard.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
-                    }, 400);
-                }
+                
+                // Freeze the exact scroll position
+                const currentScroll = sliderEl.scrollLeft;
+                renderCalendarAndCards(true); // Pass true to skip auto-scroll
+                sliderEl.scrollLeft = currentScroll;
+                
+                // Keep UI snapped exactly on the clicked card
+                setTimeout(() => {
+                    const currentCard = document.getElementById(`card-${dateKey}`);
+                    if(currentCard) currentCard.scrollIntoView({ behavior: 'auto', block: 'nearest', inline: 'center' });
+                }, 10);
             });
 
             sliderEl.appendChild(card);
         }
 
-        setTimeout(() => {
-            const todayCard = document.getElementById(`card-${todayStr}`);
-            if(todayCard) todayCard.scrollIntoView({ behavior: 'auto', block: 'nearest', inline: 'center' });
-        }, 100);
+        if (!skipAutoScroll) {
+            setTimeout(() => {
+                const todayCard = document.getElementById(`card-${todayStr}`);
+                if(todayCard) todayCard.scrollIntoView({ behavior: 'auto', block: 'nearest', inline: 'center' });
+            }, 100);
+        }
     };
 
     // --- BOTTOM SHEET LOGIC ---
     const openBottomSheet = (dateStr, dateObj) => {
         activeSelectedDateStr = dateStr;
-        sheetDateDisplay.textContent = dateObj.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+        sheetDateDisplay.textContent = `Plan: ${dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
         
         const targets = getTargets();
         const existingData = targets[dateStr];
         const subjects = getSubjects();
 
-        // 1. Determine which subject should be active
         currentSheetSubjectId = existingData ? existingData.subjectId : subjects[0].id;
 
-        // 2. Render Subject Pills
         pillsContainer.innerHTML = '';
         subjects.forEach(sub => {
             const btn = document.createElement('button');
             btn.className = `subject-pill ${sub.id === currentSheetSubjectId ? 'active' : ''}`;
             btn.textContent = sub.name;
             
-            // If active on load, paint it with her custom color
             if (sub.id === currentSheetSubjectId) {
                 btn.style.backgroundColor = sub.color;
                 btn.style.borderColor = sub.color;
-                btn.style.color = '#ffffff'; // Forces text to be bright white
+                btn.style.color = '#ffffff';
             }
 
-            // Handle Tap
             btn.addEventListener('click', (e) => {
-                e.preventDefault(); // Prevents accidental scrolling or form submission
+                e.preventDefault();
                 currentSheetSubjectId = sub.id;
                 
-                // Reset all pills
                 pillsContainer.querySelectorAll('.subject-pill').forEach(p => {
                     p.classList.remove('active');
                     p.style.backgroundColor = '';
                     p.style.borderColor = '';
-                    p.style.color = ''; // Reset to default muted color
+                    p.style.color = '';
                 });
                 
-                // Highlight tapped pill
                 btn.classList.add('active');
                 btn.style.backgroundColor = sub.color;
                 btn.style.borderColor = sub.color;
-                btn.style.color = '#ffffff'; // Highlight text
+                btn.style.color = '#ffffff';
             });
             
             pillsContainer.appendChild(btn);
         });
-            
-        // 3. Render Topic Text
-        if (existingData) {
-            topicInput.value = existingData.topic || '';
-        } else {
-            topicInput.value = '';
-        }
+
+        topicInput.value = existingData ? (existingData.topic || '') : '';
         
         if (bottomNav) bottomNav.classList.add('nav-hidden');
         sliderEl.classList.add('hidden');
@@ -233,14 +225,13 @@ function initPlannerTab() {
     // Save and Clear Targets
     document.getElementById('saveTargetBtn').addEventListener('click', () => {
         const textInput = topicInput.value.trim();
-        if (!textInput) { alert("Please enter a topic."); return; }
+        if (!textInput) { alert("Please enter a target to save."); return; }
 
         const targets = getTargets();
-        // Uses the currently tapped pill ID
         targets[activeSelectedDateStr] = { subjectId: currentSheetSubjectId, topic: textInput };
         saveTargets(targets);
         closeBottomSheet();
-        renderCalendarAndCards();
+        renderCalendarAndCards(true);
     });
 
     document.getElementById('clearTargetBtn').addEventListener('click', () => {
@@ -248,14 +239,14 @@ function initPlannerTab() {
         delete targets[activeSelectedDateStr];
         saveTargets(targets);
         closeBottomSheet();
-        renderCalendarAndCards();
+        renderCalendarAndCards(true);
     });
 
-    // --- DRAG PHYSICS (RESTRICTED TO HANDLE) ---
+    // --- MASSIVE DRAG ZONE PHYSICS ---
     let startY = 0;
     let currentY = 0;
-    dragHandle.addEventListener('touchstart', (e) => { startY = e.touches[0].clientY; }, { passive: true });
-    dragHandle.addEventListener('touchmove', (e) => {
+    dragZone.addEventListener('touchstart', (e) => { startY = e.touches[0].clientY; }, { passive: true });
+    dragZone.addEventListener('touchmove', (e) => {
         currentY = e.touches[0].clientY;
         const deltaY = currentY - startY;
         if (deltaY > 0) {
@@ -263,22 +254,22 @@ function initPlannerTab() {
             sheet.style.transition = 'none';
         }
     });
-    dragHandle.addEventListener('touchend', () => {
+    dragZone.addEventListener('touchend', () => {
         sheet.style.transition = 'transform 0.4s cubic-bezier(0.4, 0, 0.2, 1)';
         if (currentY - startY > 60) closeBottomSheet(); 
         else sheet.style.transform = ''; 
     });
 
-    // --- MINI CALENDAR SWIPE TO CHANGE MONTH ---
+    // --- BULLETPROOF MINI CALENDAR SWIPING ---
     let calTouchStartX = 0;
     calWrapper.addEventListener('touchstart', (e) => { calTouchStartX = e.changedTouches[0].screenX; }, { passive: true });
     calWrapper.addEventListener('touchend', (e) => {
         const calTouchEndX = e.changedTouches[0].screenX;
         if (calTouchEndX < calTouchStartX - 60) {
-            currentViewDate.setMonth(currentViewDate.getMonth() + 1); renderCalendarAndCards(); // Swipe Left -> Next
+            currentViewDate.setMonth(currentViewDate.getMonth() + 1); renderCalendarAndCards(true);
         }
         if (calTouchEndX > calTouchStartX + 60) {
-            currentViewDate.setMonth(currentViewDate.getMonth() - 1); renderCalendarAndCards(); // Swipe Right -> Prev
+            currentViewDate.setMonth(currentViewDate.getMonth() - 1); renderCalendarAndCards(true);
         }
     }, { passive: true });
 
@@ -310,8 +301,8 @@ function initPlannerTab() {
     };
 
     // --- BUTTON NAV ---
-    document.getElementById('plannerPrevMonth').addEventListener('click', () => { currentViewDate.setMonth(currentViewDate.getMonth() - 1); renderCalendarAndCards(); });
-    document.getElementById('plannerNextMonth').addEventListener('click', () => { currentViewDate.setMonth(currentViewDate.getMonth() + 1); renderCalendarAndCards(); });
+    document.getElementById('plannerPrevMonth').addEventListener('click', () => { currentViewDate.setMonth(currentViewDate.getMonth() - 1); renderCalendarAndCards(true); });
+    document.getElementById('plannerNextMonth').addEventListener('click', () => { currentViewDate.setMonth(currentViewDate.getMonth() + 1); renderCalendarAndCards(true); });
 
     // Boot
     renderCalendarAndCards();
