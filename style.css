@@ -470,7 +470,7 @@ input:checked + .slider:before { transform: translateX(24px); background-color: 
     position: absolute;
     top: 0;
     bottom: 0;
-    width: 25px; /* Width of the fade */
+    width: 40px; /* Width of the fade */
     z-index: 10;
     pointer-events: none; /* Allows user to still swipe through the fade */
 }
