@@ -470,7 +470,7 @@ input:checked + .slider:before { transform: translateX(24px); background-color: 
     position: absolute;
     top: 0;
     bottom: 0;
-    width: 40px; /* Width of the fade */
+    width: 30px; /* Width of the fade */
     z-index: 10;
     pointer-events: none; /* Allows user to still swipe through the fade */
 }
@@ -609,15 +609,33 @@ input:checked + .slider:before { transform: translateX(24px); background-color: 
 .subject-pill.active { color: #ffffff !important; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3); transform: scale(1.05); }
 
 /* =================================================================
-   13. UI POLISH (MODALS & COLOR PICKERS)
+   13. UI POLISH (MODALS, ALIGNMENT & COLOR PICKERS)
    ================================================================= */
+/* Perfect Alignment for the Add Row */
 .add-subject-row {
     display: flex;
-    gap: 12px;
-    align-items: center;
+    gap: 10px;
+    align-items: stretch; /* Forces all items to exactly match heights */
+    height: 45px; /* Fixed height for perfect uniformity */
 }
 
-/* Hack to make the native color picker look like a premium circle */
+.add-subject-row .settings-input {
+    flex: 1;
+    margin: 0;
+    padding: 0 15px;
+    border-radius: 12px;
+}
+
+.add-subject-row .btn-primary {
+    margin: 0;
+    padding: 0 15px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Flawless Circular Color Picker */
 .color-picker-wrapper {
     width: 45px;
     height: 45px;
@@ -625,30 +643,53 @@ input:checked + .slider:before { transform: translateX(24px); background-color: 
     overflow: hidden;
     border: 2px solid var(--color-glass-border);
     flex-shrink: 0;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+    background: transparent;
+    position: relative;
 }
 
 .color-input {
-    width: 150%;
-    height: 150%;
-    transform: translate(-20%, -20%);
+    position: absolute;
+    top: -10px; left: -10px;
+    width: 65px; height: 65px;
     cursor: pointer;
     border: none;
     padding: 0;
-    background: transparent;
+    background: none;
 }
 
-/* Enhancing the Subject List inside the modal */
+/* Kills the native square borders inside WebKit (Chrome/Safari/iOS) */
+.color-input::-webkit-color-swatch-wrapper { padding: 0; }
+.color-input::-webkit-color-swatch { border: none; border-radius: 50%; }
+
+/* Sleek Subject List & Delete Button */
 .subject-manager-item {
     display: flex;
     justify-content: space-between;
     align-items: center;
     background: rgba(255, 255, 255, 0.05);
-    padding: 12px 15px;
+    padding: 10px 15px;
     border-radius: 12px;
     border: 1px solid var(--color-glass-border);
     margin-bottom: 8px;
-    transition: background 0.2s;
 }
 
-.subject-manager-item:active { background: rgba(255, 255, 255, 0.1); }
+.subject-delete-btn {
+    background: rgba(255, 59, 59, 0.15);
+    border: 1px solid rgba(255, 59, 59, 0.3);
+    color: #ff5252;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    line-height: 1;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.subject-delete-btn:active {
+    transform: scale(0.9);
+    background: rgba(255, 59, 59, 0.4);
+}

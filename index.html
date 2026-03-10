@@ -261,12 +261,13 @@
                 <div class="color-picker-wrapper">
                     <input type="color" id="newSubjectColor" value="#ff3b3b" class="color-input" />
                 </div>
-                <input type="text" id="newSubjectName" class="settings-input" placeholder="New subject..." style="flex: 1; padding: 12px 15px;" />
-                <button id="addSubjectBtn" class="btn-primary" style="padding: 12px 20px; border-radius: 12px;">Add</button>
+                <input type="text" id="newSubjectName" class="settings-input" placeholder="New subject..." />
+                <button id="addSubjectBtn" class="btn-primary">Add</button>
             </div>
             
-            <div class="modal-buttons" style="margin-top: 25px;">
-                <button id="closeSubjectModalBtn" class="btn-secondary" style="width: 100%;">Done</button>
+            <div class="modal-buttons" style="margin-top: 25px; display: flex; gap: 10px;">
+                <button id="cancelSubjectModalBtn" class="btn-secondary" style="flex: 1; border: 1px solid var(--color-glass-border); background: rgba(255,255,255,0.05); border-radius: 12px;">Cancel</button>
+                <button id="closeSubjectModalBtn" class="btn-primary" style="flex: 1; border-radius: 12px;">Done</button>
             </div>
         </div>
     </div>

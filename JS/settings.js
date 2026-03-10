@@ -140,6 +140,7 @@ function setupSubjectManager() {
     const manageBtn = document.getElementById('manageSubjectsBtn');
     const modal = document.getElementById('subjectModalOverlay');
     const closeBtn = document.getElementById('closeSubjectModalBtn');
+    const cancelBtn = document.getElementById('cancelSubjectModalBtn'); // NEW: Cancel Button
     const addBtn = document.getElementById('addSubjectBtn');
     const subList = document.getElementById('subjectList');
 
@@ -175,11 +176,16 @@ function setupSubjectManager() {
     };
 
     manageBtn.addEventListener('click', () => { renderSubjects(); modal.style.display = 'flex'; });
-    closeBtn.addEventListener('click', () => { 
+    
+    // NEW: Unified handler to close modal and sync data
+    const closeModalHandler = () => { 
         modal.style.display = 'none'; 
         // Force planner to refresh if it's already rendered
         if (typeof window.forcePlannerRefresh === 'function') window.forcePlannerRefresh();
-    });
+    };
+
+    closeBtn.addEventListener('click', closeModalHandler);
+    if (cancelBtn) cancelBtn.addEventListener('click', closeModalHandler); // Wired the cancel button
 
     addBtn.addEventListener('click', () => {
         const nameInput = document.getElementById('newSubjectName');

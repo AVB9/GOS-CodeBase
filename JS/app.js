@@ -119,3 +119,15 @@ function initSmartUI() {
         });
     }
 }
+
+// --- GLOBAL MODAL BEHAVIOR ---
+// Click outside any modal overlay to close it
+document.addEventListener('click', (e) => {
+    if (e.target.classList.contains('modal-overlay')) {
+        e.target.style.display = 'none';
+        // Force a planner refresh just in case it was the subject modal
+        if (e.target.id === 'subjectModalOverlay' && typeof window.forcePlannerRefresh === 'function') {
+            window.forcePlannerRefresh();
+        }
+    }
+});
