@@ -157,6 +157,19 @@
                 </div>
 
                 <div class="glass-panel settings-card">
+                    <h3 class="settings-title">Date Change</h3>
+                    <div class="settings-group toggle-group" style="display: flex; align-items: center;">
+                        <label>
+                            Wanna swipe anywhere on the screen to change dates in Todo & Journal? 
+                        </label>
+                        <label class="switch">
+                            <input type="checkbox" id="globalSwipeToggle" checked>
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="glass-panel settings-card">
                     <h3 class="settings-title">Appearance</h3>
                     <div class="settings-group toggle-group">
                         <label>Crazxyy Dark Mode</label>
@@ -272,5 +285,17 @@
         </div>
     </div>
     
+    <div id="datePickerModalOverlay" class="modal-overlay" style="display: none;">
+        <div class="modal-box glass-panel">
+            <h2 style="text-align: center; margin-bottom: 20px;">Jump to Date</h2>
+            <input type="date" id="globalDatePickerInput" class="settings-input" style="width: 100%; margin-bottom: 25px; color-scheme: dark; padding: 15px;" />
+            
+            <div class="modal-buttons" style="display: flex; gap: 10px;">
+                <button id="closeDatePickerBtn" class="btn-secondary" style="flex: 1; border: 1px solid var(--color-glass-border); background: rgba(255,255,255,0.05); border-radius: 12px;">Cancel</button>
+                <button id="confirmDatePickerBtn" class="btn-primary" style="flex: 1; border-radius: 12px;">Go</button>
+            </div>
+        </div>
+    </div>
+
 </body>
 </html>

@@ -351,4 +351,25 @@ function initPlannerTab() {
     // Boot
     renderCalendarAndCards();
     window.updateHomeWidget();
+    
+    // --- FIX: SCROLL TO TODAY WHEN TAB BECOMES VISIBLE ---
+    const plannerTab = document.getElementById('tab-planner');
+    if (plannerTab) {
+        const tabObserver = new IntersectionObserver((entries) => {
+            if (entries[0].isIntersecting) {
+                // The moment the tab is actually displayed on screen, scroll to today!
+                const todayStr = getDateKey(new Date());
+                const todayCard = document.getElementById(`card-${todayStr}`);
+                
+                if (todayCard) {
+                    // A tiny 50ms delay ensures the browser has fully painted the CSS before scrolling
+                    setTimeout(() => {
+                        todayCard.scrollIntoView({ behavior: 'auto', block: 'nearest', inline: 'center' });
+                    }, 50);
+                }
+            }
+        }, { threshold: 0.01 }); // Triggers as soon as 1% of the tab is visible
+        
+        tabObserver.observe(plannerTab);
+    }
 }
