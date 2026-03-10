@@ -186,7 +186,9 @@ function initPlannerTab() {
     // --- BOTTOM SHEET LOGIC ---
     const openBottomSheet = (dateStr, dateObj) => {
         activeSelectedDateStr = dateStr;
-        sheetDateDisplay.textContent = `${dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
+        
+        // FIX: Display full format (e.g., 2 March 2026)
+        sheetDateDisplay.textContent = dateObj.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
         
         const targets = getTargets();
         const existingData = targets[dateStr];
@@ -326,6 +328,10 @@ function initPlannerTab() {
     returnTodayBtn.addEventListener('click', () => {
         currentViewDate = new Date();
         currentViewDate.setDate(1); 
+        
+        // FIX: Clear the "Selected" memory so the ring doesn't stay on the old day
+        activeSelectedDateStr = null; 
+        
         renderCalendarAndCards(false); 
         if (navigator.vibrate) navigator.vibrate(50);
     });
