@@ -307,30 +307,39 @@ function initPlannerTab() {
         }
     }, { passive: true });
 
-    // --- HOME WIDGET UPDATE LOGIC ---
+// --- HOME WIDGET UPDATE LOGIC (NEET OS EXACT MATCH) ---
     window.updateHomeWidget = () => {
-        const targetValue = document.getElementById('targetValue');
-        const targetSubText = document.getElementById('targetSubText');
-        if(!targetValue || !targetSubText) return;
+        const taskContainer = document.getElementById('dashTaskContainer');
+        const widgetCard = document.getElementById('homeTargetWidget');
+        if(!taskContainer) return;
 
         const targets = getTargets();
         const subjects = getSubjects();
         const todayStr = getDateKey(new Date());
         const dayTask = targets[todayStr];
 
-        if (dayTask) {
+        // If there is a task AND it's not the "Day Off" subject
+        if (dayTask && dayTask.subjectId !== 'off') {
             const sub = subjects.find(s => s.id === dayTask.subjectId) || subjects[0];
-            targetValue.style.display = 'block'; 
-            targetValue.textContent = sub.name;
-            targetValue.style.color = sub.color;
-            targetValue.style.fontSize = '1.8rem';
-            targetSubText.innerHTML = `<div style="font-size: 0.95rem; color: var(--color-text); margin-top: 5px;">${dayTask.topic}</div>`;
+            
+            taskContainer.innerHTML = `
+                <div class="task-preview" style="border-left-color: ${sub.color};">
+                    <div class="task-preview-subject" style="color: ${sub.color};">${sub.name}</div>
+                    <div class="task-preview-topic">${dayTask.topic}</div>
+                </div>
+            `;
         } else {
-            targetValue.style.display = 'block';
-            targetValue.textContent = '---';
-            targetValue.style.color = 'var(--color-primary)';
-            targetValue.style.fontSize = '2.5rem';
-            targetSubText.innerHTML = 'No target set for today.';
+            // Naked NEET OS State: No vertical line, just muted text
+            taskContainer.innerHTML = `<div style="color:var(--color-text-muted); margin-top:10px;">No task scheduled for today.</div>`;
+        }
+
+        // Add the click-to-navigate functionality
+        if (widgetCard && !widgetCard.dataset.wired) {
+            widgetCard.dataset.wired = "true"; 
+            widgetCard.addEventListener('click', () => {
+                const plannerNavBtn = document.querySelector('.bottom-pill-btn[data-target="tab-planner"]');
+                if (plannerNavBtn) plannerNavBtn.click(); 
+            });
         }
     };
 

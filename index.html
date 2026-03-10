@@ -14,7 +14,15 @@
     <script src="JS/journal.js" defer></script>
 </head>
 <body>
-    <main id="app-container">
+    <div id="appPreloader" class="preloader">
+        <div class="preloader-content">
+            <div class="preloader-icon" id="preloaderIcon"></div>
+            <h2 class="preloader-text" id="preloaderGreeting">...</h2>
+        </div>
+    </div>
+    
+    <main id="app-container" class="app-hidden">
+   
         
         <section id="tab-journal" class="app-tab">
             <div class="central-column" style="height: 100%; display: flex; flex-direction: column;">
@@ -106,10 +114,13 @@
                         <div class="bento-sub" id="goalDisplayText">Set your goal...</div>
                     </article>
 
-                    <article class="glass-panel bento-card">
-                        <div class="bento-title">Today's Target</div>
-                        <div class="bento-value" id="targetValue">---</div>
-                        <div class="bento-sub" id="targetSubText">Pulling from planner...</div>
+                    <article class="glass-panel bento-card" id="homeTargetWidget" style="cursor: pointer;">
+                        <div class="bento-title" style="display: flex; justify-content: space-between; align-items: center;">
+                            Today's Target ↗
+                        </div>
+                        <div id="dashTaskContainer" style="flex: 1; display: flex; flex-direction: column; justify-content: center;">
+                            <div style="color:var(--color-text-muted); margin-top:10px; font-style: italic;">Pulling from planner...</div>
+                        </div>
                     </article>
                 </div>
             </div>
@@ -239,7 +250,7 @@
         <div class="modal-box glass-panel">
             <h2>Your Ultimate Goal</h2>
             <input type="text" id="goalInput" placeholder="Enter your ultimate goal..." />
-            <input type="date" id="goalDateInput" />
+            <input type="date" id="goalDateInput" class="settings-input" style="width: 100%; padding: 15px; margin-bottom: 20px; color-scheme: dark;" />
             <div class="modal-buttons">
                 <button id="closeGoalModalBtn" class="btn-secondary">Cancel</button>
                 <button id="saveGoalBtn" class="btn-primary">Save Goal</button>

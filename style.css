@@ -152,6 +152,32 @@ button { font-family: inherit; }
 }
 .date-display { font-weight: 600; font-size: 0.95rem; min-width: 80px; text-align: center; color: var(--color-text); }
 
+/* NEET OS Style Task Preview (For Home Widget) */
+.task-preview {
+    border-left: 3px solid var(--color-primary); /* Dynamically overridden by JS */
+    padding-left: 15px;
+    margin-top: 5px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.task-preview-subject {
+    font-size: 0.8rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    /* Color injected by JS */
+}
+
+.task-preview-topic {
+    font-size: 1.3rem;
+    font-weight: 600;
+    color: var(--color-text);
+    line-height: 1.3;
+    word-break: break-word;
+}
+
 /* =================================================================
    6. TAB-SPECIFIC OVERRIDES
    ================================================================= */
@@ -721,3 +747,113 @@ input:checked + .slider:before { transform: translateX(24px); background-color: 
     transform: scale(0.9);
     background: rgba(255, 59, 59, 0.4);
 }
+
+/* =================================================================
+   CLEAN DATE PICKERS (Hiding Native Mobile Icons)
+   ================================================================= */
+input[type="date"] {
+    position: relative;
+    appearance: none; /* Strips native OS styling */
+    -webkit-appearance: none;
+    font-family: inherit;
+}
+
+/* This targets the ugly native calendar/dropdown icon. 
+  We make it invisible (opacity: 0) and stretch it over the entire input 
+  so tapping ANYWHERE on the box opens the calendar!
+*/
+input[type="date"]::-webkit-calendar-picker-indicator {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0; 
+    cursor: pointer;
+    background: transparent;
+}
+
+/* Removes the inner spin buttons sometimes added by old browsers */
+input[type="date"]::-webkit-inner-spin-button,
+input[type="date"]::-webkit-clear-button {
+    display: none;
+}
+
+/* =================================================================
+   PREMIUM "DIVE-IN" PRELOADER
+   ================================================================= */
+.preloader {
+    position: fixed;
+    top: 0; left: 0; width: 100vw; height: 100vh;
+    background: var(--color-bg); 
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    /* The 3D Dive Transition */
+    transition: opacity 0.8s ease-in-out, visibility 0.8s, transform 0.8s ease-in, filter 0.8s ease-in;
+}
+
+.preloader-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+    position: relative;
+    z-index: 2;
+}
+
+/* Ambient Breathing Glow behind the logo */
+.preloader-content::before {
+    content: ''; 
+    position: absolute; 
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 150px; height: 150px;
+    background: var(--color-primary);
+    filter: blur(70px); 
+    opacity: 0;
+    border-radius: 50%;
+    animation: breathingGlow 3s ease-in-out infinite alternate;
+    z-index: -1;
+}
+
+/* The Magic Exit: Zooms in and blurs like glass clearing */
+.preloader.hidden {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transform: scale(1.15);
+    filter: blur(10px);
+}
+
+.preloader-icon svg {
+    width: 50px; height: 50px;
+    stroke: var(--color-text); /* White/Silver looks more premium here than red */
+    stroke-width: 1.5; /* Thinner, more elegant lines */
+    opacity: 0;
+    animation: smoothFade 1s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}
+
+.preloader-text {
+    font-size: 1.4rem;
+    font-weight: 500;
+    letter-spacing: 2px; /* Cinematic spacing */
+    color: var(--color-text);
+    opacity: 0;
+    animation: smoothFade 1s cubic-bezier(0.2, 0.8, 0.2, 1) 0.3s forwards;
+}
+
+@keyframes smoothFade {
+    from { opacity: 0; transform: translateY(15px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes breathingGlow {
+    from { opacity: 0.1; transform: translate(-50%, -50%) scale(0.8); }
+    to { opacity: 0.25; transform: translate(-50%, -50%) scale(1.2); }
+}
+
+/* App Background Reveal */
+#app-container { transition: opacity 1s ease 0.3s, transform 1s ease 0.3s; transform: scale(0.98); } 
+#app-container.app-hidden { opacity: 0; transform: scale(1); }
