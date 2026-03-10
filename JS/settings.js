@@ -140,9 +140,13 @@ function setupSubjectManager() {
     const manageBtn = document.getElementById('manageSubjectsBtn');
     const modal = document.getElementById('subjectModalOverlay');
     const closeBtn = document.getElementById('closeSubjectModalBtn');
-    const cancelBtn = document.getElementById('cancelSubjectModalBtn'); // NEW: Cancel Button
+    const cancelBtn = document.getElementById('cancelSubjectModalBtn'); 
     const addBtn = document.getElementById('addSubjectBtn');
     const subList = document.getElementById('subjectList');
+
+    // NEW: Get the color picker elements
+    const colorInput = document.getElementById('newSubjectColor');
+    const colorWrapper = document.getElementById('colorPickerWrapper');
 
     if (!manageBtn || !modal) return;
 
@@ -175,27 +179,36 @@ function setupSubjectManager() {
         });
     };
 
+    // NEW: Update the circular wrapper color in real-time as she picks a color!
+    if (colorInput && colorWrapper) {
+        colorInput.addEventListener('input', (e) => {
+            colorWrapper.style.backgroundColor = e.target.value;
+        });
+    }
+
     manageBtn.addEventListener('click', () => { renderSubjects(); modal.style.display = 'flex'; });
     
-    // NEW: Unified handler to close modal and sync data
     const closeModalHandler = () => { 
         modal.style.display = 'none'; 
-        // Force planner to refresh if it's already rendered
         if (typeof window.forcePlannerRefresh === 'function') window.forcePlannerRefresh();
     };
 
     closeBtn.addEventListener('click', closeModalHandler);
-    if (cancelBtn) cancelBtn.addEventListener('click', closeModalHandler); // Wired the cancel button
+    if (cancelBtn) cancelBtn.addEventListener('click', closeModalHandler);
 
     addBtn.addEventListener('click', () => {
         const nameInput = document.getElementById('newSubjectName');
-        const colorInput = document.getElementById('newSubjectColor');
         const name = nameInput.value.trim();
         if (name) {
             const subjects = getSubjects();
             subjects.push({ id: 'sub_' + Date.now(), name: name, color: colorInput.value });
             saveSubjects(subjects);
+            
+            // Reset the form
             nameInput.value = '';
+            colorInput.value = '#ff3b3b'; 
+            if (colorWrapper) colorWrapper.style.backgroundColor = '#ff3b3b'; // Reset the UI circle
+            
             renderSubjects();
         }
     });

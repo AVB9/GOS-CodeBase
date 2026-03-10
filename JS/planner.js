@@ -30,6 +30,18 @@ function initPlannerTab() {
     const defaultSubjects = [{ id: 'off', name: 'Day Off', color: '#555555' }];
     const getSubjects = () => JSON.parse(localStorage.getItem('plannerSubjects')) || defaultSubjects;
     
+    // NEW: Smart Contrast Calculator (Returns black or white based on background brightness)
+    const getContrastColor = (hex) => {
+        if (!hex) return '#ffffff';
+        hex = hex.replace('#', '');
+        if (hex.length === 3) hex = hex.split('').map(x => x + x).join('');
+        const r = parseInt(hex.substring(0,2), 16);
+        const g = parseInt(hex.substring(2,4), 16);
+        const b = parseInt(hex.substring(4,6), 16);
+        const yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
+        return (yiq >= 128) ? '#000000' : '#ffffff';
+    };
+    
     const getTargets = () => JSON.parse(localStorage.getItem('plannerTargets')) || {};
     const saveTargets = (targs) => { localStorage.setItem('plannerTargets', JSON.stringify(targs)); window.updateHomeWidget(); };
 
@@ -111,9 +123,11 @@ function initPlannerTab() {
             
             if (dayTask) {
                 const sub = subjects.find(s => s.id === dayTask.subjectId) || subjects[0];
+                const textColor = getContrastColor(sub.color); // Calculates optimal text color
+                
                 cardContentHTML = `
                     <div style="display:flex; flex-direction:column; gap: 8px;">
-                        <span class="subject-tag" style="background-color:${sub.color};">${sub.name}</span>
+                        <span class="subject-tag" style="background-color:${sub.color}; color:${textColor};">${sub.name}</span>
                         <span class="daily-card-topic">${dayTask.topic || 'No topic details'}</span>
                     </div>
                 `;
@@ -187,7 +201,6 @@ function initPlannerTab() {
     const openBottomSheet = (dateStr, dateObj) => {
         activeSelectedDateStr = dateStr;
         
-        // FIX: Display full format (e.g., 2 March 2026)
         sheetDateDisplay.textContent = dateObj.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
         
         const targets = getTargets();
@@ -205,7 +218,7 @@ function initPlannerTab() {
             if (sub.id === currentSheetSubjectId) {
                 btn.style.backgroundColor = sub.color;
                 btn.style.borderColor = sub.color;
-                btn.style.color = '#ffffff';
+                btn.style.color = getContrastColor(sub.color); // Smart text color
             }
 
             btn.addEventListener('click', (e) => {
@@ -222,7 +235,7 @@ function initPlannerTab() {
                 btn.classList.add('active');
                 btn.style.backgroundColor = sub.color;
                 btn.style.borderColor = sub.color;
-                btn.style.color = '#ffffff';
+                btn.style.color = getContrastColor(sub.color); // Smart text color
             });
             
             pillsContainer.appendChild(btn);
@@ -329,7 +342,6 @@ function initPlannerTab() {
         currentViewDate = new Date();
         currentViewDate.setDate(1); 
         
-        // FIX: Clear the "Selected" memory so the ring doesn't stay on the old day
         activeSelectedDateStr = null; 
         
         renderCalendarAndCards(false); 
