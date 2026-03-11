@@ -247,15 +247,96 @@ button { font-family: inherit; }
 .todo-input-group button:active {
     transform: scale(0.9);
 }
-.todo-list { list-style: none; display: flex; flex-direction: column; gap: 10px; }
-.todo-item { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 15px; padding: 15px; display: flex; align-items: center; gap: 15px; }
-.todo-checkbox { width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--color-text-muted); appearance: none; -webkit-appearance: none; outline: none; cursor: pointer; position: relative; flex-shrink: 0; }
-.todo-checkbox:checked { background-color: var(--color-primary); border-color: var(--color-primary); }
-.todo-checkbox:checked::after { content: '✓'; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: white; font-size: 12px; font-weight: bold; }
-.todo-text { flex: 1; font-size: 1rem; transition: color 0.3s ease; }
-.todo-item.done .todo-text { color: var(--color-text-muted); text-decoration: line-through; }
-.todo-delete { background: none; border: none; color: var(--color-text-muted); font-size: 1.5rem; cursor: pointer; padding: 0 5px; }
-.todo-item.dragging { opacity: 0.6; transform: scale(0.98); border-color: var(--color-primary); z-index: 100; }
+/* =================================================================
+   TODO LIST ITEMS (Smooth Drag, Wrapping & Anti-Select)
+   ================================================================= */
+.todo-list { 
+    list-style: none; 
+    display: flex; 
+    flex-direction: column; 
+    gap: 10px; 
+}
+
+.todo-item { 
+    background: var(--color-surface); 
+    border: 1px solid var(--color-border); 
+    border-radius: 15px; 
+    padding: 15px; 
+    display: flex; 
+    align-items: flex-start; /* Changed to flex-start so multi-line text aligns properly */
+    gap: 15px; 
+    transition: all 0.2s ease;
+    
+    /* THE FIX: Disables OS text selection so holding triggers drag instantly */
+    user-select: none; 
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+}
+
+.todo-checkbox { 
+    width: 22px; 
+    height: 22px; 
+    border-radius: 50%; 
+    border: 2px solid var(--color-text-muted); 
+    appearance: none; 
+    -webkit-appearance: none; 
+    outline: none; 
+    cursor: pointer; 
+    position: relative; 
+    flex-shrink: 0; 
+    margin-top: 2px; /* Aligns circle with the first line of wrapped text */
+}
+
+.todo-checkbox:checked { 
+    background-color: var(--color-primary); 
+    border-color: var(--color-primary); 
+}
+
+.todo-checkbox:checked::after { 
+    content: '✓'; 
+    position: absolute; 
+    top: 50%; left: 50%; 
+    transform: translate(-50%, -50%); 
+    color: white; 
+    font-size: 12px; 
+    font-weight: bold; 
+}
+
+.todo-text { 
+    flex: 1; 
+    font-size: 1rem; 
+    transition: color 0.3s ease; 
+    line-height: 1.4; /* Breathing room for multiple lines */
+    word-break: break-word; /* Forces long unbroken URLs or text to wrap */
+    white-space: normal; 
+}
+
+.todo-item.done .todo-text { 
+    color: var(--color-text-muted); 
+    text-decoration: line-through; 
+}
+
+.todo-delete { 
+    background: none; 
+    border: none; 
+    color: var(--color-text-muted); 
+    font-size: 1.5rem; 
+    cursor: pointer; 
+    padding: 0 5px; 
+    flex-shrink: 0; /* Prevents button from getting squished by long text */
+    margin-top: -2px; /* Visually aligns the 'x' with the first line of text */
+}
+
+/* Premium Visual Feedback when an item is picked up */
+.todo-item.dragging { 
+    opacity: 0.95; 
+    transform: scale(1.02); /* Slight pop-up effect feels more physical */
+    border-color: var(--color-primary); 
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
+    z-index: 100; 
+    position: relative;
+    transition: none; /* CRUCIAL: Removes CSS lag so it glides smoothly with your thumb */
+}
 
 /* Journal */
 .journal-textarea {
@@ -857,3 +938,91 @@ input[type="date"]::-webkit-clear-button {
 /* App Background Reveal */
 #app-container { transition: opacity 1s ease 0.3s, transform 1s ease 0.3s; transform: scale(0.98); } 
 #app-container.app-hidden { opacity: 0; transform: scale(1); }
+
+/* =================================================================
+   TODO SUBJECT TRAY, HEADINGS & PLAIN PILLS
+   ================================================================= */
+.todo-subject-tray {
+    position: absolute;
+    bottom: 100%; /* Sits exactly on top of the floating input */
+    left: 0;
+    width: 100%;
+    padding-bottom: 15px;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(15px);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    pointer-events: none;
+}
+
+.todo-subject-tray.active {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+    pointer-events: auto;
+}
+
+/* Inactive State: Plain Frosted Glass */
+.todo-tint-pill {
+    padding: 6px 14px;
+    border-radius: 20px; /* Highly rounded to match floating input */
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    background: rgba(255, 255, 255, 0.05); /* Plain frosted */
+    color: var(--color-text-muted);
+    border: 1px solid var(--color-glass-border);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    transition: all 0.2s ease;
+}
+
+.todo-tint-pill:active { transform: scale(0.92); }
+
+/* Active State: Receives dynamic color from JS */
+.todo-tint-pill.selected {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+}
+
+/* New Subject Headings separating grouped tasks */
+.todo-subject-header {
+    margin-top: 15px;
+    margin-bottom: 5px;
+    font-size: 0.85rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    padding-left: 5px;
+    list-style: none; /* Removes the dot */
+}
+
+/* =================================================================
+   CINEMATIC BACKGROUND & NOISE
+   ================================================================= */
+.dynamic-bg {
+    position: fixed;
+    top: 0; left: 0; width: 100vw; height: 100vh;
+    background-color: var(--color-bg); /* Fallback dark color */
+    background-size: cover;
+    background-position: center;
+    /* The magic: Heavy blur and darkened fade */
+    filter: blur(25px) brightness(0.35); 
+    transform: scale(1.15); /* Scales up slightly so the blur doesn't create white edges */
+    z-index: -2;
+    transition: background-image 1s ease-in-out;
+}
+
+.noise-overlay {
+    position: fixed;
+    top: 0; left: 0; width: 100vw; height: 100vh;
+    /* Pure mathematical film grain */
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+    opacity: 0.05; /* Just enough to add texture */
+    z-index: -1;
+    pointer-events: none; /* Lets clicks pass through to the app */
+}

@@ -213,3 +213,118 @@ function setupSubjectManager() {
         }
     });
 }
+
+function initAesthetics() {
+    // --- 1. MATCHY-MATCHY ACCENT COLOR ;)---
+    const themeInput = document.getElementById('themeColorPicker');
+    const themeWrapper = document.getElementById('themeColorWrapper');
+    
+    // Load saved color or default to red
+    const savedThemeColor = localStorage.getItem('appAccentColor') || '#ff3b3b';
+    
+    // Inject it globally into CSS variables!
+    document.documentElement.style.setProperty('--color-primary', savedThemeColor);
+    if(themeWrapper) themeWrapper.style.backgroundColor = savedThemeColor;
+    if(themeInput) themeInput.value = savedThemeColor;
+
+    // Listen for live color changes
+    if (themeInput) {
+        themeInput.addEventListener('input', (e) => {
+            const newColor = e.target.value;
+            themeWrapper.style.backgroundColor = newColor;
+            document.documentElement.style.setProperty('--color-primary', newColor);
+            localStorage.setItem('appAccentColor', newColor);
+        });
+    }
+
+    // --- 2. BLURRED FADED BACKGROUND UPLOAD ---
+    const bgContainer = document.getElementById('dynamicBackground');
+    const uploader = document.getElementById('bgUploader');
+    const clearBtn = document.getElementById('clearBgBtn');
+
+    // Load saved background
+    const savedBg = localStorage.getItem('appCustomBg');
+    if (savedBg && bgContainer) {
+        bgContainer.style.backgroundImage = `url(${savedBg})`;
+    }
+
+    if (uploader) {
+        uploader.addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const img = new Image();
+                img.onload = () => {
+                    // COMPRESSION ENGINE: Scales down massive 4K phone photos 
+                    // so they don't crash the 5MB localStorage limit.
+                    const canvas = document.createElement('canvas');
+                    const MAX_WIDTH = 600; // It's blurred anyway, so low-res is perfect!
+                    const scaleSize = MAX_WIDTH / img.width;
+                    
+                    canvas.width = MAX_WIDTH;
+                    canvas.height = img.height * scaleSize;
+
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+                    // Compress to JPEG at 60% quality
+                    const dataUrl = canvas.toDataURL('image/jpeg', 0.6); 
+                    
+                    try {
+                        localStorage.setItem('appCustomBg', dataUrl);
+                        if (bgContainer) bgContainer.style.backgroundImage = `url(${dataUrl})`;
+                    } catch (err) {
+                        alert("Image is too large to save! Try a smaller picture.");
+                    }
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        });
+    }
+
+    if (clearBtn) {
+        clearBtn.addEventListener('click', () => {
+            localStorage.removeItem('appCustomBg');
+            if (bgContainer) bgContainer.style.backgroundImage = 'none';
+            if (uploader) uploader.value = '';
+        });
+    }
+}
+
+// Ensure this runs on boot
+document.addEventListener('DOMContentLoaded', () => {
+    initAesthetics();
+});
+
+// --- 1.5 MAIN TEXT COLOR ---
+    const textInput = document.getElementById('textColorPicker');
+    const textWrapper = document.getElementById('textColorWrapper');
+    
+    // Load saved text color or default to white
+    const savedTextColor = localStorage.getItem('appTextColor') || '#ffffff';
+    
+    // Inject it globally into CSS variables (targeting both standard and bright text variables)
+    document.documentElement.style.setProperty('--color-text', savedTextColor);
+    document.documentElement.style.setProperty('--color-text-bright', savedTextColor);
+    document.documentElement.style.setProperty('--color-text-default', savedTextColor);
+    
+    if(textWrapper) textWrapper.style.backgroundColor = savedTextColor;
+    if(textInput) textInput.value = savedTextColor;
+
+    // Listen for live color changes
+    if (textInput) {
+        textInput.addEventListener('input', (e) => {
+            const newColor = e.target.value;
+            textWrapper.style.backgroundColor = newColor;
+            
+            // Apply to all primary text variables
+            document.documentElement.style.setProperty('--color-text', newColor);
+            document.documentElement.style.setProperty('--color-text-bright', newColor);
+            document.documentElement.style.setProperty('--color-text-default', newColor);
+            
+            localStorage.setItem('appTextColor', newColor);
+        });
+    }

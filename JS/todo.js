@@ -10,17 +10,31 @@ function initTodoTab() {
     const prevBtn = document.getElementById('todoPrevDay');
     const nextBtn = document.getElementById('todoNextDay');
     const dateDisplay = document.getElementById('todoDateDisplay');
+    const tray = document.getElementById('todoSubjectTray');
 
     if (!input || !addBtn || !listEl || !dateDisplay) return;
 
     let currentDate = new Date();
     let tasks = [];
+    let selectedSubjectId = null;
 
     const getDateKey = (date) => {
         const y = date.getFullYear();
         const m = String(date.getMonth() + 1).padStart(2, '0');
         const d = String(date.getDate()).padStart(2, '0');
         return `todo_${y}-${m}-${d}`;
+    };
+
+    const getSubjects = () => JSON.parse(localStorage.getItem('plannerSubjects')) || [{ id: 'off', name: 'Day Off', color: '#555555' }];
+
+    const hexToRgba = (hex, alpha) => {
+        if (!hex) return `rgba(255,255,255,${alpha})`;
+        hex = hex.replace('#', '');
+        if (hex.length === 3) hex = hex.split('').map(x => x + x).join('');
+        const r = parseInt(hex.substring(0,2), 16);
+        const g = parseInt(hex.substring(2,4), 16);
+        const b = parseInt(hex.substring(4,6), 16);
+        return `rgba(${r}, ${g}, ${b}, ${alpha})`;
     };
 
     const updateDateDisplay = () => {
@@ -46,8 +60,62 @@ function initTodoTab() {
         localStorage.setItem(getDateKey(currentDate), JSON.stringify(tasks));
     };
 
+    // --- INSTANT REACTIVITY LINK ---
+    // Safely attaches to the Planner refresh to update Todo tray simultaneously
+    const existingRefresh = window.forcePlannerRefresh;
+    window.forcePlannerRefresh = () => {
+        if (existingRefresh) existingRefresh();
+        if (window.forceTodoRefresh) window.forceTodoRefresh();
+    };
+
+    window.forceTodoRefresh = () => {
+        renderSubjectTray();
+        renderTasks(); // Updates any changed subject names/colors in the UI
+    };
+
+    // --- SUBJECT TRAY LOGIC ---
+    const renderSubjectTray = () => {
+        if (!tray) return;
+        tray.innerHTML = '';
+        const subjects = getSubjects().filter(s => s.id !== 'off');
+
+        subjects.forEach(sub => {
+            const pill = document.createElement('div');
+            pill.className = `todo-tint-pill ${selectedSubjectId === sub.id ? 'selected' : ''}`;
+            pill.textContent = sub.name;
+            
+            // Dynamic Color vs Plain Frosted
+            if (selectedSubjectId === sub.id) {
+                pill.style.backgroundColor = hexToRgba(sub.color, 0.2);
+                pill.style.borderColor = sub.color;
+                pill.style.color = sub.color;
+            } else {
+                pill.style.backgroundColor = '';
+                pill.style.borderColor = '';
+                pill.style.color = '';
+            }
+
+            pill.addEventListener('mousedown', (e) => {
+                e.preventDefault(); 
+                selectedSubjectId = selectedSubjectId === sub.id ? null : sub.id;
+                renderSubjectTray(); 
+            });
+
+            tray.appendChild(pill);
+        });
+    };
+
+    input.addEventListener('focus', () => tray.classList.add('active'));
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('#floatingTodoInput')) {
+            tray.classList.remove('active');
+        }
+    });
+
+    // --- RENDER TASKS (WITH SMART HEADINGS) ---
     const updateArrayOrderFromDOM = () => {
         const newArray = [];
+        // Only grab actual items, ignoring the header text
         listEl.querySelectorAll('.todo-item').forEach(item => {
             const originalIndex = parseInt(item.dataset.index);
             newArray.push(tasks[originalIndex]);
@@ -64,10 +132,32 @@ function initTodoTab() {
             return;
         }
 
+        const subjects = getSubjects();
+        let currentSubject = null;
+
         tasks.forEach((task, index) => {
+            // Grouping Logic: Inject a heading when the subject changes
+            if (task.subjectId) {
+                if (task.subjectId !== currentSubject) {
+                    currentSubject = task.subjectId;
+                    const sub = subjects.find(s => s.id === task.subjectId);
+                    if (sub) {
+                        const hdr = document.createElement('li');
+                        hdr.className = 'todo-subject-header';
+                        hdr.style.color = sub.color;
+                        hdr.textContent = sub.name;
+                        listEl.appendChild(hdr);
+                    }
+                }
+            } else {
+                currentSubject = null; // Resets tracker if untagged
+            }
+
+            // Render standard list item
             const li = document.createElement('li');
             li.className = `todo-item ${task.done ? 'done' : ''}`;
             li.dataset.index = index;
+            li.dataset.taskId = task.id; 
             
             li.innerHTML = `
                 <input type="checkbox" class="todo-checkbox" ${task.done ? 'checked' : ''}>
@@ -87,6 +177,7 @@ function initTodoTab() {
                 renderTasks();
             });
 
+            // Drag and Drop
             let holdTimer;
             let isDragging = false;
 
@@ -100,10 +191,16 @@ function initTodoTab() {
 
             li.addEventListener('touchmove', (e) => {
                 if (!isDragging) { clearTimeout(holdTimer); return; }
-                e.preventDefault(); 
+                e.preventDefault(); // Prevents the screen from scrolling
                 
                 const touch = e.touches[0];
+                
+                // THE SMOOTH TRICK: Momentarily make the dragged item "invisible" to touch 
+                // so document.elementFromPoint can see exactly what task is underneath it.
+                li.style.pointerEvents = 'none';
                 const target = document.elementFromPoint(touch.clientX, touch.clientY);
+                li.style.pointerEvents = 'auto'; // Turn it back on immediately
+                
                 const overItem = target?.closest('.todo-item');
                 
                 if (overItem && overItem !== li) {
@@ -132,37 +229,51 @@ function initTodoTab() {
         });
     };
 
+    // --- ADD TASK ---
     const addTask = () => {
         const text = input.value.trim();
         if (text) {
-            tasks.push({ text, done: false });
+            const newTask = { id: Date.now(), text: text, done: false, subjectId: selectedSubjectId };
+
+            if (!selectedSubjectId) {
+                // UNTAGGED: Top of list
+                tasks.unshift(newTask);
+            } else {
+                // TAGGED: Find last item of same group, insert after
+                let insertIdx = tasks.length;
+                for (let i = tasks.length - 1; i >= 0; i--) {
+                    if (tasks[i].subjectId === selectedSubjectId) {
+                        insertIdx = i + 1;
+                        break;
+                    }
+                }
+                if (insertIdx === tasks.length) tasks.push(newTask);
+                else tasks.splice(insertIdx, 0, newTask);
+            }
+
             input.value = '';
             saveTasks();
             renderTasks();
-            window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+            
+            setTimeout(() => {
+                const addedNode = listEl.querySelector(`.todo-item[data-task-id="${newTask.id}"]`);
+                if (addedNode) addedNode.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }, 50);
         }
     };
 
     addBtn.addEventListener('click', addTask);
     input.addEventListener('keypress', (e) => { if (e.key === 'Enter') addTask(); });
 
-    // --- CORE DATE LOGIC EXPOSED TO GLOBAL WINDOW ---
+    // --- CORE DATE LOGIC EXPOSED ---
     const changeDate = (days) => {
         currentDate.setDate(currentDate.getDate() + days);
         loadTasks();
     };
 
-    // Make these accessible to app.js for swipes and modal!
     window.todoNextDay = () => changeDate(1);
     window.todoPrevDay = () => changeDate(-1);
-    
-    // Exact date jumper for the modal
-    window.todoSetDate = (dateObj) => { 
-        currentDate = new Date(dateObj); 
-        loadTasks(); 
-    };
-    
-    // Returns current date in YYYY-MM-DD format for the modal input
+    window.todoSetDate = (dateObj) => { currentDate = new Date(dateObj); loadTasks(); };
     window.todoGetDateStr = () => {
         const y = currentDate.getFullYear();
         const m = String(currentDate.getMonth() + 1).padStart(2, '0');
@@ -173,5 +284,6 @@ function initTodoTab() {
     prevBtn.addEventListener('click', () => changeDate(-1));
     nextBtn.addEventListener('click', () => changeDate(1));
 
+    renderSubjectTray();
     loadTasks();
 }
