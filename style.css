@@ -988,22 +988,33 @@ input[type="date"]::-webkit-clear-button {
     pointer-events: auto;
 }
 
-/* Inactive State: Plain Frosted Glass */
+/* Inactive State: Mobile-Optimized Frosted Glass */
 .todo-tint-pill {
     padding: 6px 14px;
-    border-radius: 20px; /* Highly rounded to match floating input */
+    border-radius: 20px; 
     font-size: 0.8rem;
     font-weight: 600;
     cursor: pointer;
-    background: rgba(255, 255, 255, 0.05); /* Plain frosted */
     color: var(--color-text-muted);
     border: 1px solid var(--color-glass-border);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
+    
+    /* 1. Boosted the white tint from 0.05 to 0.15 so mobile screens can actually see it */
+    background: rgba(255, 255, 255, 0.15); 
+    
+    /* 2. THE MOBILE FIX: Hardware Acceleration */
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
+    
+    /* These translate3d lines force the mobile GPU to render the blur even while sliding */
+    -webkit-transform: translate3d(0, 0, 0);
+    transform: translate3d(0, 0, 0);
+    
     transition: all 0.2s ease;
 }
 
-.todo-tint-pill:active { transform: scale(0.92); }
+.todo-tint-pill:active { 
+    transform: scale(0.92) translate3d(0, 0, 0); 
+}
 
 /* Active State: Receives dynamic color from JS */
 .todo-tint-pill.selected {

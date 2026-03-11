@@ -60,18 +60,20 @@ function initTodoTab() {
         localStorage.setItem(getDateKey(currentDate), JSON.stringify(tasks));
     };
 
-    // --- INSTANT REACTIVITY LINK ---
-    // Safely attaches to the Planner refresh to update Todo tray simultaneously
-    const existingRefresh = window.forcePlannerRefresh;
-    window.forcePlannerRefresh = () => {
-        if (existingRefresh) existingRefresh();
-        if (window.forceTodoRefresh) window.forceTodoRefresh();
-    };
-
+    // --- INSTANT REACTIVITY LINK (Bulletproof Mobile Fix) ---
     window.forceTodoRefresh = () => {
         renderSubjectTray();
         renderTasks(); // Updates any changed subject names/colors in the UI
     };
+
+    // We use a slight delay so Planner has time to fully boot up before we link them together!
+    setTimeout(() => {
+        const existingRefresh = window.forcePlannerRefresh;
+        window.forcePlannerRefresh = () => {
+            if (existingRefresh) existingRefresh();
+            if (window.forceTodoRefresh) window.forceTodoRefresh();
+        };
+    }, 500);
 
     // --- SUBJECT TRAY LOGIC ---
     const renderSubjectTray = () => {
