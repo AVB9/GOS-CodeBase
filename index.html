@@ -45,7 +45,7 @@
         </section>
         
         <section id="tab-planner" class="app-tab">
-            <div class="central-column" style="height: 100%; display: flex; flex-direction: column; position: relative; overflow: hidden;">
+            <div class="central-column">
                 
                 <div class="tab-header">
                     <h2 class="tab-title">Planner</h2>
@@ -71,29 +71,6 @@
 
                 <div style="display: flex; justify-content: center; margin-top: 5px; min-height: 40px;">
                     <button id="returnTodayBtn" class="return-today-btn hidden">Today</button>
-                </div>
-
-                <div class="bottom-sheet glass-panel" id="agendaBottomSheet">
-                    
-                    <div class="sheet-swipe-zone" id="sheetDragZone">
-                        <div class="sheet-drag-handle"></div>
-                        <div class="sheet-header" style="justify-content: center; padding-bottom: 15px; border-bottom: 1px solid var(--color-glass-border); margin-bottom: 15px;">
-                            <h3 id="sheetDateDisplay" style="font-size: 1.15rem; font-weight: 600; color: var(--color-text);">Select a Date</h3>
-                        </div>
-                    </div>
-                    
-                    <div class="sheet-content" id="sheetContent">
-                        
-                        <div id="subjectPillsContainer" class="subject-pills-wrapper" style="margin-bottom: 15px;"></div>
-                        
-                        <textarea id="targetTopicInput" class="settings-input target-textarea" placeholder="What exactly do you want to accomplish?" rows="3"></textarea>
-                        
-                        <div style="display: flex; gap: 12px; padding-bottom: 10px;">
-                            <button id="clearTargetBtn" class="btn-secondary" style="flex: 1; border: 1px solid var(--color-glass-border); background: rgba(255,255,255,0.05); border-radius: 12px;">Clear</button>
-                            <button id="saveTargetBtn" class="btn-primary" style="flex: 2; border-radius: 12px; font-weight: 700; font-size: 1.05rem;">Save</button>
-                        </div>
-
-                    </div>
                 </div>
 
             </div>
@@ -293,6 +270,29 @@
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
         </button>
     </nav>
+
+    <div class="bottom-sheet glass-panel" id="agendaBottomSheet">
+                    
+          <div class="sheet-swipe-zone" id="sheetDragZone">
+                        <div class="sheet-drag-handle"></div>
+                        <div class="sheet-header" style="justify-content: center; padding-bottom: 15px; border-bottom: 1px solid var(--color-glass-border); margin-bottom: 15px;">
+                            <h3 id="sheetDateDisplay" style="font-size: 1.15rem; font-weight: 600; color: var(--color-text);">Select a Date</h3>
+                        </div>
+                    </div>
+                    
+                    <div class="sheet-content" id="sheetContent">
+                        
+                        <div id="subjectPillsContainer" class="subject-pills-wrapper" style="margin-bottom: 15px;"></div>
+                        
+                        <textarea id="targetTopicInput" class="settings-input target-textarea" placeholder="What exactly do you want to accomplish?" rows="3"></textarea>
+                        
+                        <div style="display: flex; gap: 12px; padding-bottom: 10px;">
+                            <button id="clearTargetBtn" class="btn-secondary" style="flex: 1; border: 1px solid var(--color-glass-border); background: rgba(255,255,255,0.05); border-radius: 12px;">Clear</button>
+                            <button id="saveTargetBtn" class="btn-primary" style="flex: 2; border-radius: 12px; font-weight: 700; font-size: 1.05rem;">Save</button>
+                        </div>
+
+                    </div>          
+    </div>
 
     <div id="goalModalOverlay" class="modal-overlay" style="display: none;">
         <div class="modal-box glass-panel">

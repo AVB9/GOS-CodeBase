@@ -96,14 +96,13 @@ function initNavigation() {
 function initSmartUI() {
     const bottomNav = document.getElementById('bottomNav');
     const floatingTodoInput = document.getElementById('floatingTodoInput');
-    let lastScrollY = 0;
-
+    const journalEditor = document.getElementById('journalEditor'); // Grab the journal
+    
     if (!bottomNav) return;
 
-    // A. Scroll Logic (Hides when scrolling down, reveals when scrolling up)
-    // A. Scroll Logic (Hides when scrolling down, reveals when scrolling up)
+    // --- A. MAIN WINDOW SCROLL LOGIC ---
+    let lastScrollY = 0;
     window.addEventListener('scroll', () => {
-        // Use window.scrollY because the body is now doing the scrolling
         const currentScrollY = window.scrollY;
         
         if (currentScrollY > lastScrollY && currentScrollY > 40) {
@@ -122,12 +121,30 @@ function initSmartUI() {
         lastScrollY = currentScrollY;
     }, { passive: true });
 
-    // B. Keyboard & Viewport Logic (With Legacy Fallback)
+    // --- B. JOURNAL INTERNAL SCROLL LOGIC ---
+    // The textarea handles its own scrolling, so it needs its own listener!
+    if (journalEditor) {
+        let lastJournalScrollY = 0;
+        journalEditor.addEventListener('scroll', () => {
+            const currentScrollY = journalEditor.scrollTop;
+            
+            if (currentScrollY > lastJournalScrollY && currentScrollY > 20) {
+                // Scrolling down inside the text box
+                bottomNav.classList.add('nav-hidden');
+            } else if (currentScrollY < lastJournalScrollY) {
+                // Scrolling up inside the text box
+                bottomNav.classList.remove('nav-hidden');
+            }
+            lastJournalScrollY = currentScrollY;
+        }, { passive: true });
+    }
+
+    // --- C. KEYBOARD & VIEWPORT LOGIC ---
     const baseWindowHeight = window.innerHeight;
 
-    // Standard Desktop Focus/Blur
     document.addEventListener('focusin', (e) => {
-        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
+        // Hide nav when typing, UNLESS it's the Journal Editor (we want the scroll to control that)
+        if ((e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') && e.target.id !== 'journalEditor') {
             bottomNav.classList.add('nav-hidden');
             if (floatingTodoInput && e.target.id === 'newTaskInput') {
                 floatingTodoInput.classList.add('keyboard-active');
@@ -144,7 +161,6 @@ function initSmartUI() {
         }
     });
 
-    // Mobile Keyboard Dismissal Detection
     const handleKeyboardClose = (currentHeight) => {
         if (currentHeight >= baseWindowHeight - 100) {
             bottomNav.classList.remove('nav-hidden');
@@ -157,31 +173,16 @@ function initSmartUI() {
         }
     };
 
-    // Modern API (2017-2019+)
     if (window.visualViewport) {
         window.visualViewport.addEventListener('resize', () => {
             handleKeyboardClose(window.visualViewport.height);
         });
-    } 
-    // Legacy Fallback (Older than 2017/2019)
-    else {
+    } else {
         window.addEventListener('resize', () => {
             handleKeyboardClose(window.innerHeight);
         });
     }
 }
-
-// --- GLOBAL MODAL BEHAVIOR ---
-// Click outside any modal overlay to close it
-document.addEventListener('click', (e) => {
-    if (e.target.classList.contains('modal-overlay')) {
-        e.target.style.display = 'none';
-        // Force a planner refresh just in case it was the subject modal
-        if (e.target.id === 'subjectModalOverlay' && typeof window.forcePlannerRefresh === 'function') {
-            window.forcePlannerRefresh();
-        }
-    }
-});
 
 document.addEventListener('DOMContentLoaded', () => {
     initDateGesturesAndModals();

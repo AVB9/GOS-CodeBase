@@ -98,7 +98,15 @@ function initPlannerTab() {
 
             const dayTask = targets[dateKey];
             
-            if (dayTask) cell.classList.add('has-task');
+            // LOGIC FIX: Check if the target is in the past/present OR the future
+            if (dayTask) {
+                if (dateObj <= todayObjReal) {
+                    cell.classList.add('has-task'); // Red for today or missed days
+                } else {
+                    cell.classList.add('future-task'); // Neutral white for future plans
+                }
+            }
+            
             if (completed.includes(dateKey)) cell.classList.add('completed');
 
             cell.addEventListener('click', () => {
@@ -147,7 +155,14 @@ function initPlannerTab() {
 
             // Card Click = Toggle Complete
             card.addEventListener('click', () => {
-                if (dateObj > todayObjReal) { alert("Cannot mark future days as complete."); return; }
+                // LOGIC FIX 1: Cannot complete a day with no target
+                if (!dayTask) return; 
+                
+                // LOGIC FIX 2: Cannot complete a day in the future
+                if (dateObj > todayObjReal) { 
+                    alert("Cannot mark future days as complete."); 
+                    return; 
+                }
 
                 let compArr = getCompleted();
                 if (compArr.includes(dateKey)) compArr = compArr.filter(id => id !== dateKey);

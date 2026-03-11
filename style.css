@@ -145,9 +145,13 @@ button { font-family: inherit; }
     display: flex;
     align-items: center;
     gap: 15px;
-    background: var(--color-surface);
     padding: 6px 15px;
     border-radius: 20px;
+    
+    /* THE TINTED GLASS FIX */
+    background: rgba(10, 10, 10, 0.45); /* Deep tinted black */
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
     border: 1px solid var(--color-glass-border);
 }
 .date-display { font-weight: 600; font-size: 0.95rem; min-width: 80px; text-align: center; color: var(--color-text); }
@@ -257,20 +261,23 @@ button { font-family: inherit; }
     gap: 10px; 
 }
 
+/* Todo Tasks (Frosted Glass Upgrade) */
 .todo-item { 
-    background: var(--color-surface); 
-    border: 1px solid var(--color-border); 
     border-radius: 15px; 
     padding: 15px; 
     display: flex; 
-    align-items: flex-start; /* Changed to flex-start so multi-line text aligns properly */
+    align-items: flex-start; 
     gap: 15px; 
     transition: all 0.2s ease;
-    
-    /* THE FIX: Disables OS text selection so holding triggers drag instantly */
     user-select: none; 
     -webkit-user-select: none;
     -webkit-touch-callout: none;
+    
+    /* THE TINTED GLASS FIX */
+    background: rgba(10, 10, 10, 0.45);
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
+    border: 1px solid var(--color-glass-border); 
 }
 
 .todo-checkbox { 
@@ -338,26 +345,60 @@ button { font-family: inherit; }
     transition: none; /* CRUCIAL: Removes CSS lag so it glides smoothly with your thumb */
 }
 
-/* Journal */
-.journal-textarea {
-    width: 100%;
+/* =================================================================
+   JOURNAL TAB STYLES (Full Screen Override)
+   ================================================================= */
+
+/* 1. Kill the global 120px nav-height padding on the tab wrapper itself! */
+#tab-journal {
+    padding-bottom: 0 !important; 
+    height: 100vh; 
+}
+
+/* THE FIX: ONLY apply flex when the tab is actually active so it hides properly! */
+#tab-journal.active {
+    display: flex;
+    flex-direction: column;
+}
+
+/* 2. Make the column flex to fill that space */
+#tab-journal .central-column {
     flex: 1;
+    padding-bottom: 0 !important;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+}
+
+/* 3. Force the swipe container to stretch perfectly */
+#journalSwipeContainer {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    margin: 0;
+    padding: 0;
+}
+
+/* 4. The Textarea itself */
+.journal-textarea {
+    flex: 1;
+    width: 100%;
     background: transparent;
     border: none;
     color: var(--color-text);
+    font-family: inherit;
     font-size: 1.1rem;
     line-height: 1.6;
-    resize: none; 
+    padding: 15px 15px 120px 15px; 
+    resize: none;
     outline: none;
-    font-family: inherit;
-    padding: 10px 5px;
+    margin: 0;
 }
 
 .journal-textarea::placeholder {
     color: var(--color-text-muted);
-    opacity: 0.5;
     font-style: italic;
-    font-weight: 400;
+    opacity: 0.6;
 }
 
 /* =================================================================
@@ -551,17 +592,27 @@ input:checked + .slider:before { transform: translateX(24px); background-color: 
 /* =================================================================
    12. PLANNER (MINI CALENDAR, CARDS, & BOTTOM SHEET)
    ================================================================= */
-.mini-calendar-wrapper { 
-    padding: 15px; 
-    margin-bottom: 15px; 
-    touch-action: pan-y; 
+
+/* 1. KILLS ALL SCROLL TRAPS & SHRINK-WRAPS THE TAB */
+#tab-planner {
+    padding-bottom: 90px !important; /* Just enough to safely clear the glass pill */
+    height: auto; 
+}
+#tab-planner .central-column {
+    padding-bottom: 0 !important; /* Erases any duplicate column padding */
 }
 
+/* 2. COMPACT MINI CALENDAR */
+.mini-calendar-wrapper { 
+    padding: 15px; 
+    margin-bottom: 5px; 
+    touch-action: pan-y; 
+}
 .cal-header { display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; font-size: 0.8rem; color: var(--color-text-muted); font-weight: 700; margin-bottom: 10px; }
 .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; justify-items: center; }
 
 .cal-day {
-    width: 35px; height: 35px;
+    width: 32px; height: 32px; /* Slightly tighter so it doesn't push the screen down */
     display: flex; align-items: center; justify-content: center;
     border-radius: 50%;
     font-size: 0.95rem; font-weight: 500;
@@ -570,84 +621,58 @@ input:checked + .slider:before { transform: translateX(24px); background-color: 
     color: var(--color-text);
     border: 1px solid transparent;
 }
-
 .cal-day.empty { visibility: hidden; }
 .cal-day:active { transform: scale(0.9); }
 .cal-day.today { color: var(--color-text); font-weight: 800; border: 1px solid var(--color-text-muted); }
 .cal-day.selected { border: 2px solid var(--color-text); transform: scale(1.1); }
-
-/* AESTHETIC CALENDAR STATES */
-.cal-day.has-task { background: rgba(255, 59, 59, 0.15); border-color: rgba(255, 59, 59, 0.3); color: #ff5252; font-weight: 700; }
+.cal-day.future-task { background: rgba(255, 255, 255, 0.1); border-color: rgba(255, 255, 255, 0.2); color: var(--color-text); font-weight: 700; }
 .cal-day.completed { background: rgba(31, 204, 97, 0.15); border-color: rgba(31, 204, 97, 0.3); color: #1fcc61; font-weight: 700; }
 
-/* -------------------------------------------------------------
-   DAILY CARDS SLIDER
-   ------------------------------------------------------------- */
+/* 3. DAILY CARDS SLIDER */
 .slider-wrapper {
     position: relative;
     width: 100%;
     margin-top: 5px;
 }
-
-/* The subtle background overlays */
-.slider-wrapper::before,
-.slider-wrapper::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    bottom: 0;
-    width: 30px; /* Width of the fade */
-    z-index: 10;
-    pointer-events: none; /* Allows user to still swipe through the fade */
-}
-
-/* Fades from the exact background color to transparent */
-.slider-wrapper::before {
-    left: 0;
-    background: linear-gradient(to right, var(--color-bg) 5%, transparent 100%);
-}
-
-.slider-wrapper::after {
-    right: 0;
-    background: linear-gradient(to left, var(--color-bg) 5%, transparent 100%);
-}
-
 .daily-slider-container {
     display: flex;
     overflow-x: auto;
     scroll-snap-type: x mandatory;
     scroll-behavior: smooth;
     gap: 15px;
-    padding: 10px 25px; /* Ensures the active card rests safely past the fade */
+    padding: 5px 25px 15px 25px; 
     scrollbar-width: none; 
     transition: opacity 0.3s ease, transform 0.3s ease;
-    /* The old mask-image lines have been removed! */
+    
+    /* True transparency mask */
+    -webkit-mask-image: linear-gradient(to right, transparent 0%, black 10%, black 90%, transparent 100%);
+    mask-image: linear-gradient(to right, transparent 0%, black 10%, black 90%, transparent 100%);
 }
-
 .daily-slider-container::-webkit-scrollbar { display: none; }
 .daily-slider-container.hidden { opacity: 0; pointer-events: none; transform: translateY(20px); }
 
-.daily-slider-container::-webkit-scrollbar { display: none; }
-.daily-slider-container.hidden { opacity: 0; pointer-events: none; transform: translateY(20px); }
-
+/* Daily Cards (Frosted Glass Upgrade) */
 .daily-card {
     min-width: 85%;
-    min-height: 160px;
+    min-height: 125px; 
     scroll-snap-align: center;
-    background: var(--color-surface);
-    border: 1px solid var(--color-glass-border);
-    border-radius: 20px;
-    padding: 20px;
+    border-radius: 18px;
+    padding: 15px; 
     display: flex;
     align-items: stretch; 
-    gap: 20px;
+    gap: 15px;
     cursor: pointer;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
     position: relative;
     overflow: hidden; 
+    
+    /* THE TINTED GLASS FIX */
+    background: rgba(10, 10, 10, 0.45);
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
+    border: 1px solid var(--color-glass-border);
 }
-
 .daily-card:active { transform: scale(0.97); }
 
 .daily-card-date {
@@ -655,7 +680,7 @@ input:checked + .slider:before { transform: translateX(24px); background-color: 
     border-right: 1px solid var(--color-glass-border); padding-right: 20px; min-width: 80px; height: 100%;
 }
 .daily-card-day { font-size: 0.9rem; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 1px; }
-.daily-card-num { font-size: 2.5rem; font-weight: 800; line-height: 1; color: var(--color-text); margin-top: 5px; }
+.daily-card-num { font-size: 2.2rem; font-weight: 800; line-height: 1; color: var(--color-text); margin-top: 5px; }
 
 .daily-card-content { 
     display: flex; flex-direction: column; justify-content: center; gap: 10px; 
@@ -663,7 +688,6 @@ input:checked + .slider:before { transform: translateX(24px); background-color: 
 }
 .daily-card-topic { font-size: 1.05rem; color: var(--color-text); white-space: normal; line-height: 1.4; transition: all 0.3s ease; }
 
-/* Card Completed Overlays */
 .daily-card.completed { border-color: #222; background: rgba(0, 0, 0, 0.3); }
 .daily-card.completed .daily-card-topic { text-decoration: line-through; opacity: 0.4; }
 .daily-card.completed .subject-tag { opacity: 0.5; filter: grayscale(30%); }
@@ -672,7 +696,7 @@ input:checked + .slider:before { transform: translateX(24px); background-color: 
     font-size: 6rem; color: #3b5c2a; opacity: 0.25; pointer-events: none; font-weight: bold; z-index: 0;
 }
 
-/* Smart Return to Today Button */
+/* 4. TODAY BUTTON */
 .return-today-btn {
     background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
     border: 1px solid var(--color-glass-border); color: var(--color-text);
@@ -684,26 +708,30 @@ input:checked + .slider:before { transform: translateX(24px); background-color: 
 .return-today-btn.hidden { opacity: 0; pointer-events: none; transform: translateY(-15px) scale(0.95); }
 .return-today-btn:active { transform: scale(0.92); }
 
-/* -------------------------------------------------------------
-   PREMIUM BOTTOM SHEET UI
-   ------------------------------------------------------------- */
+/* 5. BOTTOM SHEET UI */
 .bottom-sheet {
     position: fixed; bottom: 0; left: 0; width: 100%; height: auto; max-height: 75vh;
     background: var(--color-surface); border-radius: 30px 30px 0 0;
     border: 1px solid var(--color-glass-border); border-bottom: none;
-    padding: 0 25px 25px 25px; display: flex; flex-direction: column; z-index: 2000;
-    transform: translateY(110%); transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    padding: 0 25px 25px 25px; display: flex; flex-direction: column; 
+    z-index: 3000; 
+    transform: translateY(110%); 
+    transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), visibility 0.4s;
     touch-action: none; box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.6);
+    visibility: hidden; 
+    pointer-events: none;
 }
-.bottom-sheet.active { transform: translateY(0); }
+.bottom-sheet.active { 
+    transform: translateY(0); 
+    visibility: visible;
+    pointer-events: auto;
+}
 
 .sheet-swipe-zone { width: 100%; padding-top: 15px; cursor: grab; }
 .sheet-swipe-zone:active { cursor: grabbing; }
 .sheet-drag-handle { width: 45px; height: 5px; background: rgba(255, 255, 255, 0.25); border-radius: 10px; margin: 0 auto 15px auto; }
 .sheet-content { flex: 1; display: flex; flex-direction: column; overflow-y: auto; padding-bottom: 20px; }
 
-/* Fixing the Text Area text color */
-/* Fixing the Text Area text color & focus clipping */
 .target-textarea {
     resize: none; 
     width: 100%; 
@@ -714,18 +742,12 @@ input:checked + .slider:before { transform: translateX(24px); background-color: 
     margin-bottom: 15px;
     color: var(--color-text) !important;
     caret-color: var(--color-primary);
-    border: 1px solid var(--color-glass-border); /* Explicit default border */
-    outline: none; /* Kills the browser's default clipping outline */
+    border: 1px solid var(--color-glass-border); 
+    outline: none; 
     transition: all 0.2s ease;
 }
+.target-textarea:focus { border-color: var(--color-primary); box-shadow: inset 0 0 0 1px var(--color-primary); }
 
-.target-textarea:focus {
-    border-color: var(--color-primary);
-    /* Inset shadow prevents the glow from leaking outside the 100% width */
-    box-shadow: inset 0 0 0 1px var(--color-primary); 
-}
-
-/* Non-clipping Brick Pills */
 .subject-pills-wrapper { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-bottom: 15px; padding: 5px; }
 .subject-pill {
     background: rgba(255, 255, 255, 0.05); border: 1px solid var(--color-glass-border);
