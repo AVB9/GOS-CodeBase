@@ -356,3 +356,29 @@ input[type="date"]::-webkit-inner-spin-button, input[type="date"]::-webkit-clear
 
 /* Temporary class used in JS to force elementFromPoint to see through clone */
 .ghost-mode { visibility: hidden !important; }
+
+/* =================================================================
+   18. MODAL OVERFLOW & SCROLLBARS
+   ================================================================= */
+#subjectList {
+    max-height: 250px; /* Forces the box to stop growing */
+    overflow-y: auto;  /* Turns on scrolling */
+    padding-right: 10px;
+    margin: 15px 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+/* Custom premium scrollbar for the modal */
+#subjectList::-webkit-scrollbar {
+    width: 4px;
+}
+#subjectList::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 10px;
+}
+#subjectList::-webkit-scrollbar-thumb {
+    background: var(--color-primary);
+    border-radius: 10px;
+}

@@ -140,6 +140,7 @@ function setupSubjectManager() {
 
     const colorInput = document.getElementById('newSubjectColor');
     const colorWrapper = document.getElementById('colorPickerWrapper');
+    const nameInput = document.getElementById('newSubjectName');
 
     if (!manageBtn || !modal) return;
 
@@ -163,8 +164,7 @@ function setupSubjectManager() {
         });
     };
 
-    // THE PRODUCTION FIX: Event Delegation. 
-    // One smart listener on the parent instead of looping through all buttons.
+    // Event Delegation for Delete Buttons
     subList.addEventListener('click', (e) => {
         if (e.target.classList.contains('subject-delete-btn')) {
             const id = e.target.getAttribute('data-id');
@@ -182,7 +182,6 @@ function setupSubjectManager() {
 
     manageBtn.addEventListener('click', () => { renderSubjects(); modal.style.display = 'flex'; });
     
-    // THE PRODUCTION FIX: Emitting the clean event instead of hacky window functions
     const closeModalHandler = () => { 
         modal.style.display = 'none'; 
         if (window.AppEvents) AppEvents.emit('SUBJECTS_UPDATED');
@@ -191,19 +190,34 @@ function setupSubjectManager() {
     closeBtn.addEventListener('click', closeModalHandler);
     if (cancelBtn) cancelBtn.addEventListener('click', closeModalHandler);
 
-    addBtn.addEventListener('click', () => {
-        const nameInput = document.getElementById('newSubjectName');
+    // Helper function to handle adding a subject
+    const handleAddSubject = () => {
         const name = nameInput.value.trim();
         if (name) {
             const subjects = getSubjects();
             subjects.push({ id: 'sub_' + Date.now(), name: name, color: colorInput.value });
             saveSubjects(subjects);
             
+            // Reset the form
             nameInput.value = '';
             colorInput.value = '#ff3b3b'; 
             if (colorWrapper) colorWrapper.style.backgroundColor = '#ff3b3b'; 
             
             renderSubjects();
+            
+            // Auto-scroll to the bottom so you see your new subject
+            subList.scrollTop = subList.scrollHeight;
+        }
+    };
+
+    // Trigger on Button Click
+    addBtn.addEventListener('click', handleAddSubject);
+
+    // Trigger on ENTER KEY
+    nameInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault(); // Prevents accidental form submission reloads
+            handleAddSubject();
         }
     });
 }

@@ -222,3 +222,25 @@ function initDateGesturesAndModals() {
         closeDateModal();
     });
 }
+
+// =================================================================
+// 6. GLOBAL MODAL "CLICK OUTSIDE TO CLOSE" LOGIC
+// =================================================================
+document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('.modal-overlay').forEach(overlay => {
+        overlay.addEventListener('click', (e) => {
+            // If the user clicked the dark background itself, NOT the modal box inside it
+            if (e.target === overlay) {
+                // Find the Cancel/Close button for this specific modal and click it programmatically
+                const closeBtn = overlay.querySelector('.btn-secondary') || overlay.querySelector('.btn-ghost');
+                
+                if (closeBtn) {
+                    closeBtn.click();
+                } else {
+                    // Fallback just in case
+                    overlay.style.display = 'none';
+                }
+            }
+        });
+    });
+});
