@@ -106,3 +106,73 @@ function setupGoalModal() {
         }
     });
 }
+
+document.addEventListener('DOMContentLoaded', () => {
+    const focusWidget = document.getElementById('focusModeWidget');
+    const standbyOverlay = document.getElementById('standbyOverlay');
+    const exitBtn = document.getElementById('exitStandbyBtn');
+    const timeEl = document.getElementById('standbyTime');
+    const dateEl = document.getElementById('standbyDate');
+    
+    let standbyInterval;
+    let wakeLock = null;
+
+    // The Clock Engine
+    const updateStandbyClock = () => {
+        const now = new Date();
+        let h = now.getHours();
+        const m = String(now.getMinutes()).padStart(2, '0');
+        h = h % 12 || 12; // 12-hour format
+        timeEl.textContent = `${h}:${m}`;
+        dateEl.textContent = now.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+    };
+
+    // Enter Standby
+    if (focusWidget) {
+        focusWidget.addEventListener('click', async () => {
+            standbyOverlay.classList.remove('standby-hidden');
+            updateStandbyClock();
+            standbyInterval = setInterval(updateStandbyClock, 1000);
+            
+            try {
+                // 1. Go Fullscreen
+                const elem = document.documentElement;
+                if (elem.requestFullscreen) await elem.requestFullscreen();
+                
+                // 2. Lock to Landscape (Works perfectly on installed Android PWAs!)
+                if (screen.orientation && screen.orientation.lock) {
+                    await screen.orientation.lock('landscape');
+                }
+                
+                // 3. Keep Screen Awake
+                if ('wakeLock' in navigator) {
+                    wakeLock = await navigator.wakeLock.request('screen');
+                }
+            } catch(e) { 
+                console.log('Advanced hardware APIs skipped:', e); 
+            }
+        });
+    }
+
+    // Exit Standby
+    if (exitBtn) {
+        exitBtn.addEventListener('click', async () => {
+            standbyOverlay.classList.add('standby-hidden');
+            clearInterval(standbyInterval);
+            
+            try {
+                // 1. Release Screen Awake
+                if (wakeLock !== null) {
+                    await wakeLock.release();
+                    wakeLock = null;
+                }
+                // 2. Unlock Orientation
+                if (screen.orientation && screen.orientation.unlock) {
+                    screen.orientation.unlock();
+                }
+                // 3. Exit Fullscreen
+                if (document.exitFullscreen) await document.exitFullscreen();
+            } catch(e) {}
+        });
+    }
+});

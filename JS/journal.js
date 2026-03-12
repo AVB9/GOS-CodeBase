@@ -11,8 +11,8 @@ function initJournalTab() {
     if (!editor || !dateDisplay) return;
 
     let currentDate = new Date();
+    let debounceTimer = null; // The Memory Protector
 
-    // Helper: Dynamic Storage Key
     const getDateKey = (date) => {
         const y = date.getFullYear();
         const m = String(date.getMonth() + 1).padStart(2, '0');
@@ -20,7 +20,6 @@ function initJournalTab() {
         return `journal_${y}-${m}-${d}`;
     };
 
-    // Helper: Display Date
     const updateDateDisplay = () => {
         const today = new Date();
         today.setHours(0, 0, 0, 0);
@@ -34,44 +33,44 @@ function initJournalTab() {
         else dateDisplay.textContent = currentDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
     };
 
-    // Load entry for the current date
     const loadEntry = () => {
         const savedText = localStorage.getItem(getDateKey(currentDate)) || "";
         editor.value = savedText;
         updateDateDisplay();
     };
 
-    // Auto-save entry when typing
+    // PERFORMANCE FIX: Debounce logic prevents crashing the hard drive when typing fast!
     editor.addEventListener('input', () => {
-        localStorage.setItem(getDateKey(currentDate), editor.value);
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => {
+            localStorage.setItem(getDateKey(currentDate), editor.value);
+        }, 400); // Waits 400ms after you stop typing to save
     });
 
-    // Date Navigation
     const changeDate = (days) => {
         currentDate.setDate(currentDate.getDate() + days);
         loadEntry();
     };
 
-    // --- CORE DATE LOGIC EXPOSED TO GLOBAL WINDOW ---
-    // This allows app.js to trigger these when you swipe or use the Date Modal!
-    window.journalNextDay = () => changeDate(1);
-    window.journalPrevDay = () => changeDate(-1);
-    
-    window.journalSetDate = (dateObj) => { 
-        currentDate = new Date(dateObj); 
-        loadEntry(); 
-    };
-    
-    window.journalGetDateStr = () => {
-        const y = currentDate.getFullYear();
-        const m = String(currentDate.getMonth() + 1).padStart(2, '0');
-        const d = String(currentDate.getDate()).padStart(2, '0');
-        return `${y}-${m}-${d}`;
-    };
-
-    // Button Click Listeners
     if (prevBtn) prevBtn.addEventListener('click', () => changeDate(-1));
     if (nextBtn) nextBtn.addEventListener('click', () => changeDate(1));
+
+    // Request date picker when clicking the display
+    dateDisplay.addEventListener('click', () => {
+        AppEvents.emit('REQUEST_DATE_PICKER', { tab: 'journal', dateStr: getDateKey(currentDate).replace('journal_', '') });
+    });
+
+    // --- EVENT BUS LISTENERS (No more dirty global window functions) ---
+    AppEvents.on('DATE_CHANGE', ({ tab, direction }) => {
+        if (tab === 'journal') changeDate(direction);
+    });
+
+    AppEvents.on('JUMP_DATE', ({ tab, date }) => {
+        if (tab === 'journal') {
+            currentDate = new Date(date);
+            loadEntry();
+        }
+    });
 
     // Boot
     loadEntry();
