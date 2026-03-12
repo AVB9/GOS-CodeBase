@@ -61,6 +61,9 @@
 body { background-color: var(--color-bg); color: var(--color-text); font-family: var(--font-main); overscroll-behavior-y: auto; }
 h1, h2, h3 { color: var(--color-text); }
 button, input, textarea, select { font-family: inherit; }
+.hidden-input { display: none !important; }
+.flex-between { display: flex; justify-content: space-between; align-items: center; }
+.text-md { font-size: 1.8rem !important; }
 
 /* =================================================================
    3. GLOBAL LAYOUT ARCHITECTURE
@@ -81,6 +84,8 @@ button, input, textarea, select { font-family: inherit; }
 .btn-secondary { background: transparent; color: var(--color-text-muted); border: none; padding: 10px var(--pad-lg); font-weight: 600; cursor: pointer; }
 .btn-danger { background: var(--color-danger-bg); color: var(--color-danger); border: 1px solid var(--color-danger-border); padding: 10px var(--pad-lg); border-radius: var(--rad-sm); font-weight: 600; cursor: pointer; transition: var(--trans-fast); }
 .btn-danger:hover { background: rgba(255, 59, 59, 0.2); }
+.btn-ghost { flex: 1; border: 1px solid var(--color-glass-border); background: rgba(255,255,255,0.05); border-radius: var(--rad-md); color: var(--color-text-muted); font-weight: 600; cursor: pointer; transition: var(--trans-fast); }
+.btn-ghost:active { transform: scale(0.95); }
 .swipe-container { width: 100%; min-height: 60vh; touch-action: pan-y; }
 .subject-tag { font-size: 0.7rem; font-weight: 700; padding: 3px var(--pad-sm); border-radius: var(--rad-pill); width: fit-content; text-transform: uppercase; letter-spacing: 0.5px; color: var(--color-text); text-shadow: 0 1px 2px rgba(0,0,0,0.5); }
 
@@ -89,6 +94,7 @@ button, input, textarea, select { font-family: inherit; }
    ================================================================= */
 .bento-card { display: flex; flex-direction: column; justify-content: center; min-width: 0; overflow: hidden; padding: var(--pad-lg); min-height: 110px; cursor: pointer; transition: transform 0.2s ease, background 0.2s ease; }
 .bento-card:active { transform: scale(0.97); background: rgba(255, 255, 255, 0.05); }
+.bento-danger { background: var(--color-danger-bg); border: 1px solid var(--color-danger-border); }
 .bento-title { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px; color: var(--color-text-muted); margin-bottom: var(--pad-sm); }
 .bento-value { font-size: 2.5rem; font-weight: 800; color: var(--color-primary); line-height: 1; margin-bottom: var(--pad-sm); }
 .bento-sub { font-size: 0.85rem; color: var(--color-text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -108,6 +114,8 @@ button, input, textarea, select { font-family: inherit; }
 .greeting-icon svg { width: 45px; height: 45px; stroke: var(--color-primary); }
 .greeting-text h2 { font-size: clamp(1rem, 4.5vw, 1.6rem); font-weight: 700; margin-bottom: 5px; color: var(--color-text); }
 .greeting-text p { font-size: 0.95rem; color: var(--color-text-muted); font-weight: 500; letter-spacing: 1px; text-transform: uppercase; }
+#dashTaskContainer { flex: 1; display: flex; flex-direction: column; justify-content: center; }
+.empty-task-text { color: var(--color-text-muted); margin-top: 10px; font-style: italic; }
 
 .todo-input-group { position: fixed; bottom: 110px; left: 50%; width: calc(100% - 30px); max-width: 500px; display: flex; flex-direction: row; align-items: center; padding: 8px 10px 8px var(--pad-lg); gap: 10px; z-index: 990; border-radius: var(--rad-pill) !important; transform: translateX(-50%) translateY(20px); opacity: 0; pointer-events: none; transition: var(--trans-smooth); }
 .todo-input-group.active { opacity: 1; pointer-events: auto; transform: translateX(-50%) translateY(0); }
@@ -115,7 +123,7 @@ button, input, textarea, select { font-family: inherit; }
 .todo-input-group input { flex: 1; background: transparent; border: none; color: var(--color-text); font-size: 1rem; outline: none; }
 .todo-input-group button { border-radius: var(--rad-circle); width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; padding: 0; flex-shrink: 0; transition: var(--trans-fast); }
 .todo-input-group button:active { transform: scale(0.9); }
-
+#todoSwipeContainer { min-height: 40vh; }
 .todo-list { list-style: none; display: flex; flex-direction: column; gap: 10px; }
 .todo-item { border-radius: var(--pad-md); padding: var(--pad-md); display: flex; align-items: flex-start; gap: var(--pad-md); transition: var(--trans-fast); user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; background: var(--color-glass-tint); backdrop-filter: var(--blur-glass); -webkit-backdrop-filter: var(--blur-glass); border: 1px solid var(--color-glass-border); }
 .todo-checkbox { width: 22px; height: 22px; border-radius: var(--rad-circle); border: 2px solid var(--color-text-muted); appearance: none; -webkit-appearance: none; outline: none; cursor: pointer; position: relative; flex-shrink: 0; margin-top: 2px; }
@@ -124,7 +132,6 @@ button, input, textarea, select { font-family: inherit; }
 .todo-text { flex: 1; font-size: 1rem; transition: var(--trans-smooth); line-height: 1.4; word-break: break-word; white-space: normal; }
 .todo-item.done .todo-text { color: var(--color-text-muted); text-decoration: line-through; }
 .todo-delete { background: none; border: none; color: var(--color-text-muted); font-size: 1.5rem; cursor: pointer; padding: 0 5px; flex-shrink: 0; margin-top: -2px; }
-.todo-item.dragging { opacity: 0.95; transform: scale(1.02); border-color: var(--color-primary); box-shadow: var(--shadow-sm); z-index: 100; position: relative; transition: none; }
 .todo-edit-input { flex: 1; min-width: 0; background: transparent; border: none; border-bottom: 2px solid var(--color-primary); border-radius: 0; color: var(--color-text); font-family: inherit; font-size: 1rem; padding: 0 0 2px 0; margin: 0; outline: none; box-shadow: none; caret-color: var(--color-primary); }
 
 #tab-journal { padding-bottom: 0 !important; height: 100vh; }
@@ -137,13 +144,20 @@ button, input, textarea, select { font-family: inherit; }
 /* =================================================================
    7. MODALS & BOTTOM PILL NAV
    ================================================================= */
-.modal-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(5px); z-index: 9999; display: flex; align-items: center; justify-content: center; }
+.modal-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(5px); z-index: 9999; display: none; align-items: center; justify-content: center; }
 .modal-box { width: 90%; max-width: 350px; padding: var(--pad-xl); }
+.modal-title { margin-bottom: 20px; text-align: center; font-size: 1.3rem; }
 .modal-box h2 { font-size: 1.2rem; margin-bottom: var(--pad-md); }
 .modal-box input { width: 100%; padding: 12px var(--pad-md); background: var(--color-bg); border: 1px solid var(--color-glass-border); color: var(--color-text); border-radius: var(--rad-sm); margin-bottom: var(--pad-lg); font-size: 1rem; outline: none; }
 .modal-box input:focus { border-color: var(--color-primary); }
 .modal-box input[type="date"] { color-scheme: dark; }
+.modal-form-group { display: flex; flex-direction: column; gap: 15px; margin-bottom: 20px; }
+.modal-input-lg { width: 100%; padding: 15px; margin-bottom: 25px; }
+.modal-divider { margin: 20px 0; }
 .modal-buttons { display: flex; justify-content: flex-end; gap: 10px; }
+.modal-buttons.expanded { margin-top: 25px; display: flex; gap: 10px; }
+.modal-buttons.expanded button { flex: 1; border-radius: var(--rad-md); }
+.align-left { margin-right: auto; color: var(--color-text-muted); padding-left: 0; }
 
 .bottom-pill-nav { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); display: flex; gap: 8px; padding: 8px 16px; border-radius: var(--rad-pill); z-index: 1000; background: var(--color-glass-bg); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid var(--color-glass-border); box-shadow: var(--shadow-lg); transition: var(--trans-smooth); }
 .bottom-pill-nav.nav-hidden { transform: translate(-50%, 150px); }
@@ -165,6 +179,7 @@ button, input, textarea, select { font-family: inherit; }
 .settings-title { font-size: 1.1rem; font-weight: 700; color: var(--color-text); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px; }
 .settings-group { display: flex; flex-direction: column; gap: 10px; }
 .settings-group label { font-size: 0.9rem; color: var(--color-text-muted); }
+.label-block { display: block; margin-bottom: 10px; }
 .settings-input-row { display: flex; gap: 10px; flex-wrap: wrap; }
 .settings-input-row input { flex: 1 1 200px; padding: 12px var(--pad-md); background: rgba(0, 0, 0, 0.3); border: 1px solid var(--color-glass-border); color: var(--color-text); border-radius: var(--rad-sm); font-size: 1rem; outline: none; }
 .settings-input-row button { flex: 1 1 auto; white-space: nowrap; }
@@ -178,6 +193,8 @@ button, input, textarea, select { font-family: inherit; }
 .slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 4px; bottom: 4px; background-color: var(--color-text-muted); transition: .4s; border-radius: var(--rad-circle); }
 input:checked + .slider { background-color: var(--color-primary); }
 input:checked + .slider:before { transform: translateX(24px); background-color: white; }
+.upload-btn { display: flex; justify-content: center; align-items: center; cursor: pointer; margin-bottom: 10px; box-sizing: border-box; }
+.upload-btn svg { margin-right: 8px; }
 
 /* =================================================================
    10. PLANNER (MINI CALENDAR, CARDS, & BOTTOM SHEET)
@@ -195,13 +212,66 @@ input:checked + .slider:before { transform: translateX(24px); background-color: 
 .cal-day.future-task { background: var(--color-glass-white); border-color: rgba(255, 255, 255, 0.2); color: var(--color-text); font-weight: 700; }
 .cal-day.completed { background: var(--color-success-bg); border-color: var(--color-success-border); color: var(--color-success); font-weight: 700; }
 
-.slider-wrapper { position: relative; width: 100%; margin-top: 5px; }
-.daily-slider-container { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; scroll-behavior: smooth; gap: var(--pad-md); padding: 5px var(--pad-xl) var(--pad-md) var(--pad-xl); scrollbar-width: none; transition: var(--trans-smooth); -webkit-mask-image: linear-gradient(to right, transparent 0%, black 10%, black 90%, transparent 100%); mask-image: linear-gradient(to right, transparent 0%, black 10%, black 90%, transparent 100%); }
+/* 3. DAILY CARDS SLIDER */
+.slider-wrapper {
+    position: relative;
+    width: 100%;
+    margin-top: 5px;
+    
+    /* THE TRUE TRANSPARENCY MASK */
+    /* Using exact pixels (30px) instead of percentages ensures the fade never stretches out of bounds */
+    -webkit-mask-image: linear-gradient(to right, transparent 0px, black 30px, black calc(100% - 30px), transparent 100%);
+    mask-image: linear-gradient(to right, transparent 0px, black 30px, black calc(100% - 30px), transparent 100%);
+}
+
+.daily-slider-container {
+    display: flex;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scroll-behavior: smooth;
+    gap: 15px;
+    
+    /* THE MATH FIX: 30px side padding exactly matches the 30px fade zone of the mask above! */
+    padding: 5px 30px 15px 30px; 
+    
+    scrollbar-width: none; 
+    transition: opacity 0.3s ease, transform 0.3s ease;
+}
 .daily-slider-container::-webkit-scrollbar { display: none; }
 .daily-slider-container.hidden { opacity: 0; pointer-events: none; transform: translateY(20px); }
 
-.daily-card { min-width: 85%; min-height: 125px; scroll-snap-align: center; border-radius: 18px; padding: var(--pad-md); display: flex; align-items: stretch; gap: var(--pad-md); cursor: pointer; transition: var(--trans-smooth); box-shadow: var(--shadow-sm); position: relative; overflow: hidden; background: var(--color-glass-tint); backdrop-filter: var(--blur-glass); -webkit-backdrop-filter: var(--blur-glass); border: 1px solid var(--color-glass-border); }
-.daily-card:active { transform: scale(0.97); }
+/* Daily Cards (Frosted Glass Upgrade) */
+.daily-card {
+    min-width: 85%;
+    min-height: 125px; 
+    scroll-snap-align: center;
+    border-radius: 18px;
+    padding: 15px; 
+    display: flex;
+    align-items: stretch; 
+    gap: 15px;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+    position: relative;
+    overflow: hidden; 
+    
+    background: rgba(10, 10, 10, 0.45);
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
+    border: 1px solid var(--color-glass-border);
+    
+    /* THE WEBKIT GLASS BUG FIX: Forces phone GPU to render the blur before the mask */
+    will-change: transform;
+    -webkit-transform: translateZ(0);
+    transform: translateZ(0);
+}
+
+/* Make sure active state keeps the translateZ so it doesn't glitch on click */
+.daily-card:active { 
+    transform: scale(0.97) translateZ(0); 
+    -webkit-transform: scale(0.97) translateZ(0); 
+}
 .daily-card-date { display: flex; flex-direction: column; align-items: center; justify-content: center; border-right: 1px solid var(--color-glass-border); padding-right: var(--pad-lg); min-width: 80px; height: 100%; }
 .daily-card-day { font-size: 0.9rem; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 1px; }
 .daily-card-num { font-size: 2.2rem; font-weight: 800; line-height: 1; color: var(--color-text); margin-top: 5px; }
@@ -212,6 +282,7 @@ input:checked + .slider:before { transform: translateX(24px); background-color: 
 .daily-card.completed .subject-tag { opacity: 0.5; filter: grayscale(30%); }
 .daily-card.completed::after { content: '✓'; position: absolute; top: 50%; left: 65%; transform: translate(-50%, -50%); font-size: 6rem; color: #3b5c2a; opacity: 0.25; pointer-events: none; font-weight: bold; z-index: 0; }
 
+.today-btn-wrapper { display: flex; justify-content: center; margin-top: 5px; min-height: 40px; }
 .return-today-btn { background: var(--color-glass-white); backdrop-filter: var(--blur-glass); -webkit-backdrop-filter: var(--blur-glass); border: 1px solid var(--color-glass-border); color: var(--color-text); padding: 8px 30px; border-radius: var(--rad-pill); font-size: 0.9rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; cursor: pointer; box-shadow: var(--shadow-md); opacity: 1; transform: translateY(0); transition: var(--trans-smooth); }
 .return-today-btn.hidden { opacity: 0; pointer-events: none; transform: translateY(-15px) scale(0.95); }
 .return-today-btn:active { transform: scale(0.92); }
@@ -221,26 +292,37 @@ input:checked + .slider:before { transform: translateX(24px); background-color: 
 .sheet-swipe-zone { width: 100%; padding-top: var(--pad-md); cursor: grab; }
 .sheet-swipe-zone:active { cursor: grabbing; }
 .sheet-drag-handle { width: 45px; height: 5px; background: rgba(255, 255, 255, 0.25); border-radius: var(--rad-sm); margin: 0 auto var(--pad-md) auto; }
+.sheet-header { justify-content: center; padding-bottom: 15px; border-bottom: 1px solid var(--color-glass-border); margin-bottom: 15px; display: flex; }
+.sheet-title { font-size: 1.15rem; font-weight: 600; color: var(--color-text); }
 .sheet-content { flex: 1; display: flex; flex-direction: column; overflow-y: auto; padding-bottom: var(--pad-lg); }
+.sheet-actions { display: flex; gap: 12px; padding-bottom: 10px; }
 
 .target-textarea { resize: none; width: 100%; border-radius: var(--rad-md); padding: var(--pad-md); background: rgba(0,0,0,0.3); font-family: inherit; margin-bottom: var(--pad-md); color: var(--color-text) !important; caret-color: var(--color-primary); border: 1px solid var(--color-glass-border); outline: none; transition: var(--trans-fast); }
 .target-textarea:focus { border-color: var(--color-primary); box-shadow: var(--shadow-inset); }
 
 .subject-pills-wrapper { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-bottom: var(--pad-md); padding: 5px; }
+.mb-md { margin-bottom: 15px; }
 .subject-pill { background: rgba(255, 255, 255, 0.05); border: 1px solid var(--color-glass-border); color: var(--color-text-muted); padding: 8px 16px; border-radius: var(--rad-pill); font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: var(--trans-fast); }
 .subject-pill.active { color: var(--color-text) !important; box-shadow: var(--shadow-md); transform: scale(1.05); }
+.flex-2 { flex: 2; border-radius: var(--rad-md); font-weight: 700; font-size: 1.05rem; }
 
 /* =================================================================
-   11. UI POLISH (Alignments & Pickers)
+   11. UI POLISH (Alignments, Custom Pickers & Scrollbars)
    ================================================================= */
 .add-subject-row { display: flex; gap: 10px; align-items: stretch; height: 45px; }
 .add-subject-row .settings-input { flex: 1; margin: 0; padding: 0 var(--pad-md); border-radius: var(--rad-md); }
 .add-subject-row .btn-primary { margin: 0; padding: 0 var(--pad-md); border-radius: var(--rad-md); display: flex; align-items: center; justify-content: center; }
 
 .color-picker-wrapper { width: 45px; height: 45px; border-radius: var(--rad-circle); border: 2px solid var(--color-glass-border); flex-shrink: 0; position: relative; box-shadow: var(--shadow-sm); transition: var(--trans-fast); }
+.picker-sm { width: 35px !important; height: 35px !important; }
 .color-input { position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; border: none; padding: 0; margin: 0; }
 .color-input::-webkit-color-swatch-wrapper { padding: 0; }
 .color-input::-webkit-color-swatch { border: none; border-radius: var(--rad-circle); }
+
+/* The default backgrounds for the 3 distinct color pickers */
+#themeColorWrapper { background-color: var(--color-primary); }
+#textColorWrapper { background-color: var(--color-text); }
+#colorPickerWrapper { background-color: #ff3b3b; }
 
 .subject-manager-item { display: flex; justify-content: space-between; align-items: center; background: rgba(255, 255, 255, 0.05); padding: 10px var(--pad-md); border-radius: var(--rad-md); border: 1px solid var(--color-glass-border); margin-bottom: 8px; word-break: break-word; }
 .subject-manager-item > div { flex: 1; margin-right: var(--pad-md); }
@@ -250,6 +332,11 @@ input:checked + .slider:before { transform: translateX(24px); background-color: 
 input[type="date"] { position: relative; appearance: none; -webkit-appearance: none; font-family: inherit; }
 input[type="date"]::-webkit-calendar-picker-indicator { position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; background: transparent; }
 input[type="date"]::-webkit-inner-spin-button, input[type="date"]::-webkit-clear-button { display: none; }
+
+#subjectList { max-height: 250px; overflow-y: auto; padding-right: 10px; margin: 15px 0; display: flex; flex-direction: column; gap: 8px; }
+#subjectList::-webkit-scrollbar { width: 4px; }
+#subjectList::-webkit-scrollbar-track { background: rgba(255, 255, 255, 0.05); border-radius: 10px; }
+#subjectList::-webkit-scrollbar-thumb { background: var(--color-primary); border-radius: 10px; }
 
 /* =================================================================
    12. EFFECTS (Preloader, Noise, Trays)
@@ -270,7 +357,7 @@ input[type="date"]::-webkit-inner-spin-button, input[type="date"]::-webkit-clear
 .todo-tint-pill.selected { transform: translateY(-2px); box-shadow: var(--shadow-md); }
 .todo-subject-header { margin-top: var(--pad-md); margin-bottom: 5px; font-size: 0.85rem; font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px; padding-left: 5px; list-style: none; }
 
-.dynamic-bg { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-color: var(--color-bg); background-size: cover; background-position: center; filter: var(--blur-heavy) brightness(0.35); transform: scale(1.15); z-index: -2; transition: background-image 1s ease-in-out; }
+.dynamic-bg { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-color: var(--color-bg); background-size: cover; background-position: center; filter: blur(12px) brightness(0.45); transform: scale(1.15); z-index: -2; transition: background-image 1s ease-in-out; }
 .noise-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E"); opacity: 0.05; z-index: -1; pointer-events: none; }
 
 /* =================================================================
@@ -285,41 +372,10 @@ input[type="date"]::-webkit-inner-spin-button, input[type="date"]::-webkit-clear
 .standby-exit:active { opacity: 1; }
 
 /* =================================================================
-   14. HTML DECLUTTER UTILITIES (The Cleanup Patch)
+   14. PREMIUM DRAG VISUALS & ANIMATION
    ================================================================= */
-.today-btn-wrapper { display: flex; justify-content: center; margin-top: 5px; min-height: 40px; }
-.flex-between { display: flex; justify-content: space-between; align-items: center; }
-#dashTaskContainer { flex: 1; display: flex; flex-direction: column; justify-content: center; }
-.empty-task-text { color: var(--color-text-muted); margin-top: 10px; font-style: italic; }
-.bento-danger { background: var(--color-danger-bg); border: 1px solid var(--color-danger-border); }
-.text-md { font-size: 1.8rem !important; }
-#todoSwipeContainer { min-height: 40vh; }
-.label-block { display: block; margin-bottom: 10px; }
-.upload-btn { display: flex; justify-content: center; align-items: center; cursor: pointer; margin-bottom: 10px; box-sizing: border-box; }
-.upload-btn svg { margin-right: 8px; }
-.picker-sm { width: 35px !important; height: 35px !important; }
-.sheet-header { justify-content: center; padding-bottom: 15px; border-bottom: 1px solid var(--color-glass-border); margin-bottom: 15px; display: flex; }
-.sheet-title { font-size: 1.15rem; font-weight: 600; color: var(--color-text); }
-.mb-md { margin-bottom: 15px; }
-.sheet-actions { display: flex; gap: 12px; padding-bottom: 10px; }
-.btn-ghost { flex: 1; border: 1px solid var(--color-glass-border); background: rgba(255,255,255,0.05); border-radius: var(--rad-md); color: var(--color-text-muted); font-weight: 600; cursor: pointer; transition: var(--trans-fast); }
-.btn-ghost:active { transform: scale(0.95); }
-.flex-2 { flex: 2; border-radius: var(--rad-md); font-weight: 700; font-size: 1.05rem; }
-.modal-input-lg { width: 100%; padding: 15px; margin-bottom: 25px; }
-.modal-form-group { display: flex; flex-direction: column; gap: 15px; margin-bottom: 20px; }
-.align-left { margin-right: auto; color: var(--color-text-muted); padding-left: 0; }
-.modal-title { margin-bottom: 20px; text-align: center; font-size: 1.3rem; }
-.modal-divider { margin: 20px 0; }
-.modal-buttons.expanded { margin-top: 25px; display: flex; gap: 10px; }
-.modal-buttons.expanded button { flex: 1; border-radius: var(--rad-md); }
+.ghost-mode { visibility: hidden !important; }
 
-.ghost-mode { pointer-events: none !important; }
-
-/* =================================================================
-   17. PREMIUM DRAG VISUALS & ANIMATION
-   ================================================================= */
-
-/* 1. The Real Item (Hidden Ghost Placeholder) */
 .dragging-placeholder {
     opacity: 0.25 !important;
     border: 2px dashed var(--color-glass-border) !important;
@@ -327,58 +383,21 @@ input[type="date"]::-webkit-inner-spin-button, input[type="date"]::-webkit-clear
     box-shadow: none !important;
     backdrop-filter: none !important;
     -webkit-backdrop-filter: none !important;
-    transform: scale(0.98); /* Slight shrinking animation */
+    transform: scale(0.98); 
     transition: transform 0.3s ease, opacity 0.3s ease;
 }
 
-/* 2. The Flying Glass Item (The visible clone) */
 .flying-glass-task {
     position: fixed !important;
     margin: 0 !important;
-    z-index: 99999 !important; /* Above EVERYTHING */
-    pointer-events: none !important; /* Critical so finger clicks *through* it */
+    z-index: 99999 !important; 
+    pointer-events: none !important; 
     opacity: 0.98;
-    
-    /* That glassy look you asked for */
     background: rgba(30, 30, 30, 0.7) !important; 
     backdrop-filter: blur(20px) !important;
     -webkit-backdrop-filter: blur(20px) !important;
-    
-    /* Custom Red Glow Border & Deep Shadow for 3D depth */
     border: 1px solid var(--color-primary) !important;
     box-shadow: 0 15px 35px rgba(0,0,0,0.6), 0 0 15px rgba(255, 59, 59, 0.2) !important;
-    
-    /* We DO NOT transition transform/position because JS controls it at 60fps, 
-       but we *do* transition the visual scale for the 'pop-off' animation. */
     transition: scale 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
-    scale: 1; /* Default starting scale */
-}
-
-/* Temporary class used in JS to force elementFromPoint to see through clone */
-.ghost-mode { visibility: hidden !important; }
-
-/* =================================================================
-   18. MODAL OVERFLOW & SCROLLBARS
-   ================================================================= */
-#subjectList {
-    max-height: 250px; /* Forces the box to stop growing */
-    overflow-y: auto;  /* Turns on scrolling */
-    padding-right: 10px;
-    margin: 15px 0;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-}
-
-/* Custom premium scrollbar for the modal */
-#subjectList::-webkit-scrollbar {
-    width: 4px;
-}
-#subjectList::-webkit-scrollbar-track {
-    background: rgba(255, 255, 255, 0.05);
-    border-radius: 10px;
-}
-#subjectList::-webkit-scrollbar-thumb {
-    background: var(--color-primary);
-    border-radius: 10px;
+    scale: 1; 
 }

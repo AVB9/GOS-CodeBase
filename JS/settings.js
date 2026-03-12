@@ -271,7 +271,7 @@ function setupAesthetics() {
                 const img = new Image();
                 img.onload = () => {
                     const canvas = document.createElement('canvas');
-                    const MAX_WIDTH = 600; 
+                    const MAX_WIDTH = 800; 
                     const scaleSize = MAX_WIDTH / img.width;
                     
                     canvas.width = MAX_WIDTH;

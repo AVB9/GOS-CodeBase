@@ -14,6 +14,7 @@ function initPlannerTab() {
     
     const returnTodayBtn = document.getElementById('returnTodayBtn');
     let todayObserver = null;
+    let isFirstTimeOpeningPlanner = true; // THE FIX: Tracks the very first boot-up
     
     const pillsContainer = document.getElementById('subjectPillsContainer');
     const topicInput = document.getElementById('targetTopicInput');
@@ -29,7 +30,6 @@ function initPlannerTab() {
     const defaultSubjects = [{ id: 'off', name: 'Day Off', color: '#555555' }];
     const getSubjects = () => JSON.parse(localStorage.getItem('plannerSubjects')) || defaultSubjects;
     
-    // Smart Contrast Calculator
     const getContrastColor = (hex) => {
         if (!hex) return '#ffffff';
         hex = hex.replace('#', '');
@@ -113,7 +113,16 @@ function initPlannerTab() {
             cell.addEventListener('click', () => {
                 document.querySelectorAll('.cal-day').forEach(el => el.classList.remove('selected'));
                 cell.classList.add('selected');
+                
                 document.getElementById(`card-${dateKey}`)?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+                
+                // THE TITANIUM FIX: Absolute assurance the pill appears if clicking away from today
+                if (dateKey !== todayStr) {
+                    returnTodayBtn.classList.remove('hidden');
+                } else {
+                    returnTodayBtn.classList.add('hidden');
+                }
+
                 openBottomSheet(dateKey, dateObj);
             });
             gridEl.appendChild(cell);
@@ -169,7 +178,7 @@ function initPlannerTab() {
             sliderEl.appendChild(card);
         }
 
-        // THE PRODUCTION FIX: Bulletproof Today Observer
+        // THE TITANIUM FIX: 50% Visibility Rule
         if (todayObserver) todayObserver.disconnect();
         const isCurrentMonth = (year === todayObjReal.getFullYear() && month === todayObjReal.getMonth());
 
@@ -179,17 +188,18 @@ function initPlannerTab() {
             const todayCard = document.getElementById(`card-${todayStr}`);
             if (todayCard) {
                 todayObserver = new IntersectionObserver((entries) => {
-                    // THE MAGIC LOCK: If the tab is display: none, ignore the observer completely!
                     const plannerTab = document.getElementById('tab-planner');
                     if (!plannerTab || !plannerTab.classList.contains('active')) return;
-
+                    
+                    // The card must be at least 50% visible, otherwise the button appears
                     entries[0].isIntersecting ? returnTodayBtn.classList.add('hidden') : returnTodayBtn.classList.remove('hidden');
-                }, { root: sliderEl, threshold: 0.1 });
+                }, { root: sliderEl, threshold: 0.5 }); 
                 todayObserver.observe(todayCard);
             }
         }
 
-        if (!skipAutoScroll) {
+        // Normal auto-scroll for when user manually changes months
+        if (!skipAutoScroll && !isFirstTimeOpeningPlanner) {
             setTimeout(() => document.getElementById(`card-${todayStr}`)?.scrollIntoView({ behavior: 'auto', block: 'nearest', inline: 'center' }), 50);
         }
     };
@@ -264,7 +274,7 @@ function initPlannerTab() {
         renderCalendarAndCards(true);
     });
 
-    // --- 4. TIGHTENED DRAG PHYSICS ---
+    // --- 4. DRAG PHYSICS ---
     let startY = 0;
     let currentY = 0;
     dragZone.addEventListener('touchstart', (e) => startY = e.touches[0].clientY, { passive: true });
@@ -272,7 +282,7 @@ function initPlannerTab() {
         currentY = e.touches[0].clientY;
         const deltaY = currentY - startY;
         if (deltaY > 0) {
-            e.preventDefault(); // Locks the screen from scrolling behind the sheet
+            e.preventDefault(); 
             sheet.style.transform = `translateY(${deltaY}px)`;
             sheet.style.transition = 'none';
         }
@@ -283,7 +293,7 @@ function initPlannerTab() {
         else sheet.style.transform = ''; 
     });
 
-    // --- 5. BULLETPROOF CALENDAR SWIPING ---
+    // --- 5. CALENDAR SWIPING ---
     let calTouchStartX = 0;
     calWrapper.addEventListener('touchstart', (e) => calTouchStartX = e.changedTouches[0].screenX, { passive: true });
     calWrapper.addEventListener('touchend', (e) => {
@@ -325,16 +335,14 @@ function initPlannerTab() {
     document.getElementById('plannerPrevMonth').addEventListener('click', () => { currentViewDate.setMonth(currentViewDate.getMonth() - 1); renderCalendarAndCards(true); });
     document.getElementById('plannerNextMonth').addEventListener('click', () => { currentViewDate.setMonth(currentViewDate.getMonth() + 1); renderCalendarAndCards(true); });
 
-    // THE PRODUCTION FIX: Smooth scroll to today if already in the DOM!
     returnTodayBtn.addEventListener('click', () => {
         const todayStr = getDateKey(new Date());
         const todayCard = document.getElementById(`card-${todayStr}`);
         
         if (todayCard) {
-            // Smoothly slide over if we are still in the current month
             todayCard.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+            returnTodayBtn.classList.add('hidden'); 
         } else {
-            // Rebuild and jump instantly if we are in a different month
             currentViewDate = new Date();
             currentViewDate.setDate(1); 
             activeSelectedDateStr = null; 
@@ -342,6 +350,20 @@ function initPlannerTab() {
         }
         if (navigator.vibrate) navigator.vibrate(50);
     });
+
+    // THE TITANIUM FIX: Instantly snap to today ONLY on the very first time the tab is opened
+    if (window.AppEvents) {
+        AppEvents.on('TAB_CHANGED', ({ tab }) => {
+            if (tab === 'tab-planner') {
+                if (isFirstTimeOpeningPlanner) {
+                    isFirstTimeOpeningPlanner = false;
+                    const todayStr = getDateKey(new Date());
+                    // A tiny 10ms delay ensures the CSS 'display: block' has painted before scrolling
+                    setTimeout(() => document.getElementById(`card-${todayStr}`)?.scrollIntoView({ behavior: 'auto', block: 'nearest', inline: 'center' }), 10);
+                }
+            }
+        });
+    }
 
     // Boot
     renderCalendarAndCards();
