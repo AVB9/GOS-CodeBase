@@ -9,6 +9,7 @@ function initSettingsTab() {
     setupDataManagement();
     setupSubjectManager();
     setupAesthetics();
+    initAuthUI();
 }
 
 function setupProfileSettings() {
@@ -301,5 +302,240 @@ function setupAesthetics() {
             if (bgContainer) bgContainer.style.backgroundImage = 'none';
             if (uploader) uploader.value = '';
         });
+    }
+}
+// =================================================================
+// AUTHENTICATION UI STATE (SUPABASE INTEGRATED & SMART UI)
+// =================================================================
+function initAuthUI() {
+    // Settings Card Elements
+    const loggedOutSettingsView = document.getElementById('loggedOutSettingsView');
+    const loggedInSettingsView = document.getElementById('loggedInSettingsView');
+    const userEmailDisplay = document.getElementById('userEmailDisplay');
+    const openAuthModalBtn = document.getElementById('openAuthModalBtn');
+    const openUpdatePasswordBtn = document.getElementById('openUpdatePasswordBtn');
+    const logoutBtn = document.getElementById('logoutBtn');
+
+    // Auth Modal Elements (Smart Modal)
+    const authModalOverlay = document.getElementById('authModalOverlay');
+    const closeAuthModalBtn = document.getElementById('closeAuthModalBtn');
+    const authModalTitle = document.getElementById('authModalTitle');
+    const authModalSubtitle = document.getElementById('authModalSubtitle');
+    const emailInput = document.getElementById('authEmail');
+    const passwordInput = document.getElementById('authPassword');
+    const primaryAuthBtn = document.getElementById('primaryAuthBtn');
+    const forgotPasswordBtn = document.getElementById('forgotPasswordBtn');
+    const authToggleText = document.getElementById('authToggleText');
+    const toggleAuthModeBtn = document.getElementById('toggleAuthModeBtn');
+    
+    // Auth Modal Eye Toggle Elements
+    const togglePasswordVisBtn = document.getElementById('togglePasswordVisBtn');
+    const eyeIconHidden = document.getElementById('eyeIconHidden');
+    const eyeIconVisible = document.getElementById('eyeIconVisible');
+
+    // Update Password Modal Elements
+    const updatePasswordModalOverlay = document.getElementById('updatePasswordModalOverlay');
+    const closeUpdatePasswordBtn = document.getElementById('closeUpdatePasswordBtn');
+    const newPasswordInput = document.getElementById('newPasswordInput');
+    const saveNewPasswordBtn = document.getElementById('saveNewPasswordBtn');
+    
+    // Update Password Eye Toggle Elements
+    const toggleUpdatePasswordVisBtn = document.getElementById('toggleUpdatePasswordVisBtn');
+    const updateEyeIconHidden = document.getElementById('updateEyeIconHidden');
+    const updateEyeIconVisible = document.getElementById('updateEyeIconVisible');
+
+    // --- SESSION CHECKER ---
+    const checkSession = async () => {
+        try {
+            const session = await AppDB.checkSession();
+            if (session) {
+                loggedOutSettingsView.style.display = 'none';
+                loggedInSettingsView.style.display = 'flex';
+                userEmailDisplay.textContent = `Synced as: ${session.user.email}`;
+            } else {
+                loggedOutSettingsView.style.display = 'flex';
+                loggedInSettingsView.style.display = 'none';
+            }
+        } catch (error) {
+            console.error("Session check failed:", error);
+        }
+    };
+
+    // --- PASSWORD VISIBILITY TOGGLES ---
+    if (togglePasswordVisBtn) {
+        togglePasswordVisBtn.addEventListener('click', () => {
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
+                eyeIconHidden.style.display = 'none';
+                eyeIconVisible.style.display = 'block';
+            } else {
+                passwordInput.type = 'password';
+                eyeIconHidden.style.display = 'block';
+                eyeIconVisible.style.display = 'none';
+            }
+        });
+    }
+
+    if (toggleUpdatePasswordVisBtn) {
+        toggleUpdatePasswordVisBtn.addEventListener('click', () => {
+            if (newPasswordInput.type === 'password') {
+                newPasswordInput.type = 'text';
+                updateEyeIconHidden.style.display = 'none';
+                updateEyeIconVisible.style.display = 'block';
+            } else {
+                newPasswordInput.type = 'password';
+                updateEyeIconHidden.style.display = 'block';
+                updateEyeIconVisible.style.display = 'none';
+            }
+        });
+    }
+
+    // --- SMART MODAL STATE TOGGLE ---
+    let isLoginMode = true;
+
+    const toggleModalMode = () => {
+        isLoginMode = !isLoginMode;
+        if (isLoginMode) {
+            authModalTitle.textContent = "Welcome Back";
+            authModalSubtitle.textContent = "Log in to sync your diary";
+            primaryAuthBtn.textContent = "Login";
+            authToggleText.textContent = "New here?";
+            toggleAuthModeBtn.textContent = "Create an account";
+            if (forgotPasswordBtn) forgotPasswordBtn.style.display = 'block';
+        } else {
+            authModalTitle.textContent = "Create Account";
+            authModalSubtitle.textContent = "Securely back up your data";
+            primaryAuthBtn.textContent = "Sign Up";
+            authToggleText.textContent = "Already have an account?";
+            toggleAuthModeBtn.textContent = "Log in";
+            if (forgotPasswordBtn) forgotPasswordBtn.style.display = 'none'; // Hide forgot password when signing up
+        }
+    };
+
+    if (toggleAuthModeBtn) toggleAuthModeBtn.addEventListener('click', toggleModalMode);
+
+    // --- MODAL CONTROLS ---
+    openAuthModalBtn.addEventListener('click', () => {
+        isLoginMode = false; // Set to false so toggle sets it back to true (Login mode)
+        toggleModalMode(); 
+        authModalOverlay.style.display = 'flex';
+    });
+    closeAuthModalBtn.addEventListener('click', () => authModalOverlay.style.display = 'none');
+    
+    openUpdatePasswordBtn.addEventListener('click', () => updatePasswordModalOverlay.style.display = 'flex');
+    closeUpdatePasswordBtn.addEventListener('click', () => updatePasswordModalOverlay.style.display = 'none');
+
+    // --- THE ONE SMART AUTH BUTTON ---
+    primaryAuthBtn.addEventListener('click', async () => {
+        const email = emailInput.value.trim();
+        const password = passwordInput.value;
+        if(!email || !password) return alert("Please enter both email and password.");
+        
+        const originalText = primaryAuthBtn.textContent;
+        primaryAuthBtn.textContent = isLoginMode ? "Logging in..." : "Creating Account...";
+        primaryAuthBtn.disabled = true;
+
+        try {
+            if (isLoginMode) {
+                // LOGIN
+                await AppDB.login(email, password);
+                emailInput.value = ''; passwordInput.value = '';
+                authModalOverlay.style.display = 'none';
+                await checkSession();
+            } else {
+                // SIGN UP & MIGRATION
+                const result = await AppDB.register(email, password);
+                
+                if (result && result.requiresVerification) {
+                    alert("Account created! 🚨 IMPORTANT: Please check your email inbox to verify your account before logging in.");
+                    toggleModalMode(); // Swap to login screen so they are ready
+                    passwordInput.value = ''; // clear password
+                } else {
+                    alert("Account created! Your local data is now synced.");
+                    emailInput.value = ''; passwordInput.value = '';
+                    authModalOverlay.style.display = 'none';
+                    await checkSession();
+                }
+            }
+        } catch (error) {
+            if (error.message.includes("Email not confirmed")) {
+                alert("Please check your email and click the confirmation link before logging in!");
+            } else {
+                alert(error.message || "Authentication failed. Please check your details.");
+            }
+        } finally {
+            primaryAuthBtn.textContent = originalText;
+            primaryAuthBtn.disabled = false;
+        }
+    });
+
+    // --- FORGOT PASSWORD ---
+    if (forgotPasswordBtn) {
+        forgotPasswordBtn.addEventListener('click', async () => {
+            const email = emailInput.value.trim();
+            if(!email) return alert("Please type your email address in the box above first.");
+            
+            try {
+                await AppDB.resetPassword(email);
+                alert(`A password reset link has been sent to: ${email}`);
+            } catch (error) {
+                alert(error.message || "Failed to send reset link.");
+            }
+        });
+    }
+
+    // --- UPDATE PASSWORD ---
+    saveNewPasswordBtn.addEventListener('click', async () => {
+        const newPass = newPasswordInput.value;
+        if(!newPass || newPass.length < 6) return alert("New password must be at least 6 characters.");
+        
+        const originalText = saveNewPasswordBtn.textContent;
+        saveNewPasswordBtn.textContent = "Updating...";
+        saveNewPasswordBtn.disabled = true;
+
+        try {
+            await AppDB.updatePassword(newPass);
+            alert("Password updated successfully!");
+            newPasswordInput.value = '';
+            updatePasswordModalOverlay.style.display = 'none';
+        } catch (error) {
+            alert(error.message || "Failed to update password.");
+        } finally {
+            saveNewPasswordBtn.textContent = originalText;
+            saveNewPasswordBtn.disabled = false;
+        }
+    });
+
+    // --- LOGOUT ---
+    logoutBtn.addEventListener('click', async () => {
+        const originalText = logoutBtn.textContent;
+        logoutBtn.textContent = "Logging out...";
+        logoutBtn.disabled = true;
+
+        try {
+            await AppDB.logout();
+            await checkSession();
+        } catch (error) {
+            alert(error.message || "Failed to log out.");
+        } finally {
+            logoutBtn.textContent = originalText;
+            logoutBtn.disabled = false;
+        }
+    });
+
+    // Run on boot to check if user is already logged in
+    checkSession();
+
+    // --- SMART RECOVERY INTERCEPTOR ---
+    // If the user just clicked a "Reset Password" link in their email...
+    if (window.location.hash.includes('type=recovery')) {
+        // Clean the ugly token out of the address bar
+        window.history.replaceState(null, document.title, window.location.pathname);
+        
+        // Wait a split second for the Supabase session to lock in, then pop the modal!
+        setTimeout(() => {
+            alert("Welcome back! Please enter your new password now.");
+            updatePasswordModalOverlay.style.display = 'flex';
+        }, 500);
     }
 }

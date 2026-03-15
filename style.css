@@ -159,6 +159,64 @@ button, input, textarea, select { font-family: inherit; }
 .modal-buttons.expanded button { flex: 1; border-radius: var(--rad-md); }
 .align-left { margin-right: auto; color: var(--color-text-muted); padding-left: 0; }
 
+/* --- PREMIUM AUTH MODAL STYLES --- */
+.auth-modal { padding: 30px 25px; }
+.auth-header { display: flex; flex-direction: column; align-items: center; gap: 8px; margin-bottom: 25px; text-align: center; }
+.auth-subtitle { font-size: 0.85rem; color: var(--color-text-muted); margin-top: -5px; letter-spacing: 0.5px; }
+
+.password-wrapper { position: relative; width: 100%; }
+/* Eye Icon Button */
+.password-eye-btn {
+    position: absolute; 
+    right: 12px; 
+    top: 50%; 
+    transform: translateY(-50%); 
+    background: none; 
+    border: none; 
+    color: var(--color-text-muted); 
+    cursor: pointer; 
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: var(--trans-fast); 
+    padding: 5px;
+}
+.password-eye-btn:hover { color: var(--color-text); }
+.password-eye-btn:active { transform: translateY(-50%) scale(0.9); }
+
+/* Standalone Forgot Password Link */
+.standalone-forgot-btn {
+    background: none; 
+    border: none; 
+    color: var(--color-primary); 
+    font-size: 0.8rem; 
+    font-weight: 600; 
+    cursor: pointer; 
+    transition: var(--trans-fast); 
+    padding: 0;
+}
+.standalone-forgot-btn:hover { opacity: 0.8; text-decoration: underline; }
+
+.auth-action-stack { display: flex; flex-direction: column; gap: 12px; margin-top: 25px; }
+.btn-block { width: 100%; display: flex; justify-content: center; align-items: center; padding: 14px; font-size: 1.05rem; border-radius: 12px; }
+
+.auth-separator { 
+    display: flex; 
+    align-items: center; 
+    text-align: center; 
+    margin: 5px 0; 
+    color: var(--color-text-muted); 
+    font-size: 0.75rem; 
+    font-weight: 700; 
+    letter-spacing: 2px; 
+}
+.auth-separator::before, .auth-separator::after { 
+    content: ''; 
+    flex: 1; 
+    border-bottom: 1px solid var(--color-glass-border); 
+}
+.auth-separator span { padding: 0 10px; }
+
 .bottom-pill-nav { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); display: flex; gap: 8px; padding: 8px 16px; border-radius: var(--rad-pill); z-index: 1000; background: var(--color-glass-bg); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid var(--color-glass-border); box-shadow: var(--shadow-lg); transition: var(--trans-smooth); }
 .bottom-pill-nav.nav-hidden { transform: translate(-50%, 150px); }
 .bottom-pill-btn { background: transparent; border: none; color: var(--color-text-muted); padding: 12px; border-radius: var(--rad-circle); cursor: pointer; transition: var(--trans-smooth); display: flex; align-items: center; justify-content: center; }
