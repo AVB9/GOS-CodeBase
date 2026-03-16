@@ -22,6 +22,7 @@ db.enablePersistence({ synchronizeTabs: true }).catch((err) => console.warn("Off
 
 let isInjectingCloudData = false;
 let realTimeListener = null;
+let authPromise = null; // THE FIX: Prevents duplicate background listeners causing UI freezes
 
 // ARCHITECTURE FIX: Single Source of Truth for all synced data
 const SYNC_CONFIG = {
@@ -40,20 +41,29 @@ const AppDB = {
     session: null,
 
     checkSession() {
-        return new Promise((resolve) => {
-            auth.onAuthStateChanged((user) => {
-                this.session = user;
-                if (user) this.startRealTimeSync();
-                else if (realTimeListener) { realTimeListener(); realTimeListener = null; }
-                resolve(user);
+        // THE FIX: Only attach the Firebase listener once. 
+        // Subsequent calls instantly return the active session without hanging the thread.
+        if (!authPromise) {
+            authPromise = new Promise((resolve) => {
+                auth.onAuthStateChanged((user) => {
+                    this.session = user;
+                    if (user) this.startRealTimeSync();
+                    else if (realTimeListener) { realTimeListener(); realTimeListener = null; }
+                    resolve(user);
+                });
             });
-        });
+        }
+        return authPromise;
     },
 
     async register(email, password) {
         const userCredential = await auth.createUserWithEmailAndPassword(email, password);
         this.session = userCredential.user;
-        await this.pushToCloud();
+        
+        // THE FIX: Fire and forget! Do NOT await this. 
+        // This stops the UI from freezing while waiting for the server handshake.
+        this.pushToCloud(); 
+        
         return { requiresVerification: false };
     },
 
@@ -63,6 +73,23 @@ const AppDB = {
         this.startRealTimeSync();
         return userCredential.user;
     },
+
+    async loginWithGoogle() {
+        // 1. Initialize the Google Provider
+        const provider = new firebase.auth.GoogleAuthProvider();
+        
+        // 2. Trigger the secure pop-up window
+        const result = await auth.signInWithPopup(provider);
+        this.session = result.user;
+        
+        // 3. Fire and forget push! 
+        // If this is a brand new account, we instantly back up their local phone data to the cloud.
+        // If it's an existing account, Firestore will safely merge it.
+        this.pushToCloud();
+        this.startRealTimeSync();
+        
+        return result.user;
+    },    
 
     async logout() {
         await auth.signOut();
@@ -135,7 +162,6 @@ const AppDB = {
                 SYNC_CONFIG.staticKeys.forEach(key => {
                     const localVal = localStorage.getItem(key);
                     const cloudVal = state[key];
-                    // Strict defensive check prevents infinite reload loops
                     if (cloudVal !== undefined && cloudVal !== null && cloudVal !== localVal) {
                         originalSetItem.call(localStorage, key, cloudVal);
                         needsRefresh = true;
@@ -182,7 +208,6 @@ const originalSetItem = localStorage.setItem;
 
 localStorage.setItem = function(key, value) {
     try { 
-        // Safer context binding recommended by the architecture review
         originalSetItem.apply(window.localStorage, [key, value]); 
     } catch (e) { 
         console.error("Storage Error:", e);
@@ -192,7 +217,6 @@ localStorage.setItem = function(key, value) {
 
     if (isInjectingCloudData) return;
 
-    // Use the central config to determine if we should sync
     const isTracked = SYNC_CONFIG.staticKeys.includes(key) || 
                       SYNC_CONFIG.dynamicPrefixes.some(prefix => key.startsWith(prefix));
 

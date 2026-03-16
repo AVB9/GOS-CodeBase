@@ -102,14 +102,11 @@ function setupDataManagement() {
             try {
                 const importedData = JSON.parse(event.target.result);
                 
-                // DEFENSIVE CODING: Verify this is an actual object before proceeding
                 if (typeof importedData !== 'object' || importedData === null) {
                     throw new Error("Invalid file structure");
                 }
 
                 if (confirm("This will overwrite your current data with the backup. Are you sure?")) {
-                    // ARCHITECTURE FIX: Safe merge instead of a destructive wipe.
-                    // This protects Firebase Auth tokens from being destroyed.
                     Object.keys(importedData).forEach(key => {
                         if (importedData[key] !== null && importedData[key] !== undefined) {
                             localStorage.setItem(key, importedData[key]);
@@ -129,7 +126,6 @@ function setupDataManagement() {
 
     resetBtn.addEventListener('click', () => {
         if (confirm("WARNING: This will permanently delete all tasks, journal entries, and settings. This cannot be undone. Are you absolutely sure?")) {
-            // DEFENSIVE WIPE: Only delete our app data, leave Firebase Auth alone!
             const keysToRemove = [];
             for (let i = 0; i < localStorage.length; i++) {
                 const key = localStorage.key(i);
@@ -160,7 +156,6 @@ function setupSubjectManager() {
 
     const defaultSubjects = [{ id: 'off', name: 'Day Off', color: '#555555' }];
     
-    // ARCHITECTURE FIX: Defensive JSON parsing
     const getSubjects = () => {
         try {
             const stored = localStorage.getItem('plannerSubjects');
@@ -324,7 +319,7 @@ function setupAesthetics() {
 }
 
 // =================================================================
-// UPGRADED AUTH UI (CUSTOM INLINE ALERTS)
+// UPGRADED AUTH UI (CUSTOM INLINE ALERTS & GOOGLE AUTH)
 // =================================================================
 function initAuthUI() {
     const loggedOutSettingsView = document.getElementById('loggedOutSettingsView');
@@ -344,7 +339,10 @@ function initAuthUI() {
     const authToggleText = document.getElementById('authToggleText');
     const toggleAuthModeBtn = document.getElementById('toggleAuthModeBtn');
     
-    // Custom Feedback Engines
+    // NEW GOOGLE ELEMENTS
+    const googleAuthBtn = document.getElementById('googleAuthBtn');
+    const googleAuthText = document.getElementById('googleAuthText');
+    
     const authFeedback = document.getElementById('authFeedback');
     const updateAuthFeedback = document.getElementById('updateAuthFeedback');
 
@@ -398,6 +396,7 @@ function initAuthUI() {
             primaryAuthBtn.textContent = "Login";
             authToggleText.textContent = "New here?";
             toggleAuthModeBtn.textContent = "Create an account";
+            if (googleAuthText) googleAuthText.textContent = "Log in with Google"; // UPDATE
             if (forgotPasswordBtn) forgotPasswordBtn.style.display = 'block';
         } else {
             authModalTitle.textContent = "Create Account";
@@ -405,6 +404,7 @@ function initAuthUI() {
             primaryAuthBtn.textContent = "Sign Up";
             authToggleText.textContent = "Already have an account?";
             toggleAuthModeBtn.textContent = "Log in";
+            if (googleAuthText) googleAuthText.textContent = "Sign up with Google"; // UPDATE
             if (forgotPasswordBtn) forgotPasswordBtn.style.display = 'none'; 
         }
     };
@@ -456,6 +456,27 @@ function initAuthUI() {
             primaryAuthBtn.disabled = false;
         }
     });
+
+    if (googleAuthBtn) {
+        googleAuthBtn.addEventListener('click', async () => {
+            const originalText = googleAuthText.textContent;
+            googleAuthText.textContent = "Connecting...";
+            googleAuthBtn.disabled = true;
+
+            try {
+                await AppDB.loginWithGoogle();
+                authModalOverlay.style.display = 'none';
+                await checkSession();
+            } catch (error) {
+                let msg = error.message;
+                if (error.code === 'auth/popup-closed-by-user') msg = "Google sign-in was canceled."; 
+                showFeedback(authFeedback, msg, "error");
+            } finally {
+                googleAuthText.textContent = originalText;
+                googleAuthBtn.disabled = false;
+            }
+        });
+    }
 
     if (forgotPasswordBtn) {
         forgotPasswordBtn.addEventListener('click', async () => {
