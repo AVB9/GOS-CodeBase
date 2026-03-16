@@ -1,5 +1,5 @@
 // =================================================================
-// BILLU'S DIARY: FIREBASE KERNEL (THE SHIELD UPGRADE)
+// BILLU'S DIARY: FIREBASE KERNEL (STRICT WHITELIST SYNC)
 // =================================================================
 
 const firebaseConfig = {
@@ -21,8 +21,6 @@ db.enablePersistence({ synchronizeTabs: true }).catch(err => console.warn("Offli
 let isInjectingCloudData = false;
 let realTimeListener = null;
 let authPromise = null; 
-
-// THE SHIELD: Prevents an empty phone from wiping the cloud on boot
 let hasInitialSyncCompleted = false; 
 
 const SYNC_CONFIG = {
@@ -65,6 +63,11 @@ const AppDB = {
         const provider = new firebase.auth.GoogleAuthProvider();
         const result = await auth.signInWithPopup(provider);
         this.session = result.user;
+        
+        if (result.additionalUserInfo && result.additionalUserInfo.isNewUser) {
+            this.pushToCloud();
+        }
+        
         this.startRealTimeSync();
         return result.user;
     },
@@ -87,14 +90,13 @@ const AppDB = {
     async resetPassword(email) { await auth.sendPasswordResetEmail(email); },
     async updatePassword(newPassword) { if (this.session) await this.session.updatePassword(newPassword); },
 
-    // THE FLAT PAYLOAD ENGINE: Prevents nested array wiping
     async pushToCloud() {
-        // THE SHIELD: DO NOT UPLOAD UNTIL WE HAVE DOWNLOADED FIRST
         if (!this.session || !hasInitialSyncCompleted) return;
 
         const payload = {};
         SYNC_CONFIG.staticKeys.forEach(key => {
-            payload[key] = localStorage.getItem(key) || null;
+            const val = localStorage.getItem(key);
+            if (val) payload[key] = val;
         });
 
         for (let i = 0; i < localStorage.length; i++) {
@@ -108,7 +110,6 @@ const AppDB = {
 
         try {
             await db.collection('users').doc(this.session.uid).set(payload, { merge: true });
-            console.log("Firebase Sync Successful!");
         } catch (error) { console.error("Firebase Sync Failed:", error); }
     },
 
@@ -117,7 +118,6 @@ const AppDB = {
 
         realTimeListener = db.collection('users').doc(this.session.uid)
             .onSnapshot((doc) => {
-                // If brand new account, unlock shield and push their local data up
                 if (!doc.exists) {
                     hasInitialSyncCompleted = true;
                     AppDB.pushToCloud();
@@ -128,23 +128,35 @@ const AppDB = {
                 let needsRefresh = false;
                 isInjectingCloudData = true;
 
-                Object.keys(state).forEach(key => {
-                    if (key === 'updated_at') return; // Ignore timestamp
-                    
-                    const localVal = localStorage.getItem(key);
+                // CRITICAL FIX: The Strict Whitelist. Only checks strings we explicitly care about.
+                
+                // 1. Check Static Keys
+                SYNC_CONFIG.staticKeys.forEach(key => {
                     const cloudVal = state[key];
-                    
-                    if (cloudVal !== undefined && cloudVal !== null && cloudVal !== localVal) {
+                    const localVal = localStorage.getItem(key);
+                    // Safely ignore objects, arrays, timestamps, and nulls
+                    if (typeof cloudVal === 'string' && cloudVal !== localVal) {
                         originalSetItem.call(localStorage, key, cloudVal);
                         needsRefresh = true;
                     }
                 });
 
+                // 2. Check Dynamic Keys
+                Object.keys(state).forEach(key => {
+                    if (key.startsWith('todo_') || key.startsWith('journal_')) {
+                        const cloudVal = state[key];
+                        const localVal = localStorage.getItem(key);
+                        if (typeof cloudVal === 'string' && cloudVal !== localVal) {
+                            originalSetItem.call(localStorage, key, cloudVal);
+                            needsRefresh = true;
+                        }
+                    }
+                });
+
                 isInjectingCloudData = false;
-                hasInitialSyncCompleted = true; // THE SHIELD IS UNLOCKED
+                hasInitialSyncCompleted = true;
 
                 if (needsRefresh) {
-                    console.log("Cloud data injected, refreshing UI...");
                     window.location.reload(); 
                 }
             });
@@ -153,7 +165,6 @@ const AppDB = {
 
 window.AppDB = AppDB;
 
-// THE SAFE WIRETAP
 let syncTimeout = null;
 const originalSetItem = localStorage.setItem;
 
