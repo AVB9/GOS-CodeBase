@@ -249,16 +249,16 @@
     <div class="todo-input-group glass-panel" id="floatingTodoInput">
         <div id="todoSubjectTray" class="todo-subject-tray"></div>
         
-        <textarea 
+        <input 
+            type="text" 
             id="newTaskInput" 
-            rows="1" 
             placeholder="What needs to be done?" 
-            autocomplete="off" 
-            spellcheck="false"
-            style="flex: 1; background: transparent; border: none; color: var(--color-text); outline: none; resize: none; overflow: hidden; white-space: nowrap; height: 24px; line-height: 24px; font-family: inherit; font-size: 1rem; padding: 0;"
-        ></textarea>
+            autocomplete="new-password" 
+            role="presentation"
+            spellcheck="false" 
+        />
         
-        <button id="addTaskBtn" type="button" aria-label="Add task" style="background: var(--color-primary); color: var(--color-bg);">
+        <button id="addTaskBtn" type="button" aria-label="Add task">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <line x1="12" y1="5" x2="12" y2="19"></line>
                 <line x1="5" y1="12" x2="19" y2="12"></line>

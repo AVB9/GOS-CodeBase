@@ -341,15 +341,20 @@ function initTodoTab() {
         tray.innerHTML = '';
         const subjects = getSubjects().filter(s => s.id !== 'off');
 
-        // NEW FIX: If database is empty, show a helpful button so it's not invisible!
         if (subjects.length === 0) {
             const emptyPill = document.createElement('div');
             emptyPill.className = `todo-tint-pill`;
             emptyPill.textContent = "Add Subjects in Settings →";
-            emptyPill.addEventListener('mousedown', (e) => {
+            
+            // MOBILE FIX: Bind both mousedown AND touchstart
+            const handleEmptyTap = (e) => {
                 e.preventDefault();
+                e.stopPropagation();
                 document.querySelector('.bottom-pill-btn[data-target="tab-settings"]').click();
-            });
+            };
+            emptyPill.addEventListener('mousedown', handleEmptyTap);
+            emptyPill.addEventListener('touchstart', handleEmptyTap, { passive: false });
+            
             tray.appendChild(emptyPill);
             return;
         }
@@ -365,11 +370,16 @@ function initTodoTab() {
                 pill.style.color = sub.color;
             }
 
-            pill.addEventListener('mousedown', (e) => {
+            // MOBILE FIX: Bind both mousedown AND touchstart to keep the keyboard open
+            const handlePillTap = (e) => {
                 e.preventDefault(); 
+                e.stopPropagation();
                 selectedSubjectId = selectedSubjectId === sub.id ? null : sub.id;
                 renderSubjectTray(); 
-            });
+            };
+            
+            pill.addEventListener('mousedown', handlePillTap);
+            pill.addEventListener('touchstart', handlePillTap, { passive: false });
 
             tray.appendChild(pill);
         });
