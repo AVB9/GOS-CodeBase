@@ -193,6 +193,26 @@ input, textarea {
     flex-shrink: 0;
 }
 
+.auth-separator { 
+    display: flex; 
+    align-items: center; 
+    text-align: center; 
+    margin: 15px 0; 
+    color: var(--color-text-muted); 
+    font-size: 0.85rem; 
+    font-weight: 700; 
+    letter-spacing: 2px; 
+    width: 100%; /* FIX: Forces it to stretch */
+}
+.auth-separator::before, .auth-separator::after { 
+    content: ''; 
+    flex: 1; 
+    border-bottom: 1px solid var(--color-glass-border); 
+}
+.auth-separator span { 
+    padding: 0 15px; 
+}
+
 .password-wrapper { position: relative; width: 100%; }
 .password-eye-btn { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: none; color: var(--color-text-muted); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: color 0.2s ease; padding: 5px; }
 .password-eye-btn:hover { color: var(--color-text); }

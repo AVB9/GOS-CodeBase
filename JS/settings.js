@@ -420,7 +420,7 @@ function initAuthUI() {
     
     closeAuthModalBtn.addEventListener('click', () => authModalOverlay.style.display = 'none');
 
-    primaryAuthBtn.addEventListener('click', async () => {
+primaryAuthBtn.addEventListener('click', async () => {
         const email = emailInput.value.trim();
         const password = passwordInput.value;
         if(!email || !password) return showFeedback(authFeedback, "Please enter both email and password.", "error");
@@ -432,17 +432,10 @@ function initAuthUI() {
         try {
             if (isLoginMode) {
                 await AppDB.login(email, password);
-                emailInput.value = ''; passwordInput.value = '';
-                authModalOverlay.style.display = 'none';
-                await checkSession();
+                window.location.reload(); // FIX: Instant UI Reload
             } else {
                 await AppDB.register(email, password);
-                showFeedback(authFeedback, "Account created! Syncing to the cloud.", "success");
-                setTimeout(() => {
-                    emailInput.value = ''; passwordInput.value = '';
-                    authModalOverlay.style.display = 'none';
-                }, 1500);
-                await checkSession();
+                window.location.reload(); // FIX: Instant UI Reload
             }
         } catch (error) {
             let msg = error.message;
@@ -451,11 +444,29 @@ function initAuthUI() {
             if (error.code === 'auth/weak-password') msg = "Password must be at least 6 characters.";
             
             showFeedback(authFeedback, msg, "error");
-        } finally {
             primaryAuthBtn.textContent = originalText;
             primaryAuthBtn.disabled = false;
         }
     });
+
+    if (googleAuthBtn) {
+        googleAuthBtn.addEventListener('click', async () => {
+            const originalText = googleAuthText.textContent;
+            googleAuthText.textContent = "Connecting...";
+            googleAuthBtn.disabled = true;
+
+            try {
+                await AppDB.loginWithGoogle();
+                window.location.reload(); // FIX: Instant UI Reload
+            } catch (error) {
+                let msg = error.message;
+                if (error.code === 'auth/popup-closed-by-user') msg = "Google sign-in was canceled."; 
+                showFeedback(authFeedback, msg, "error");
+                googleAuthText.textContent = originalText;
+                googleAuthBtn.disabled = false;
+            }
+        });
+    }
 
     if (googleAuthBtn) {
         googleAuthBtn.addEventListener('click', async () => {

@@ -248,7 +248,7 @@
 
     <div class="glass-panel todo-input-group" id="floatingTodoInput">
         <div id="todoSubjectTray" class="todo-subject-tray"></div>
-        <input type="text" id="newTaskInput" placeholder="What needs to be done?" />
+        <input type="text" id="newTaskInput" placeholder="What needs to be done?" autocomplete="off" autocorrect="off" data-lpignore="true" data-1p-ignore="true" spellcheck="false" />
         <button id="addTaskBtn" class="btn-primary" title="Add Task">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
         </button>
@@ -372,11 +372,11 @@
             </div>
 
             <div class="auth-action-stack">
-                <button id="primaryAuthBtn" class="btn-primary btn-block">Login</button>
+                <button type="button" id="primaryAuthBtn" class="btn-primary btn-block">Login</button>
                 
                 <div class="auth-separator"><span>OR</span></div>
                 
-                <button id="googleAuthBtn" class="btn-ghost btn-block google-btn">
+                <button type="button" id="googleAuthBtn" class="btn-ghost btn-block google-btn">
                     <svg viewBox="0 0 24 24" width="20" height="20" xmlns="http://www.w3.org/2000/svg">
                         <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
                         <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
