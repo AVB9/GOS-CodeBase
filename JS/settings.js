@@ -413,24 +413,51 @@ function initAuthUI() {
         toggleModalMode(); toggleModalMode(); 
         clearFeedback(authFeedback);
         
-        // NUCLEAR FIX: Reveal password input ONLY when modal opens
-        if (passwordInput) passwordInput.type = 'password';
-        
+        // NUCLEAR FIX: Build the password field so the user can type
+        document.getElementById('authPasswordContainer').innerHTML = `
+            <input type="password" id="authPassword" class="auth-input" placeholder="Password" autocomplete="current-password" style="margin-bottom: 0; padding-right: 40px;" />
+            <button id="togglePasswordVisBtn" class="password-eye-btn" type="button">
+                <svg id="eyeIconHidden" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/><path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/><line x1="2" y1="2" x2="22" y2="22"/></svg>
+                <svg id="eyeIconVisible" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display: none;"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
+        `;
+
+        // Re-bind the eye toggle since we just created it
+        document.getElementById('togglePasswordVisBtn').addEventListener('click', () => {
+            const passInput = document.getElementById('authPassword');
+            const eyeHidden = document.getElementById('eyeIconHidden');
+            const eyeVisible = document.getElementById('eyeIconVisible');
+            if (passInput.type === 'password') {
+                passInput.type = 'text';
+                eyeHidden.style.display = 'none';
+                eyeVisible.style.display = 'block';
+            } else {
+                passInput.type = 'password';
+                eyeHidden.style.display = 'block';
+                eyeVisible.style.display = 'none';
+            }
+        });
+
+        document.getElementById('authPassword').addEventListener('input', () => clearFeedback(authFeedback));
+
         authModalOverlay.style.display = 'flex';
     });
     
     closeAuthModalBtn.addEventListener('click', () => {
-        if (emailInput) { emailInput.value = ''; }
+        if (emailInput) emailInput.value = '';
         
-        // NUCLEAR FIX: Hide password input completely when closed to cage Chrome
-        if (passwordInput) { passwordInput.value = ''; passwordInput.type = 'hidden'; }
+        // NUCLEAR FIX: Physically destroy the password field so Chrome forgets it exists
+        document.getElementById('authPasswordContainer').innerHTML = '';
         
         authModalOverlay.style.display = 'none';
     });
 
     primaryAuthBtn.addEventListener('click', async () => {
         const email = emailInput.value.trim();
-        const password = passwordInput.value;
+        // Grab it dynamically
+        const passInput = document.getElementById('authPassword');
+        const password = passInput ? passInput.value : '';
+        
         if(!email || !password) return showFeedback(authFeedback, "Please enter both email and password.", "error");
         
         const originalText = primaryAuthBtn.textContent;
