@@ -332,8 +332,6 @@ function initAuthUI() {
     const closeAuthModalBtn = document.getElementById('closeAuthModalBtn');
     const authModalTitle = document.getElementById('authModalTitle');
     const authModalSubtitle = document.getElementById('authModalSubtitle');
-    const emailInput = document.getElementById('authEmail');
-    const passwordInput = document.getElementById('authPassword');
     const primaryAuthBtn = document.getElementById('primaryAuthBtn');
     const forgotPasswordBtn = document.getElementById('forgotPasswordBtn');
     const authToggleText = document.getElementById('authToggleText');
@@ -413,16 +411,18 @@ function initAuthUI() {
         toggleModalMode(); toggleModalMode(); 
         clearFeedback(authFeedback);
         
-        // NUCLEAR FIX: Build the password field so the user can type
-        document.getElementById('authPasswordContainer').innerHTML = `
-            <input type="password" id="authPassword" class="auth-input" placeholder="Password" autocomplete="current-password" style="margin-bottom: 0; padding-right: 40px;" />
-            <button id="togglePasswordVisBtn" class="password-eye-btn" type="button">
-                <svg id="eyeIconHidden" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/><path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/><line x1="2" y1="2" x2="22" y2="22"/></svg>
-                <svg id="eyeIconVisible" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display: none;"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
-            </button>
+        // NUCLEAR FIX: Inject BOTH Email and Password dynamically
+        document.getElementById('authInputContainer').innerHTML = `
+            <input type="email" id="authEmail" class="auth-input" placeholder="Email address" autocomplete="username" style="margin-bottom: 15px;" />
+            <div class="password-wrapper">
+                <input type="password" id="authPassword" class="auth-input" placeholder="Password" autocomplete="current-password" style="margin-bottom: 0; padding-right: 40px;" />
+                <button id="togglePasswordVisBtn" class="password-eye-btn" type="button">
+                    <svg id="eyeIconHidden" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/><path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/><line x1="2" y1="2" x2="22" y2="22"/></svg>
+                    <svg id="eyeIconVisible" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display: none;"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+                </button>
+            </div>
         `;
 
-        // Re-bind the eye toggle since we just created it
         document.getElementById('togglePasswordVisBtn').addEventListener('click', () => {
             const passInput = document.getElementById('authPassword');
             const eyeHidden = document.getElementById('eyeIconHidden');
@@ -438,9 +438,16 @@ function initAuthUI() {
             }
         });
 
+        document.getElementById('authEmail').addEventListener('input', () => clearFeedback(authFeedback));
         document.getElementById('authPassword').addEventListener('input', () => clearFeedback(authFeedback));
 
         authModalOverlay.style.display = 'flex';
+    });
+    
+    closeAuthModalBtn.addEventListener('click', () => {
+        // NUCLEAR FIX: Physically destroy both fields to clear Chrome's memory
+        document.getElementById('authInputContainer').innerHTML = '';
+        authModalOverlay.style.display = 'none';
     });
     
     closeAuthModalBtn.addEventListener('click', () => {
@@ -453,9 +460,9 @@ function initAuthUI() {
     });
 
     primaryAuthBtn.addEventListener('click', async () => {
-        const email = emailInput.value.trim();
-        // Grab it dynamically
+        const emailInput = document.getElementById('authEmail');
         const passInput = document.getElementById('authPassword');
+        const email = emailInput ? emailInput.value.trim() : '';
         const password = passInput ? passInput.value : '';
         
         if(!email || !password) return showFeedback(authFeedback, "Please enter both email and password.", "error");
@@ -505,7 +512,8 @@ function initAuthUI() {
 
     if (forgotPasswordBtn) {
         forgotPasswordBtn.addEventListener('click', async () => {
-            const email = emailInput.value.trim();
+            const emailInput = document.getElementById('authEmail');
+            const email = emailInput ? emailInput.value.trim() : '';
             if(!email) return showFeedback(authFeedback, "Please type your email address first.", "error");
             
             try {
