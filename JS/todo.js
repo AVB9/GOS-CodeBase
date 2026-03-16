@@ -336,7 +336,44 @@ function initTodoTab() {
     });
 
     AppEvents.on('SUBJECTS_UPDATED', () => {
-        renderSubjectTray();
+        const renderSubjectTray = () => {
+        if (!tray) return;
+        tray.innerHTML = '';
+        const subjects = getSubjects().filter(s => s.id !== 'off');
+
+        // NEW FIX: If database is empty, show a helpful button so it's not invisible!
+        if (subjects.length === 0) {
+            const emptyPill = document.createElement('div');
+            emptyPill.className = `todo-tint-pill`;
+            emptyPill.textContent = "Add Subjects in Settings →";
+            emptyPill.addEventListener('mousedown', (e) => {
+                e.preventDefault();
+                document.querySelector('.bottom-pill-btn[data-target="tab-settings"]').click();
+            });
+            tray.appendChild(emptyPill);
+            return;
+        }
+
+        subjects.forEach(sub => {
+            const pill = document.createElement('div');
+            pill.className = `todo-tint-pill ${selectedSubjectId === sub.id ? 'selected' : ''}`;
+            pill.textContent = sub.name;
+            
+            if (selectedSubjectId === sub.id) {
+                pill.style.backgroundColor = hexToRgba(sub.color, 0.2); 
+                pill.style.borderColor = sub.color;
+                pill.style.color = sub.color;
+            }
+
+            pill.addEventListener('mousedown', (e) => {
+                e.preventDefault(); 
+                selectedSubjectId = selectedSubjectId === sub.id ? null : sub.id;
+                renderSubjectTray(); 
+            });
+
+            tray.appendChild(pill);
+        });
+    };
         renderTasks();
     });
 
