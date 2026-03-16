@@ -246,13 +246,22 @@
         </section>
     </main>
 
-    <div class="glass-panel todo-input-group" id="floatingTodoInput">
-        <div id="todoSubjectTray" class="todo-subject-tray"></div>
-        <input type="text" id="newTaskInput" placeholder="What needs to be done?" autocomplete="off" autocorrect="off" data-lpignore="true" data-1p-ignore="true" spellcheck="false" />
-        <button id="addTaskBtn" class="btn-primary" title="Add Task">
+   <form class="todo-input-group" id="floatingTodoInput" autocomplete="off" onsubmit="return false;">
+        <input 
+            type="text" 
+            id="newTaskInput" 
+            placeholder="What needs to be done?" 
+            autocomplete="off" 
+            readonly 
+            onfocus="this.removeAttribute('readonly');" 
+            style="cursor: text;" 
+        />
+        <button id="addTaskBtn" type="button" aria-label="Add task">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
         </button>
-    </div>
+    </form>
+        
+
 
     <nav class="bottom-pill-nav" id="bottomNav">
         <button class="bottom-pill-btn" data-target="tab-journal" title="Journal"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/></svg></button>

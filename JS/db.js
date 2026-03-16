@@ -1,5 +1,5 @@
 // =================================================================
-// BILLU'S DIARY: FIREBASE KERNEL (SILENT SYNC UPGRADE)
+// BILLU'S DIARY: FIREBASE KERNEL (SILENT SYNC & READ-ONLY FIX)
 // =================================================================
 
 const firebaseConfig = {
@@ -18,10 +18,13 @@ const db = firebase.firestore();
 
 db.enablePersistence({ synchronizeTabs: true }).catch(err => console.warn("Offline Mode Error:", err.code));
 
-let isInjectingCloudData = false;
+// Global Scope Locks
+window.isInjectingCloudData = false;
+window.hasInitialSyncCompleted = false;
+window.syncTimeout = null;
+
 let realTimeListener = null;
 let authPromise = null; 
-let hasInitialSyncCompleted = false; 
 
 const SYNC_CONFIG = {
     staticKeys: ['plannerTargets', 'plannerCompleted', 'plannerSubjects', 'userDisplayName', 'userUltimateGoalName', 'userUltimateGoalDate'],
@@ -91,7 +94,8 @@ const AppDB = {
     async updatePassword(newPassword) { if (this.session) await this.session.updatePassword(newPassword); },
 
     async pushToCloud() {
-        if (!this.session || !hasInitialSyncCompleted) return;
+        // THE SHIELD: Prevents wiping the cloud if the PC hasn't finished downloading yet
+        if (!this.session || !window.hasInitialSyncCompleted) return;
 
         const payload = {};
         SYNC_CONFIG.staticKeys.forEach(key => {
@@ -119,49 +123,52 @@ const AppDB = {
         realTimeListener = db.collection('users').doc(this.session.uid)
             .onSnapshot((doc) => {
                 if (!doc.exists) {
-                    hasInitialSyncCompleted = true;
+                    window.hasInitialSyncCompleted = true;
                     AppDB.pushToCloud();
                     return;
                 }
 
                 const state = doc.data();
                 let needsRefresh = false;
-                isInjectingCloudData = true;
-                
-                // 1. Check Static Keys
-                SYNC_CONFIG.staticKeys.forEach(key => {
-                    const cloudVal = state[key];
-                    const localVal = localStorage.getItem(key);
-                    if (typeof cloudVal === 'string' && cloudVal !== localVal) {
-                        originalSetItem.call(localStorage, key, cloudVal);
-                        needsRefresh = true;
-                    }
-                });
+                window.isInjectingCloudData = true;
 
-                // 2. Check Dynamic Keys
-                Object.keys(state).forEach(key => {
-                    if (key.startsWith('todo_') || key.startsWith('journal_')) {
+                // UNBREAKABLE INJECTION BLOCK
+                try {
+                    SYNC_CONFIG.staticKeys.forEach(key => {
                         const cloudVal = state[key];
                         const localVal = localStorage.getItem(key);
+                        // Normal setItem used to avoid browser crash
                         if (typeof cloudVal === 'string' && cloudVal !== localVal) {
-                            originalSetItem.call(localStorage, key, cloudVal);
+                            localStorage.setItem(key, cloudVal);
                             needsRefresh = true;
                         }
-                    }
-                });
+                    });
 
-                isInjectingCloudData = false;
-                hasInitialSyncCompleted = true;
+                    Object.keys(state).forEach(key => {
+                        if (key.startsWith('todo_') || key.startsWith('journal_')) {
+                            const cloudVal = state[key];
+                            const localVal = localStorage.getItem(key);
+                            if (typeof cloudVal === 'string' && cloudVal !== localVal) {
+                                localStorage.setItem(key, cloudVal);
+                                needsRefresh = true;
+                            }
+                        }
+                    });
+                } catch (err) {
+                    console.error("Silent injection handled:", err);
+                } finally {
+                    // GUARANTEED TO UNLOCK THE SHIELD
+                    window.isInjectingCloudData = false;
+                    window.hasInitialSyncCompleted = true;
+                }
 
-                // CRITICAL FIX: The Soft Sync Engine. No more reloading the page.
+                // SILENT UI REFRESH (NO MORE RELOADING)
                 if (needsRefresh) {
-                    console.log("Cloud data synced, updating UI silently...");
                     if (window.AppEvents) {
-                        // Adding 0 days forces the UI to gracefully re-read from memory
+                        window.AppEvents.emit('SUBJECTS_UPDATED');
+                        window.AppEvents.emit('PLANNER_UPDATED');
                         window.AppEvents.emit('DATE_CHANGE', { tab: 'todo', direction: 0 });
                         window.AppEvents.emit('DATE_CHANGE', { tab: 'journal', direction: 0 });
-                        window.AppEvents.emit('PLANNER_UPDATED'); 
-                        window.AppEvents.emit('SUBJECTS_UPDATED');
                     }
                     if (typeof window.forcePlannerRefresh === 'function') {
                         window.forcePlannerRefresh();
@@ -173,7 +180,7 @@ const AppDB = {
 
 window.AppDB = AppDB;
 
-let syncTimeout = null;
+// THE SAFE WIRETAP
 const originalSetItem = localStorage.setItem;
 
 localStorage.setItem = function(key, value) {
@@ -181,14 +188,16 @@ localStorage.setItem = function(key, value) {
         originalSetItem.apply(window.localStorage, [key, value]); 
     } catch (e) { return; }
 
-    if (isInjectingCloudData) return;
+    // If Firestore is downloading, DO NOT bounce it back up
+    if (window.isInjectingCloudData) return;
+
     const isTracked = SYNC_CONFIG.staticKeys.includes(key) || 
                       SYNC_CONFIG.dynamicPrefixes.some(prefix => key.startsWith(prefix));
 
-    if (isTracked && AppDB.session) {
-        clearTimeout(syncTimeout);
-        syncTimeout = setTimeout(() => {
+    if (isTracked && AppDB.session && window.hasInitialSyncCompleted) {
+        clearTimeout(window.syncTimeout);
+        window.syncTimeout = setTimeout(() => {
             AppDB.pushToCloud();
-        }, 2000);
+        }, 1500);
     }
 };
