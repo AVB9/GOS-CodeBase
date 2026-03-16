@@ -305,7 +305,12 @@ function initTodoTab() {
     };
 
     addBtn.addEventListener('click', addTask);
-    input.addEventListener('keypress', (e) => { if (e.key === 'Enter') addTask(); });
+    input.addEventListener('keypress', (e) => { 
+        if (e.key === 'Enter') {
+            e.preventDefault(); // Blocks the new line
+            addTask(); 
+        } 
+    });
 
     const changeDate = (days) => {
         currentDate.setDate(currentDate.getDate() + days);
