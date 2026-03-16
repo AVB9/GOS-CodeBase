@@ -409,17 +409,22 @@ function initAuthUI() {
     if (toggleAuthModeBtn) toggleAuthModeBtn.addEventListener('click', toggleModalMode);
 
     openAuthModalBtn.addEventListener('click', () => {
-        isLoginMode = true; // Always default to login when opening
-        toggleModalMode(); toggleModalMode(); // Hack to reset text cleanly
+        isLoginMode = true; 
+        toggleModalMode(); toggleModalMode(); 
         clearFeedback(authFeedback);
-        if (emailInput) emailInput.disabled = false;
-        if (passwordInput) passwordInput.disabled = false;
+        
+        // NUCLEAR FIX: Reveal password input ONLY when modal opens
+        if (passwordInput) passwordInput.type = 'password';
+        
         authModalOverlay.style.display = 'flex';
     });
     
     closeAuthModalBtn.addEventListener('click', () => {
-        if (emailInput) { emailInput.value = ''; emailInput.disabled = true; }
-        if (passwordInput) { passwordInput.value = ''; passwordInput.disabled = true; }
+        if (emailInput) { emailInput.value = ''; }
+        
+        // NUCLEAR FIX: Hide password input completely when closed to cage Chrome
+        if (passwordInput) { passwordInput.value = ''; passwordInput.type = 'hidden'; }
+        
         authModalOverlay.style.display = 'none';
     });
 

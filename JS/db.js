@@ -1,5 +1,5 @@
 // =================================================================
-// BILLU'S DIARY: FIREBASE KERNEL (SILENT SYNC & READ-ONLY FIX)
+// BILLU'S DIARY: FIREBASE KERNEL (STRICT PROTOTYPE BINDING)
 // =================================================================
 
 const firebaseConfig = {
@@ -18,7 +18,6 @@ const db = firebase.firestore();
 
 db.enablePersistence({ synchronizeTabs: true }).catch(err => console.warn("Offline Mode Error:", err.code));
 
-// Global Scope Locks
 window.isInjectingCloudData = false;
 window.hasInitialSyncCompleted = false;
 window.syncTimeout = null;
@@ -94,13 +93,12 @@ const AppDB = {
     async updatePassword(newPassword) { if (this.session) await this.session.updatePassword(newPassword); },
 
     async pushToCloud() {
-        // THE SHIELD: Prevents wiping the cloud if the PC hasn't finished downloading yet
         if (!this.session || !window.hasInitialSyncCompleted) return;
 
         const payload = {};
         SYNC_CONFIG.staticKeys.forEach(key => {
             const val = localStorage.getItem(key);
-            if (val) payload[key] = val;
+            if (val !== null && val !== undefined) payload[key] = val;
         });
 
         for (let i = 0; i < localStorage.length; i++) {
@@ -132,14 +130,12 @@ const AppDB = {
                 let needsRefresh = false;
                 window.isInjectingCloudData = true;
 
-                // UNBREAKABLE INJECTION BLOCK
                 try {
                     SYNC_CONFIG.staticKeys.forEach(key => {
                         const cloudVal = state[key];
                         const localVal = localStorage.getItem(key);
-                        // Normal setItem used to avoid browser crash
                         if (typeof cloudVal === 'string' && cloudVal !== localVal) {
-                            localStorage.setItem(key, cloudVal);
+                            originalSetItem.call(localStorage, key, cloudVal);
                             needsRefresh = true;
                         }
                     });
@@ -149,15 +145,12 @@ const AppDB = {
                             const cloudVal = state[key];
                             const localVal = localStorage.getItem(key);
                             if (typeof cloudVal === 'string' && cloudVal !== localVal) {
-                                localStorage.setItem(key, cloudVal);
+                                originalSetItem.call(localStorage, key, cloudVal);
                                 needsRefresh = true;
                             }
                         }
                     });
-                } catch (err) {
-                    console.error("Silent injection handled:", err);
                 } finally {
-                    // GUARANTEED TO UNLOCK THE SHIELD
                     window.isInjectingCloudData = false;
                     window.hasInitialSyncCompleted = true;
                 }
@@ -180,15 +173,17 @@ const AppDB = {
 
 window.AppDB = AppDB;
 
-// THE SAFE WIRETAP
-const originalSetItem = localStorage.setItem;
+// THE UNBREAKABLE PROTOTYPE WIRETAP
+const originalSetItem = Storage.prototype.setItem;
 
-localStorage.setItem = function(key, value) {
+Storage.prototype.setItem = function(key, value) {
     try { 
-        originalSetItem.apply(window.localStorage, [key, value]); 
-    } catch (e) { return; }
+        originalSetItem.call(this, key, value); 
+    } catch (e) { 
+        console.error("Storage Error:", e);
+        return; 
+    }
 
-    // If Firestore is downloading, DO NOT bounce it back up
     if (window.isInjectingCloudData) return;
 
     const isTracked = SYNC_CONFIG.staticKeys.includes(key) || 
