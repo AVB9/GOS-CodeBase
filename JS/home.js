@@ -5,6 +5,7 @@ document.addEventListener('DOMContentLoaded', () => {
 function initHomeTab() {
     setupGreeting();
     setupGoalModal();
+    setupStandbyMode(); // ARCHITECTURE FIX: Consolidated boot sequence
 }
 
 function setupGreeting() {
@@ -12,7 +13,6 @@ function setupGreeting() {
     const iconEl = document.getElementById('timeIcon');
     
     if (!greetingEl || !iconEl) return; 
-
 
     const savedName = localStorage.getItem('userDisplayName') || 'jiruuuu';
     const greetings = [
@@ -59,7 +59,11 @@ function setupGoalModal() {
         }
 
         try {
-            const targetDate = new Date(targetDateStr);
+            // BUG FIX: Parsing "YYYY-MM-DD" directly assumes UTC, causing timezone offset bugs.
+            // Splitting and using local date parameters fixes the off-by-one-day issue perfectly.
+            const [y, m, d] = targetDateStr.split('-');
+            const targetDate = new Date(y, m - 1, d);
+            
             const today = new Date();
             today.setHours(0, 0, 0, 0); 
             
@@ -97,6 +101,7 @@ function setupGoalModal() {
         const newDate = goalDateInput.value;
 
         if (newName && newDate) {
+            // These will now trigger the dynamic wiretap in db.js perfectly
             localStorage.setItem('userUltimateGoalName', newName);
             localStorage.setItem('userUltimateGoalDate', newDate);
             updateGoalUI(newName, newDate);
@@ -107,7 +112,7 @@ function setupGoalModal() {
     });
 }
 
-document.addEventListener('DOMContentLoaded', () => {
+function setupStandbyMode() {
     const focusWidget = document.getElementById('focusModeWidget');
     const standbyOverlay = document.getElementById('standbyOverlay');
     const exitBtn = document.getElementById('exitStandbyBtn');
@@ -117,7 +122,6 @@ document.addEventListener('DOMContentLoaded', () => {
     let standbyInterval;
     let wakeLock = null;
 
-    // The Clock Engine
     const updateStandbyClock = () => {
         const now = new Date();
         let h = now.getHours();
@@ -127,52 +131,54 @@ document.addEventListener('DOMContentLoaded', () => {
         dateEl.textContent = now.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
     };
 
-    // Enter Standby
+    // WAKELOCK FIX: OS kills WakeLock when app is minimized. We must re-request it when they return.
+    const handleVisibilityChange = async () => {
+        if (wakeLock !== null && document.visibilityState === 'visible' && !standbyOverlay.classList.contains('standby-hidden')) {
+            try { wakeLock = await navigator.wakeLock.request('screen'); } 
+            catch (e) { console.log('WakeLock request failed upon return.'); }
+        }
+    };
+
     if (focusWidget) {
         focusWidget.addEventListener('click', async () => {
             standbyOverlay.classList.remove('standby-hidden');
             updateStandbyClock();
             standbyInterval = setInterval(updateStandbyClock, 1000);
+            document.addEventListener('visibilitychange', handleVisibilityChange);
             
             try {
-                // 1. Go Fullscreen
                 const elem = document.documentElement;
                 if (elem.requestFullscreen) await elem.requestFullscreen();
                 
-                // 2. Lock to Landscape (Works perfectly on installed Android PWAs!)
                 if (screen.orientation && screen.orientation.lock) {
                     await screen.orientation.lock('landscape');
                 }
                 
-                // 3. Keep Screen Awake
                 if ('wakeLock' in navigator) {
                     wakeLock = await navigator.wakeLock.request('screen');
                 }
             } catch(e) { 
-                console.log('Advanced hardware APIs skipped:', e); 
+                console.log('Advanced hardware APIs skipped/unsupported by browser:', e); 
             }
         });
     }
 
-    // Exit Standby
     if (exitBtn) {
         exitBtn.addEventListener('click', async () => {
             standbyOverlay.classList.add('standby-hidden');
             clearInterval(standbyInterval);
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
             
             try {
-                // 1. Release Screen Awake
                 if (wakeLock !== null) {
                     await wakeLock.release();
                     wakeLock = null;
                 }
-                // 2. Unlock Orientation
                 if (screen.orientation && screen.orientation.unlock) {
                     screen.orientation.unlock();
                 }
-                // 3. Exit Fullscreen
                 if (document.exitFullscreen) await document.exitFullscreen();
             } catch(e) {}
         });
     }
-});
+}

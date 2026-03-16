@@ -1,158 +1,205 @@
 // =================================================================
-// BILLU'S DIARY: THE CLOUD KERNEL
+// BILLU'S DIARY: FIREBASE KERNEL (DYNAMIC SYNC UPGRADE)
 // =================================================================
 
-// 1. Initialize Supabase
-const SUPABASE_URL = 'https://sysgubflyrderrgodztd.supabase.co';
-const SUPABASE_ANON_KEY = 'sb_publishable_ziAs_ghCKVOeseu0fP4Q-w_sOz38oAD';
+const firebaseConfig = {
+    apiKey: "AIzaSyAxX3iJr--KNulCnYXqpqe6eew8_0A7lEw",
+    authDomain: "gos-backend.firebaseapp.com",
+    projectId: "gos-backend",
+    storageBucket: "gos-backend.firebasestorage.app",
+    messagingSenderId: "806581425030",
+    appId: "1:806581425030:web:4d0d607772f11d03431207",
+    measurementId: "G-12LLL4M7EL"
+};
 
-// THE FIX: We name our instance "supabaseClient" because the CDN library already owns the word "supabase"
-const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+if (!firebase.apps.length) {
+    firebase.initializeApp(firebaseConfig);
+}
+const auth = firebase.auth();
+const db = firebase.firestore();
+
+db.enablePersistence({ synchronizeTabs: true }).catch((err) => console.warn("Offline Mode Error:", err.code));
+
+let isInjectingCloudData = false;
+let realTimeListener = null;
+
+// ARCHITECTURE FIX: Single Source of Truth for all synced data
+const SYNC_CONFIG = {
+    staticKeys: [
+        'plannerTargets', 
+        'plannerCompleted', 
+        'plannerSubjects', 
+        'userDisplayName', 
+        'userUltimateGoalName', 
+        'userUltimateGoalDate'
+    ],
+    dynamicPrefixes: ['todo_', 'journal_']
+};
 
 const AppDB = {
     session: null,
 
-    // --- AUTHENTICATION ---
-    async checkSession() {
-        const { data: { session } } = await supabaseClient.auth.getSession();
-        this.session = session;
-        return session;
+    checkSession() {
+        return new Promise((resolve) => {
+            auth.onAuthStateChanged((user) => {
+                this.session = user;
+                if (user) this.startRealTimeSync();
+                else if (realTimeListener) { realTimeListener(); realTimeListener = null; }
+                resolve(user);
+            });
+        });
     },
 
     async register(email, password) {
-        const { data, error } = await supabaseClient.auth.signUp({ email, password });
-        if (error) throw error;
-        
-        // Supabase returns session as null if they need to verify their email first!
-        if (!data.session) {
-            return { requiresVerification: true };
-        }
-        
-        // If email verification is off, do the ghost migration instantly
-        this.session = data.session;
-        await this.pushToCloud(); 
+        const userCredential = await auth.createUserWithEmailAndPassword(email, password);
+        this.session = userCredential.user;
+        await this.pushToCloud();
         return { requiresVerification: false };
     },
 
     async login(email, password) {
-        const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
-        if (error) throw error;
-        
-        this.session = data.session;
-        // Pull their cloud data down to this device
-        await this.pullFromCloud();
-        return data;
+        const userCredential = await auth.signInWithEmailAndPassword(email, password);
+        this.session = userCredential.user;
+        this.startRealTimeSync();
+        return userCredential.user;
     },
 
     async logout() {
-        const { error } = await supabaseClient.auth.signOut();
-        if (error) throw error;
+        await auth.signOut();
         this.session = null;
+        if (realTimeListener) { realTimeListener(); realTimeListener = null; }
+        
+        // PRIVACY WIPE: Clean up using the central config
+        SYNC_CONFIG.staticKeys.forEach(k => localStorage.removeItem(k));
+        
+        const keysToRemove = [];
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (SYNC_CONFIG.dynamicPrefixes.some(prefix => key.startsWith(prefix))) {
+                keysToRemove.push(key);
+            }
+        }
+        keysToRemove.forEach(k => localStorage.removeItem(k));
+        
+        window.location.reload();
     },
 
-    async resetPassword(email) {
-        const { error } = await supabaseClient.auth.resetPasswordForEmail(email);
-        if (error) throw error;
-    },
+    async resetPassword(email) { await auth.sendPasswordResetEmail(email); },
+    async updatePassword(newPassword) { if (this.session) await this.session.updatePassword(newPassword); },
 
-    async updatePassword(newPassword) {
-        const { error } = await supabaseClient.auth.updateUser({ password: newPassword });
-        if (error) throw error;
-    },
-
-    // --- THE SYNC ENGINE ---
-    
-    // Grabs EVERYTHING in localStorage and throws it to Supabase
+    // --- THE DYNAMIC PUSH ENGINE ---
     async pushToCloud() {
-        if (!this.session) return; // Don't sync if offline/logged out
-
-        // Package the entire state
-        const appState = {
-            plannerTargets: localStorage.getItem('plannerTargets'),
-            plannerCompleted: localStorage.getItem('plannerCompleted'),
-            plannerSubjects: localStorage.getItem('plannerSubjects'),
-            journalEntries: localStorage.getItem('journalEntries'),
-            todoList: localStorage.getItem('todoList'),
-            userDisplayName: localStorage.getItem('userDisplayName')
-        };
-
-        const { error } = await supabaseClient
-            .from('user_data')
-            .upsert({ 
-                user_id: this.session.user.id, 
-                app_state: appState,
-                updated_at: new Date().toISOString()
-            });
-
-        if (error) console.error("Cloud Sync Failed:", error);
-        else console.log("Cloud Sync Successful!");
-    },
-
-    // Pulls data from Supabase and injects it into localStorage
-    async pullFromCloud() {
         if (!this.session) return;
 
-        const { data, error } = await supabaseClient
-            .from('user_data')
-            .select('app_state')
-            .eq('user_id', this.session.user.id)
-            .single();
+        const appState = {
+            todos: {},     
+            journals: {}   
+        };
 
-        if (error || !data) {
-            console.log("No cloud data found. Starting fresh.");
-            return;
+        // Package static keys
+        SYNC_CONFIG.staticKeys.forEach(key => {
+            appState[key] = localStorage.getItem(key) || null;
+        });
+
+        // Package dynamic keys
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key.startsWith('todo_')) appState.todos[key] = localStorage.getItem(key);
+            if (key.startsWith('journal_')) appState.journals[key] = localStorage.getItem(key);
         }
 
-        // Unpack the cloud state into the phone
-        const state = data.app_state;
-        if (state.plannerTargets) localStorage.setItem('plannerTargets', state.plannerTargets);
-        if (state.plannerCompleted) localStorage.setItem('plannerCompleted', state.plannerCompleted);
-        if (state.plannerSubjects) localStorage.setItem('plannerSubjects', state.plannerSubjects);
-        if (state.journalEntries) localStorage.setItem('journalEntries', state.journalEntries);
-        if (state.todoList) localStorage.setItem('todoList', state.todoList);
-        if (state.userDisplayName) localStorage.setItem('userDisplayName', state.userDisplayName);
+        try {
+            await db.collection('users').doc(this.session.uid).set({
+                app_state: appState,
+                updated_at: firebase.firestore.FieldValue.serverTimestamp()
+            }, { merge: true });
+            console.log("Firebase Dynamic Sync Successful!");
+        } catch (error) {
+            console.error("Firebase Sync Failed:", error);
+        }
+    },
 
-        // Force the UI to refresh with the new data
-        if (window.forcePlannerRefresh) window.forcePlannerRefresh();
-        if (window.renderTodos) window.renderTodos();
-        console.log("Data pulled from cloud successfully.");
+    // --- THE DYNAMIC PULL ENGINE ---
+    startRealTimeSync() {
+        if (!this.session || realTimeListener) return;
+
+        realTimeListener = db.collection('users').doc(this.session.uid)
+            .onSnapshot((doc) => {
+                if (!doc.exists || !doc.data().app_state) return;
+
+                const state = doc.data().app_state;
+                let needsRefresh = false;
+                isInjectingCloudData = true;
+
+                // 1. Sync Static Keys
+                SYNC_CONFIG.staticKeys.forEach(key => {
+                    const localVal = localStorage.getItem(key);
+                    const cloudVal = state[key];
+                    // Strict defensive check prevents infinite reload loops
+                    if (cloudVal !== undefined && cloudVal !== null && cloudVal !== localVal) {
+                        originalSetItem.call(localStorage, key, cloudVal);
+                        needsRefresh = true;
+                    }
+                });
+
+                // 2. Sync Dynamic Todo Dates
+                if (state.todos) {
+                    Object.keys(state.todos).forEach(dateKey => {
+                        const localVal = localStorage.getItem(dateKey);
+                        const cloudVal = state.todos[dateKey];
+                        if (cloudVal !== undefined && cloudVal !== null && cloudVal !== localVal) {
+                            originalSetItem.call(localStorage, dateKey, cloudVal);
+                            needsRefresh = true;
+                        }
+                    });
+                }
+
+                // 3. Sync Dynamic Journal Dates
+                if (state.journals) {
+                    Object.keys(state.journals).forEach(dateKey => {
+                        const localVal = localStorage.getItem(dateKey);
+                        const cloudVal = state.journals[dateKey];
+                        if (cloudVal !== undefined && cloudVal !== null && cloudVal !== localVal) {
+                            originalSetItem.call(localStorage, dateKey, cloudVal);
+                            needsRefresh = true;
+                        }
+                    });
+                }
+
+                isInjectingCloudData = false;
+                if (needsRefresh) window.location.reload(); 
+            });
     }
 };
 
-// Expose it globally so all your tabs can talk to it
 window.AppDB = AppDB;
 
 // =================================================================
-// THE SILENT WIRETAP (AUTO-SYNC ENGINE)
+// THE SAFE WIRETAP (DYNAMIC AWARENESS)
 // =================================================================
-
-// We only care about backing up these specific keys
-const SYNC_KEYS = [
-    'plannerTargets', 
-    'plannerCompleted', 
-    'plannerSubjects', 
-    'journalEntries', 
-    'todoList', 
-    'userDisplayName'
-];
-
 let syncTimeout = null;
-
-// Intercept EVERY save to localStorage in the entire app
 const originalSetItem = localStorage.setItem;
 
 localStorage.setItem = function(key, value) {
-    // 1. Let the app save the data locally instantly (keeps UI fast)
-    originalSetItem.apply(this, arguments);
+    try { 
+        // Safer context binding recommended by the architecture review
+        originalSetItem.apply(window.localStorage, [key, value]); 
+    } catch (e) { 
+        console.error("Storage Error:", e);
+        alert("Device storage full!"); 
+        return; 
+    }
 
-    // 2. If it's one of our crucial cloud keys, wake up the Kernel
-    if (SYNC_KEYS.includes(key) && AppDB.session) {
-        
-        // 3. Debounce: Wait 2 seconds before syncing. 
-        // If the user types fast or double-clicks rapidly, we don't spam Supabase!
+    if (isInjectingCloudData) return;
+
+    // Use the central config to determine if we should sync
+    const isTracked = SYNC_CONFIG.staticKeys.includes(key) || 
+                      SYNC_CONFIG.dynamicPrefixes.some(prefix => key.startsWith(prefix));
+
+    if (isTracked && AppDB.session) {
         clearTimeout(syncTimeout);
         syncTimeout = setTimeout(() => {
-            console.log(`Kernel detected change in '${key}'. Syncing to cloud...`);
+            console.log(`Change detected in ${key}. Syncing...`);
             AppDB.pushToCloud();
         }, 2000);
     }

@@ -11,9 +11,11 @@ function initJournalTab() {
     if (!editor || !dateDisplay) return;
 
     let currentDate = new Date();
-    let debounceTimer = null; // The Memory Protector
+    let debounceTimer = null; 
 
+    // DEFENSIVE CODING: NaN Date Prevention
     const getDateKey = (date) => {
+        if (!(date instanceof Date) || isNaN(date)) date = new Date();
         const y = date.getFullYear();
         const m = String(date.getMonth() + 1).padStart(2, '0');
         const d = String(date.getDate()).padStart(2, '0');
@@ -39,15 +41,34 @@ function initJournalTab() {
         updateDateDisplay();
     };
 
-    // PERFORMANCE FIX: Debounce logic prevents crashing the hard drive when typing fast!
+    const forceSaveCurrent = () => {
+        if (debounceTimer) {
+            clearTimeout(debounceTimer);
+            debounceTimer = null;
+            try {
+                localStorage.setItem(getDateKey(currentDate), editor.value);
+            } catch (e) {
+                console.error('Storage error: Could not save journal entry.', e);
+            }
+        }
+    };
+
     editor.addEventListener('input', () => {
         clearTimeout(debounceTimer);
         debounceTimer = setTimeout(() => {
-            localStorage.setItem(getDateKey(currentDate), editor.value);
-        }, 400); // Waits 400ms after you stop typing to save
+            try {
+                localStorage.setItem(getDateKey(currentDate), editor.value);
+            } catch (e) {
+                console.error('Storage error: Could not save journal entry.', e);
+            }
+            debounceTimer = null;
+        }, 400); 
     });
 
+    editor.addEventListener('blur', forceSaveCurrent);
+
     const changeDate = (days) => {
+        forceSaveCurrent(); 
         currentDate.setDate(currentDate.getDate() + days);
         loadEntry();
     };
@@ -55,18 +76,17 @@ function initJournalTab() {
     if (prevBtn) prevBtn.addEventListener('click', () => changeDate(-1));
     if (nextBtn) nextBtn.addEventListener('click', () => changeDate(1));
 
-    // Request date picker when clicking the display
     dateDisplay.addEventListener('click', () => {
         AppEvents.emit('REQUEST_DATE_PICKER', { tab: 'journal', dateStr: getDateKey(currentDate).replace('journal_', '') });
     });
 
-    // --- EVENT BUS LISTENERS (No more dirty global window functions) ---
     AppEvents.on('DATE_CHANGE', ({ tab, direction }) => {
         if (tab === 'journal') changeDate(direction);
     });
 
     AppEvents.on('JUMP_DATE', ({ tab, date }) => {
         if (tab === 'journal') {
+            forceSaveCurrent(); 
             currentDate = new Date(date);
             loadEntry();
         }

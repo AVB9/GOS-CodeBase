@@ -1,12 +1,12 @@
 // =================================================================
-// 1. GLOBAL EVENT BUS (The New Communication Engine)
+// 1. GLOBAL EVENT BUS & INIT
 // =================================================================
 window.AppEvents = {
     emit: (name, detail) => window.dispatchEvent(new CustomEvent(name, { detail })),
-    on: (name, callback) => window.addEventListener(name, (e) => callback(e.detail))
+    on: (name, callback) => window.addEventListener(name, (e) => callback(e.detail)),
+    off: (name, callback) => window.removeEventListener(name, callback) 
 };
 
-// Register Service Worker for PWA Installation
 if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('./sw.js')
         .then(() => console.log('Service Worker Registered!'))
@@ -18,11 +18,17 @@ document.addEventListener('DOMContentLoaded', () => {
     initNavigation();
     initSmartUI();
     initDateGesturesAndModals();
+    initGlobalModals(); // ARCHITECTURE FIX: Consolidated boot sequence
 });
 
 // =================================================================
 // 2. PREMIUM PRELOADER LOGIC
 // =================================================================
+const PRELOADER_ASSETS = {
+    daySvg: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>`,
+    nightSvg: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>`
+};
+
 function initPreloader() {
     const preloader = document.getElementById('appPreloader');
     const preloaderIcon = document.getElementById('preloaderIcon');
@@ -33,12 +39,16 @@ function initPreloader() {
 
     const hour = new Date().getHours();
     let greetingText = hour < 12 ? 'Good Morning' : (hour < 18 ? 'Good Afternoon' : 'Good Evening');
-    
-    const svgIcon = hour < 18 
-        ? `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>`
-        : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>`;
+    const svgIcon = hour < 18 ? PRELOADER_ASSETS.daySvg : PRELOADER_ASSETS.nightSvg;
 
-    const userName = localStorage.getItem('userDisplayName') || 'jiruuuu... :)';
+    // DEFENSIVE CODING: Prevent fatal crash in strict private browsing
+    let userName = 'jiruuuu... :)';
+    try {
+        userName = localStorage.getItem('userDisplayName') || userName;
+    } catch(e) {
+        console.warn("LocalStorage restricted, using default name.");
+    }
+
     const fullText = `${greetingText}, ${userName}`;
 
     if (preloaderIcon) preloaderIcon.innerHTML = svgIcon;
@@ -50,7 +60,7 @@ function initPreloader() {
     setTimeout(() => {
         if (preloader) preloader.classList.add('hidden'); 
         if (appContainer) appContainer.classList.remove('app-hidden'); 
-    }, 2000); 
+    }, 800); 
 }
 
 // =================================================================
@@ -79,7 +89,6 @@ function initNavigation() {
                 targetId === 'tab-todo' ? floatingTodoInput.classList.add('active') : floatingTodoInput.classList.remove('active');
             }
 
-            // Tell the rest of the app that the tab changed!
             AppEvents.emit('TAB_CHANGED', { tab: targetId });
         });
     });
@@ -95,33 +104,49 @@ function initSmartUI() {
     
     if (!bottomNav) return;
 
+    let isScrolling = false;
     let lastScrollY = 0;
+    
     window.addEventListener('scroll', () => {
-        const currentScrollY = window.scrollY;
-        if (currentScrollY > lastScrollY && currentScrollY > 40) {
-            bottomNav.classList.add('nav-hidden');
-            if (floatingTodoInput?.classList.contains('active')) floatingTodoInput.classList.add('keyboard-active');
-        } else if (currentScrollY < lastScrollY) {
-            bottomNav.classList.remove('nav-hidden');
-            if (floatingTodoInput) floatingTodoInput.classList.remove('keyboard-active');
+        if (!isScrolling) {
+            window.requestAnimationFrame(() => {
+                const currentScrollY = window.scrollY;
+                if (currentScrollY > lastScrollY && currentScrollY > 40) {
+                    bottomNav.classList.add('nav-hidden');
+                    if (floatingTodoInput?.classList.contains('active')) floatingTodoInput.classList.add('keyboard-active');
+                } else if (currentScrollY < lastScrollY) {
+                    bottomNav.classList.remove('nav-hidden');
+                    if (floatingTodoInput) floatingTodoInput.classList.remove('keyboard-active');
+                }
+                lastScrollY = currentScrollY;
+                isScrolling = false;
+            });
+            isScrolling = true;
         }
-        lastScrollY = currentScrollY;
     }, { passive: true });
 
     if (journalEditor) {
+        let isJournalScrolling = false;
         let lastJournalScrollY = 0;
         journalEditor.addEventListener('scroll', () => {
-            const currentScrollY = journalEditor.scrollTop;
-            if (currentScrollY > lastJournalScrollY && currentScrollY > 20) {
-                bottomNav.classList.add('nav-hidden');
-            } else if (currentScrollY < lastJournalScrollY) {
-                bottomNav.classList.remove('nav-hidden');
+             if (!isJournalScrolling) {
+                window.requestAnimationFrame(() => {
+                    const currentScrollY = journalEditor.scrollTop;
+                    if (currentScrollY > lastJournalScrollY && currentScrollY > 20) {
+                        bottomNav.classList.add('nav-hidden');
+                    } else if (currentScrollY < lastJournalScrollY) {
+                        bottomNav.classList.remove('nav-hidden');
+                    }
+                    lastJournalScrollY = currentScrollY;
+                    isJournalScrolling = false;
+                });
+                isJournalScrolling = true;
             }
-            lastJournalScrollY = currentScrollY;
         }, { passive: true });
     }
 
     const baseWindowHeight = window.innerHeight;
+    
     document.addEventListener('focusin', (e) => {
         if ((e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') && e.target.id !== 'journalEditor') {
             bottomNav.classList.add('nav-hidden');
@@ -130,19 +155,19 @@ function initSmartUI() {
     });
 
     document.addEventListener('focusout', (e) => {
-        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
-            bottomNav.classList.remove('nav-hidden');
-            if (floatingTodoInput) floatingTodoInput.classList.remove('keyboard-active');
-        }
+        setTimeout(() => {
+            const activeTag = document.activeElement ? document.activeElement.tagName : '';
+            if (activeTag !== 'INPUT' && activeTag !== 'TEXTAREA') {
+                bottomNav.classList.remove('nav-hidden');
+                if (floatingTodoInput) floatingTodoInput.classList.remove('keyboard-active');
+            }
+        }, 10);
     });
 
     const handleKeyboardClose = (currentHeight) => {
-        if (currentHeight >= baseWindowHeight - 100) {
+        if (currentHeight >= baseWindowHeight - 150) {
             bottomNav.classList.remove('nav-hidden');
             if (floatingTodoInput) floatingTodoInput.classList.remove('keyboard-active');
-            if (document.activeElement && ['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) {
-                document.activeElement.blur();
-            }
         }
     };
 
@@ -158,14 +183,21 @@ function initSmartUI() {
 // =================================================================
 function initDateGesturesAndModals() {
     const globalSwipeToggle = document.getElementById('globalSwipeToggle');
-    let isGlobalSwipeEnabled = JSON.parse(localStorage.getItem('globalSwipeEnabled'));
-    if (isGlobalSwipeEnabled === null) isGlobalSwipeEnabled = true; 
+    let isGlobalSwipeEnabled = true; 
+    
+    // DEFENSIVE CODING: Fallback if localStorage is locked down
+    try {
+        const stored = localStorage.getItem('globalSwipeEnabled');
+        if (stored !== null) isGlobalSwipeEnabled = JSON.parse(stored);
+    } catch(e) {
+        console.warn('LocalStorage restricted. Defaulting swipe gesture to true.');
+    }
     
     if (globalSwipeToggle) {
         globalSwipeToggle.checked = isGlobalSwipeEnabled;
         globalSwipeToggle.addEventListener('change', (e) => {
             isGlobalSwipeEnabled = e.target.checked;
-            localStorage.setItem('globalSwipeEnabled', isGlobalSwipeEnabled);
+            try { localStorage.setItem('globalSwipeEnabled', isGlobalSwipeEnabled); } catch(err){}
         });
     }
 
@@ -184,7 +216,6 @@ function initDateGesturesAndModals() {
             const diffY = e.changedTouches[0].screenY - startY;
 
             if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 50) {
-                // Emit signal instead of directly calling functions
                 if (diffX < 0) AppEvents.emit('DATE_CHANGE', { tab: tabName, direction: 1 });  
                 else if (diffX > 0) AppEvents.emit('DATE_CHANGE', { tab: tabName, direction: -1 });           
             }
@@ -202,7 +233,6 @@ function initDateGesturesAndModals() {
     const confirmBtn = document.getElementById('confirmDatePickerBtn');
     let activeTabForPicker = null; 
 
-    // Listen for requests to open the date picker
     AppEvents.on('REQUEST_DATE_PICKER', ({ tab, dateStr }) => {
         activeTabForPicker = tab;
         dateInput.value = dateStr; 
@@ -217,7 +247,6 @@ function initDateGesturesAndModals() {
         const [y, m, d] = dateInput.value.split('-');
         const targetDateObj = new Date(y, m - 1, d);
         
-        // Broadcast the specific date jump
         AppEvents.emit('JUMP_DATE', { tab: activeTabForPicker, date: targetDateObj });
         closeDateModal();
     });
@@ -226,21 +255,15 @@ function initDateGesturesAndModals() {
 // =================================================================
 // 6. GLOBAL MODAL "CLICK OUTSIDE TO CLOSE" LOGIC
 // =================================================================
-document.addEventListener('DOMContentLoaded', () => {
+function initGlobalModals() {
     document.querySelectorAll('.modal-overlay').forEach(overlay => {
         overlay.addEventListener('click', (e) => {
-            // If the user clicked the dark background itself, NOT the modal box inside it
             if (e.target === overlay) {
-                // Find the Cancel/Close button for this specific modal and click it programmatically
-                const closeBtn = overlay.querySelector('.btn-secondary') || overlay.querySelector('.btn-ghost');
-                
-                if (closeBtn) {
-                    closeBtn.click();
-                } else {
-                    // Fallback just in case
-                    overlay.style.display = 'none';
-                }
+                // Extended query selector to catch any variation of a close button
+                const closeBtn = overlay.querySelector('.btn-secondary, .btn-ghost, .close-x');
+                if (closeBtn) closeBtn.click();
+                else overlay.style.display = 'none';
             }
         });
     });
-});
+}

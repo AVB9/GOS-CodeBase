@@ -17,7 +17,9 @@ function initTodoTab() {
     let tasks = [];
     let selectedSubjectId = null;
 
+    // DEFENSIVE CODING: NaN Date Prevention
     const getDateKey = (date) => {
+        if (!(date instanceof Date) || isNaN(date)) date = new Date();
         const y = date.getFullYear();
         const m = String(date.getMonth() + 1).padStart(2, '0');
         const d = String(date.getDate()).padStart(2, '0');
@@ -55,11 +57,15 @@ function initTodoTab() {
         updateDateDisplay();
     };
 
+    // DEFENSIVE CODING: Local Storage Wrapper
     const saveTasks = () => {
-        localStorage.setItem(getDateKey(currentDate), JSON.stringify(tasks));
+        try {
+            localStorage.setItem(getDateKey(currentDate), JSON.stringify(tasks));
+        } catch (e) {
+            console.error('Storage error: Could not save tasks.', e);
+        }
     };
 
-    // --- SUBJECT TRAY LOGIC ---
     const renderSubjectTray = () => {
         if (!tray) return;
         tray.innerHTML = '';
@@ -70,8 +76,6 @@ function initTodoTab() {
             pill.className = `todo-tint-pill ${selectedSubjectId === sub.id ? 'selected' : ''}`;
             pill.textContent = sub.name;
             
-            // Note: Inline styles are kept here because this color data is strictly dynamic 
-            // and cannot be predefined in CSS.
             if (selectedSubjectId === sub.id) {
                 pill.style.backgroundColor = hexToRgba(sub.color, 0.2); 
                 pill.style.borderColor = sub.color;
@@ -96,16 +100,19 @@ function initTodoTab() {
     const updateArrayOrderFromDOM = () => {
         const newArray = [];
         listEl.querySelectorAll('.todo-item').forEach(item => {
-            const taskId = parseInt(item.dataset.taskId);
+            // DEFENSIVE CODING: Prevent drag-and-drop array corruption
+            const rawId = item.getAttribute('data-task-id');
+            if (!rawId) return; 
+
+            const taskId = parseInt(rawId, 10);
             const task = tasks.find(t => t.id === taskId);
             if (task) newArray.push(task);
         });
         tasks = newArray;
         saveTasks();
-        renderTasks(); // Re-render to fix heading order
+        renderTasks(); 
     };
 
-    // --- OPTIMIZED RENDER ENGINE ---
     const renderTasks = () => {
         listEl.innerHTML = '';
         if (tasks.length === 0) {
@@ -124,7 +131,7 @@ function initTodoTab() {
                     if (sub) {
                         const hdr = document.createElement('li');
                         hdr.className = 'todo-subject-header';
-                        hdr.style.color = sub.color; // Dynamic color logic
+                        hdr.style.color = sub.color; 
                         hdr.textContent = sub.name;
                         listEl.appendChild(hdr);
                     }
@@ -143,7 +150,6 @@ function initTodoTab() {
                 <button class="todo-delete">×</button>
             `;
 
-            // THE PRODUCTION FIX: Instant Toggle Logic (No Re-rendering the list)
             const checkbox = li.querySelector('.todo-checkbox');
             checkbox.addEventListener('change', (e) => {
                 const isChecked = e.target.checked;
@@ -158,7 +164,6 @@ function initTodoTab() {
                 renderTasks();
             });
 
-            // THE PRODUCTION FIX: Instant Edit Logic (No Re-rendering the list)
             const textSpan = li.querySelector('.todo-text');
             textSpan.addEventListener('dblclick', function() {
                 const editInput = document.createElement('input');
@@ -181,85 +186,68 @@ function initTodoTab() {
 
                 editInput.addEventListener('blur', saveEdit);
                 editInput.addEventListener('keypress', (e) => {
-                    if (e.key === 'Enter') editInput.blur(); // Blur safely triggers saveEdit
+                    if (e.key === 'Enter') editInput.blur(); 
                 });
             });
 
-            // --- PREMIUM DRAG & DROP ENGINE (Fluid Glass Physics) ---
+            // DRAG AND DROP
             let holdTimer;
             let isDragging = false;
-            let currentClone = null; // Stores the glassy flying copy
+            let currentClone = null; 
             let startTouchX = 0, startTouchY = 0;
             let startRect = null;
 
-            // Prevents native menus from popping during hold
             li.addEventListener('contextmenu', (e) => e.preventDefault());
 
             li.addEventListener('touchstart', (e) => {
-                // If user is editing, don't drag
                 if (li.querySelector('.todo-edit-input')) return;
 
                 holdTimer = setTimeout(() => {
                     isDragging = true;
-                    if (navigator.vibrate) navigator.vibrate(50); // Haptic feedback
+                    if (navigator.vibrate) navigator.vibrate(50); 
 
-                    // 1. Snapshot where the item is right now
                     startRect = li.getBoundingClientRect();
                     startTouchX = e.touches[0].clientX;
                     startTouchY = e.touches[0].clientY;
 
-                    // 2. Create the beautiful glassy 'flying' clone
                     currentClone = li.cloneNode(true);
                     currentClone.classList.add('flying-glass-task');
                     
-                    // Force the clone to look exactly like the current item, 
-                    // but positioned fixed so we can move it with JS
                     currentClone.style.width = `${startRect.width}px`;
                     currentClone.style.height = `${startRect.height}px`;
                     currentClone.style.left = `${startRect.left}px`;
                     currentClone.style.top = `${startRect.top}px`;
                     
                     document.body.appendChild(currentClone);
-
-                    // 3. Make the original item turn into a faded placeholder
                     li.classList.add('dragging-placeholder');
                     
-                }, 400); // 0.4s hold to start drag
+                }, 400); 
             }, { passive: true });
 
             li.addEventListener('touchmove', (e) => {
                 if (!isDragging || !currentClone) { clearTimeout(holdTimer); return; }
-                e.preventDefault(); // Lock screen from scrolling
+                e.preventDefault(); 
 
                 const currentTouch = e.touches[0];
-                
-                // 1. CALCULATE MOVEMENT & MOVE CLONE (GPU-Accelerated)
-                // We calculate how much your finger moved and add it to the start position.
-                // translate3d forces the GPU to render the movement, making it buttery smooth.
                 const deltaX = currentTouch.clientX - startTouchX;
                 const deltaY = currentTouch.clientY - startTouchY;
                 currentClone.style.transform = `translate3d(${deltaX}px, ${deltaY}px, 0) scale(1.04)`;
 
-                // 2. FIND DROPPABLE TARGET BELOW
-                // We use a clever trick to hide the clone from elementFromPoint so we can 
-                // "see through" it to find out which task is below your finger.
                 currentClone.classList.add('ghost-mode');
                 const targetEl = document.elementFromPoint(currentTouch.clientX, currentTouch.clientY);
                 currentClone.classList.remove('ghost-mode');
                 
                 const overItem = targetEl?.closest('.todo-item:not(.dragging-placeholder)');
                 
-                // 3. APPLY REORDERING & BOUNDARY LOCK
                 if (overItem && overItem !== li) {
                     const draggedTaskData = tasks.find(t => t.id === task.id);
-                    const overTaskData = tasks.find(t => t.id === parseInt(overItem.dataset.taskId));
+                    const overTaskData = tasks.find(t => t.id === parseInt(overItem.getAttribute('data-task-id'), 10)); // Fixed mapping here too
                     
                     if (draggedTaskData && overTaskData && draggedTaskData.subjectId === overTaskData.subjectId) {
                         const allItems = [...listEl.querySelectorAll('.todo-item')];
                         const draggedIdx = allItems.indexOf(li);
                         const overIdx = allItems.indexOf(overItem);
                         
-                        // Seamlessly move the original (the ghost-placeholder) beneath the flying clone
                         if (draggedIdx < overIdx) overItem.after(li);
                         else overItem.before(li);
                     }
@@ -270,14 +258,11 @@ function initTodoTab() {
                 clearTimeout(holdTimer);
                 if (isDragging) {
                     isDragging = false;
-                    
-                    // Visual cleanup
                     li.classList.remove('dragging-placeholder');
                     if (currentClone) {
                         currentClone.remove();
                         currentClone = null;
                     }
-                    
                     updateArrayOrderFromDOM();
                 }
             };
@@ -334,7 +319,6 @@ function initTodoTab() {
         AppEvents.emit('REQUEST_DATE_PICKER', { tab: 'todo', dateStr: getDateKey(currentDate).replace('todo_', '') });
     });
 
-    // --- NEW EVENT BUS LISTENERS ---
     AppEvents.on('DATE_CHANGE', ({ tab, direction }) => {
         if (tab === 'todo') changeDate(direction);
     });
@@ -346,7 +330,6 @@ function initTodoTab() {
         }
     });
 
-    // Replaces the 500ms hack! Instantly updates if settings change.
     AppEvents.on('SUBJECTS_UPDATED', () => {
         renderSubjectTray();
         renderTasks();

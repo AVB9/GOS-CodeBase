@@ -13,8 +13,10 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Nova+Flat&display=swap" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     
+    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js" defer></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-auth-compat.js" defer></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore-compat.js" defer></script>
    
     <link rel="stylesheet" href="style.css">
     
@@ -351,6 +353,8 @@
                 <p class="auth-subtitle" id="authModalSubtitle">Log in to sync your diary</p>
             </div>
             
+            <div id="authFeedback" style="display: none; padding: 10px; border-radius: 8px; margin-bottom: 15px; font-size: 0.85rem; text-align: center; font-weight: bold; transition: all 0.3s ease;"></div>
+            
             <div class="modal-form-group">
                 <input type="email" id="authEmail" class="auth-input" placeholder="Email address" />
                 
@@ -383,6 +387,9 @@
     <div id="updatePasswordModalOverlay" class="modal-overlay">
         <div class="modal-box glass-panel">
             <h2 class="modal-title">New Password</h2>
+            
+            <div id="updateAuthFeedback" style="display: none; padding: 10px; border-radius: 8px; margin-bottom: 15px; font-size: 0.85rem; text-align: center; font-weight: bold; transition: all 0.3s ease;"></div>
+
             <div class="modal-form-group">
                 <div class="password-wrapper">
                     <input type="password" id="newPasswordInput" class="auth-input" placeholder="Enter new password..." style="margin-bottom: 0; padding-right: 40px;" />

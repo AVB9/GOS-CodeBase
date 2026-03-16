@@ -3,7 +3,6 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function initSettingsTab() {
-    // Unifying all settings boot sequences into one clean pipeline
     setupProfileSettings();
     setupThemeSettings();
     setupDataManagement();
@@ -68,7 +67,6 @@ function setupDataManagement() {
 
     if (!exportBtn || !importBtn || !importInput || !resetBtn) return;
 
-    // 1. Export JSON
     exportBtn.addEventListener('click', () => {
         try {
             const appData = {};
@@ -93,7 +91,6 @@ function setupDataManagement() {
         }
     });
 
-    // 2. Import JSON
     importBtn.addEventListener('click', () => importInput.click());
 
     importInput.addEventListener('change', (e) => {
@@ -105,10 +102,18 @@ function setupDataManagement() {
             try {
                 const importedData = JSON.parse(event.target.result);
                 
-                if (confirm("This will overwrite your current data. Are you sure?")) {
-                    localStorage.clear();
+                // DEFENSIVE CODING: Verify this is an actual object before proceeding
+                if (typeof importedData !== 'object' || importedData === null) {
+                    throw new Error("Invalid file structure");
+                }
+
+                if (confirm("This will overwrite your current data with the backup. Are you sure?")) {
+                    // ARCHITECTURE FIX: Safe merge instead of a destructive wipe.
+                    // This protects Firebase Auth tokens from being destroyed.
                     Object.keys(importedData).forEach(key => {
-                        localStorage.setItem(key, importedData[key]);
+                        if (importedData[key] !== null && importedData[key] !== undefined) {
+                            localStorage.setItem(key, importedData[key]);
+                        }
                     });
                     
                     alert("Data restored successfully. The app will now reload.");
@@ -116,16 +121,24 @@ function setupDataManagement() {
                 }
             } catch (err) {
                 console.error("Restore failed:", err);
-                alert("Invalid backup file format.");
+                alert("Invalid backup file format. Please ensure it is a valid backup.");
             }
         };
         reader.readAsText(file);
     });
 
-    // 3. Factory Reset
     resetBtn.addEventListener('click', () => {
         if (confirm("WARNING: This will permanently delete all tasks, journal entries, and settings. This cannot be undone. Are you absolutely sure?")) {
-            localStorage.clear();
+            // DEFENSIVE WIPE: Only delete our app data, leave Firebase Auth alone!
+            const keysToRemove = [];
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key.startsWith('todo_') || key.startsWith('journal_') || 
+                    ['plannerTargets', 'plannerCompleted', 'plannerSubjects', 'userDisplayName', 'userUltimateGoalName', 'userUltimateGoalDate', 'appCustomBg', 'themeOLED', 'appAccentColor', 'appTextColor'].includes(key)) {
+                    keysToRemove.push(key);
+                }
+            }
+            keysToRemove.forEach(k => localStorage.removeItem(k));
             window.location.reload();
         }
     });
@@ -146,8 +159,25 @@ function setupSubjectManager() {
     if (!manageBtn || !modal) return;
 
     const defaultSubjects = [{ id: 'off', name: 'Day Off', color: '#555555' }];
-    const getSubjects = () => JSON.parse(localStorage.getItem('plannerSubjects')) || defaultSubjects;
-    const saveSubjects = (subs) => localStorage.setItem('plannerSubjects', JSON.stringify(subs));
+    
+    // ARCHITECTURE FIX: Defensive JSON parsing
+    const getSubjects = () => {
+        try {
+            const stored = localStorage.getItem('plannerSubjects');
+            return stored ? JSON.parse(stored) : defaultSubjects;
+        } catch (e) {
+            console.warn("Corrupted subjects data detected, reverting to defaults.");
+            return defaultSubjects; 
+        }
+    };
+
+    const saveSubjects = (subs) => {
+        try {
+            localStorage.setItem('plannerSubjects', JSON.stringify(subs));
+        } catch (e) {
+            console.error("Failed to save subjects to storage.", e);
+        }
+    };
 
     const renderSubjects = () => {
         subList.innerHTML = '';
@@ -165,7 +195,6 @@ function setupSubjectManager() {
         });
     };
 
-    // Event Delegation for Delete Buttons
     subList.addEventListener('click', (e) => {
         if (e.target.classList.contains('subject-delete-btn')) {
             const id = e.target.getAttribute('data-id');
@@ -191,7 +220,6 @@ function setupSubjectManager() {
     closeBtn.addEventListener('click', closeModalHandler);
     if (cancelBtn) cancelBtn.addEventListener('click', closeModalHandler);
 
-    // Helper function to handle adding a subject
     const handleAddSubject = () => {
         const name = nameInput.value.trim();
         if (name) {
@@ -199,34 +227,27 @@ function setupSubjectManager() {
             subjects.push({ id: 'sub_' + Date.now(), name: name, color: colorInput.value });
             saveSubjects(subjects);
             
-            // Reset the form
             nameInput.value = '';
             colorInput.value = '#ff3b3b'; 
             if (colorWrapper) colorWrapper.style.backgroundColor = '#ff3b3b'; 
             
             renderSubjects();
-            
-            // Auto-scroll to the bottom so you see your new subject
             subList.scrollTop = subList.scrollHeight;
         }
     };
 
-    // Trigger on Button Click
     addBtn.addEventListener('click', handleAddSubject);
 
-    // Trigger on ENTER KEY
     nameInput.addEventListener('keypress', (e) => {
         if (e.key === 'Enter') {
-            e.preventDefault(); // Prevents accidental form submission reloads
+            e.preventDefault(); 
             handleAddSubject();
         }
     });
 }
 
 function setupAesthetics() {
-    // --- 1. MATCHY-MATCHY ACCENT COLOR ---
     const themeInput = document.getElementById('themeColorPicker');
-    
     const savedThemeColor = localStorage.getItem('appAccentColor') || '#ff3b3b';
     document.documentElement.style.setProperty('--color-primary', savedThemeColor);
     if(themeInput) themeInput.value = savedThemeColor;
@@ -239,9 +260,7 @@ function setupAesthetics() {
         });
     }
 
-    // --- 2. MAIN TEXT COLOR ---
     const textInput = document.getElementById('textColorPicker');
-    
     const savedTextColor = localStorage.getItem('appTextColor') || '#ffffff';
     document.documentElement.style.setProperty('--color-text', savedTextColor);
     if(textInput) textInput.value = savedTextColor;
@@ -254,7 +273,6 @@ function setupAesthetics() {
         });
     }
 
-    // --- 3. BLURRED FADED BACKGROUND UPLOAD ---
     const bgContainer = document.getElementById('dynamicBackground');
     const uploader = document.getElementById('bgUploader');
     const clearBtn = document.getElementById('clearBgBtn');
@@ -304,19 +322,17 @@ function setupAesthetics() {
         });
     }
 }
+
 // =================================================================
-// AUTHENTICATION UI STATE (SUPABASE INTEGRATED & SMART UI)
+// UPGRADED AUTH UI (CUSTOM INLINE ALERTS)
 // =================================================================
 function initAuthUI() {
-    // Settings Card Elements
     const loggedOutSettingsView = document.getElementById('loggedOutSettingsView');
     const loggedInSettingsView = document.getElementById('loggedInSettingsView');
     const userEmailDisplay = document.getElementById('userEmailDisplay');
     const openAuthModalBtn = document.getElementById('openAuthModalBtn');
-    const openUpdatePasswordBtn = document.getElementById('openUpdatePasswordBtn');
     const logoutBtn = document.getElementById('logoutBtn');
 
-    // Auth Modal Elements (Smart Modal)
     const authModalOverlay = document.getElementById('authModalOverlay');
     const closeAuthModalBtn = document.getElementById('closeAuthModalBtn');
     const authModalTitle = document.getElementById('authModalTitle');
@@ -328,30 +344,39 @@ function initAuthUI() {
     const authToggleText = document.getElementById('authToggleText');
     const toggleAuthModeBtn = document.getElementById('toggleAuthModeBtn');
     
-    // Auth Modal Eye Toggle Elements
-    const togglePasswordVisBtn = document.getElementById('togglePasswordVisBtn');
-    const eyeIconHidden = document.getElementById('eyeIconHidden');
-    const eyeIconVisible = document.getElementById('eyeIconVisible');
+    // Custom Feedback Engines
+    const authFeedback = document.getElementById('authFeedback');
+    const updateAuthFeedback = document.getElementById('updateAuthFeedback');
 
-    // Update Password Modal Elements
-    const updatePasswordModalOverlay = document.getElementById('updatePasswordModalOverlay');
-    const closeUpdatePasswordBtn = document.getElementById('closeUpdatePasswordBtn');
-    const newPasswordInput = document.getElementById('newPasswordInput');
-    const saveNewPasswordBtn = document.getElementById('saveNewPasswordBtn');
-    
-    // Update Password Eye Toggle Elements
-    const toggleUpdatePasswordVisBtn = document.getElementById('toggleUpdatePasswordVisBtn');
-    const updateEyeIconHidden = document.getElementById('updateEyeIconHidden');
-    const updateEyeIconVisible = document.getElementById('updateEyeIconVisible');
+    const showFeedback = (element, msg, type = 'error') => {
+        if (!element) return;
+        element.textContent = msg;
+        element.style.display = 'block';
+        if (type === 'error') {
+            element.style.backgroundColor = 'rgba(255, 59, 59, 0.1)';
+            element.style.color = '#ff3b3b';
+            element.style.border = '1px solid rgba(255, 59, 59, 0.3)';
+        } else {
+            element.style.backgroundColor = 'rgba(76, 175, 80, 0.1)';
+            element.style.color = '#4caf50';
+            element.style.border = '1px solid rgba(76, 175, 80, 0.3)';
+        }
+    };
 
-    // --- SESSION CHECKER ---
+    const clearFeedback = (element) => {
+        if (element) element.style.display = 'none';
+    };
+
+    emailInput.addEventListener('input', () => clearFeedback(authFeedback));
+    passwordInput.addEventListener('input', () => clearFeedback(authFeedback));
+
     const checkSession = async () => {
         try {
             const session = await AppDB.checkSession();
             if (session) {
                 loggedOutSettingsView.style.display = 'none';
                 loggedInSettingsView.style.display = 'flex';
-                userEmailDisplay.textContent = `Synced as: ${session.user.email}`;
+                userEmailDisplay.textContent = `Synced as: ${session.email}`;
             } else {
                 loggedOutSettingsView.style.display = 'flex';
                 loggedInSettingsView.style.display = 'none';
@@ -361,7 +386,160 @@ function initAuthUI() {
         }
     };
 
-    // --- PASSWORD VISIBILITY TOGGLES ---
+    let isLoginMode = true;
+
+    const toggleModalMode = () => {
+        isLoginMode = !isLoginMode;
+        clearFeedback(authFeedback); 
+        
+        if (isLoginMode) {
+            authModalTitle.textContent = "Welcome Back";
+            authModalSubtitle.textContent = "Log in to sync your diary";
+            primaryAuthBtn.textContent = "Login";
+            authToggleText.textContent = "New here?";
+            toggleAuthModeBtn.textContent = "Create an account";
+            if (forgotPasswordBtn) forgotPasswordBtn.style.display = 'block';
+        } else {
+            authModalTitle.textContent = "Create Account";
+            authModalSubtitle.textContent = "Securely back up your data";
+            primaryAuthBtn.textContent = "Sign Up";
+            authToggleText.textContent = "Already have an account?";
+            toggleAuthModeBtn.textContent = "Log in";
+            if (forgotPasswordBtn) forgotPasswordBtn.style.display = 'none'; 
+        }
+    };
+
+    if (toggleAuthModeBtn) toggleAuthModeBtn.addEventListener('click', toggleModalMode);
+
+    openAuthModalBtn.addEventListener('click', () => {
+        isLoginMode = false; 
+        toggleModalMode(); 
+        clearFeedback(authFeedback);
+        authModalOverlay.style.display = 'flex';
+    });
+    
+    closeAuthModalBtn.addEventListener('click', () => authModalOverlay.style.display = 'none');
+
+    primaryAuthBtn.addEventListener('click', async () => {
+        const email = emailInput.value.trim();
+        const password = passwordInput.value;
+        if(!email || !password) return showFeedback(authFeedback, "Please enter both email and password.", "error");
+        
+        const originalText = primaryAuthBtn.textContent;
+        primaryAuthBtn.textContent = isLoginMode ? "Logging in..." : "Creating Account...";
+        primaryAuthBtn.disabled = true;
+
+        try {
+            if (isLoginMode) {
+                await AppDB.login(email, password);
+                emailInput.value = ''; passwordInput.value = '';
+                authModalOverlay.style.display = 'none';
+                await checkSession();
+            } else {
+                await AppDB.register(email, password);
+                showFeedback(authFeedback, "Account created! Syncing to the cloud.", "success");
+                setTimeout(() => {
+                    emailInput.value = ''; passwordInput.value = '';
+                    authModalOverlay.style.display = 'none';
+                }, 1500);
+                await checkSession();
+            }
+        } catch (error) {
+            let msg = error.message;
+            if (error.code === 'auth/invalid-credential') msg = "Incorrect email or password.";
+            if (error.code === 'auth/email-already-in-use') msg = "This email is already registered.";
+            if (error.code === 'auth/weak-password') msg = "Password must be at least 6 characters.";
+            
+            showFeedback(authFeedback, msg, "error");
+        } finally {
+            primaryAuthBtn.textContent = originalText;
+            primaryAuthBtn.disabled = false;
+        }
+    });
+
+    if (forgotPasswordBtn) {
+        forgotPasswordBtn.addEventListener('click', async () => {
+            const email = emailInput.value.trim();
+            if(!email) return showFeedback(authFeedback, "Please type your email address first.", "error");
+            
+            try {
+                await AppDB.resetPassword(email);
+                showFeedback(authFeedback, `Reset link sent to ${email}`, "success");
+            } catch (error) {
+                let msg = error.message;
+                if (error.code === 'auth/user-not-found') msg = "No account found with this email.";
+                showFeedback(authFeedback, msg, "error");
+            }
+        });
+    }
+
+    const openUpdatePasswordBtn = document.getElementById('openUpdatePasswordBtn');
+    const updatePasswordModalOverlay = document.getElementById('updatePasswordModalOverlay');
+    const closeUpdatePasswordBtn = document.getElementById('closeUpdatePasswordBtn');
+    const saveNewPasswordBtn = document.getElementById('saveNewPasswordBtn');
+    const newPasswordInput = document.getElementById('newPasswordInput');
+
+    if (openUpdatePasswordBtn) {
+        openUpdatePasswordBtn.addEventListener('click', () => {
+            clearFeedback(updateAuthFeedback);
+            updatePasswordModalOverlay.style.display = 'flex';
+        });
+    }
+    
+    if (closeUpdatePasswordBtn) {
+        closeUpdatePasswordBtn.addEventListener('click', () => updatePasswordModalOverlay.style.display = 'none');
+    }
+
+    if (newPasswordInput) {
+        newPasswordInput.addEventListener('input', () => clearFeedback(updateAuthFeedback));
+    }
+
+    if (saveNewPasswordBtn) {
+        saveNewPasswordBtn.addEventListener('click', async () => {
+            const newPass = newPasswordInput.value;
+            if(!newPass || newPass.length < 6) return showFeedback(updateAuthFeedback, "Password must be at least 6 characters.", "error");
+            
+            const originalText = saveNewPasswordBtn.textContent;
+            saveNewPasswordBtn.textContent = "Updating...";
+            saveNewPasswordBtn.disabled = true;
+
+            try {
+                await AppDB.updatePassword(newPass);
+                showFeedback(updateAuthFeedback, "Password updated successfully!", "success");
+                setTimeout(() => {
+                    newPasswordInput.value = '';
+                    updatePasswordModalOverlay.style.display = 'none';
+                }, 1500);
+            } catch (error) {
+                showFeedback(updateAuthFeedback, error.message, "error");
+            } finally {
+                saveNewPasswordBtn.textContent = originalText;
+                saveNewPasswordBtn.disabled = false;
+            }
+        });
+    }
+
+    logoutBtn.addEventListener('click', async () => {
+        const originalText = logoutBtn.textContent;
+        logoutBtn.textContent = "Logging out...";
+        logoutBtn.disabled = true;
+
+        try {
+            await AppDB.logout(); 
+        } catch (error) {
+            alert(error.message || "Failed to log out.");
+            logoutBtn.textContent = originalText;
+            logoutBtn.disabled = false;
+        } 
+    });
+
+    const togglePasswordVisBtn = document.getElementById('togglePasswordVisBtn');
+    const eyeIconHidden = document.getElementById('eyeIconHidden');
+    const eyeIconVisible = document.getElementById('eyeIconVisible');
+    const toggleUpdatePasswordVisBtn = document.getElementById('toggleUpdatePasswordVisBtn');
+    const updateEyeIconHidden = document.getElementById('updateEyeIconHidden');
+    const updateEyeIconVisible = document.getElementById('updateEyeIconVisible');
+
     if (togglePasswordVisBtn) {
         togglePasswordVisBtn.addEventListener('click', () => {
             if (passwordInput.type === 'password') {
@@ -390,152 +568,5 @@ function initAuthUI() {
         });
     }
 
-    // --- SMART MODAL STATE TOGGLE ---
-    let isLoginMode = true;
-
-    const toggleModalMode = () => {
-        isLoginMode = !isLoginMode;
-        if (isLoginMode) {
-            authModalTitle.textContent = "Welcome Back";
-            authModalSubtitle.textContent = "Log in to sync your diary";
-            primaryAuthBtn.textContent = "Login";
-            authToggleText.textContent = "New here?";
-            toggleAuthModeBtn.textContent = "Create an account";
-            if (forgotPasswordBtn) forgotPasswordBtn.style.display = 'block';
-        } else {
-            authModalTitle.textContent = "Create Account";
-            authModalSubtitle.textContent = "Securely back up your data";
-            primaryAuthBtn.textContent = "Sign Up";
-            authToggleText.textContent = "Already have an account?";
-            toggleAuthModeBtn.textContent = "Log in";
-            if (forgotPasswordBtn) forgotPasswordBtn.style.display = 'none'; // Hide forgot password when signing up
-        }
-    };
-
-    if (toggleAuthModeBtn) toggleAuthModeBtn.addEventListener('click', toggleModalMode);
-
-    // --- MODAL CONTROLS ---
-    openAuthModalBtn.addEventListener('click', () => {
-        isLoginMode = false; // Set to false so toggle sets it back to true (Login mode)
-        toggleModalMode(); 
-        authModalOverlay.style.display = 'flex';
-    });
-    closeAuthModalBtn.addEventListener('click', () => authModalOverlay.style.display = 'none');
-    
-    openUpdatePasswordBtn.addEventListener('click', () => updatePasswordModalOverlay.style.display = 'flex');
-    closeUpdatePasswordBtn.addEventListener('click', () => updatePasswordModalOverlay.style.display = 'none');
-
-    // --- THE ONE SMART AUTH BUTTON ---
-    primaryAuthBtn.addEventListener('click', async () => {
-        const email = emailInput.value.trim();
-        const password = passwordInput.value;
-        if(!email || !password) return alert("Please enter both email and password.");
-        
-        const originalText = primaryAuthBtn.textContent;
-        primaryAuthBtn.textContent = isLoginMode ? "Logging in..." : "Creating Account...";
-        primaryAuthBtn.disabled = true;
-
-        try {
-            if (isLoginMode) {
-                // LOGIN
-                await AppDB.login(email, password);
-                emailInput.value = ''; passwordInput.value = '';
-                authModalOverlay.style.display = 'none';
-                await checkSession();
-            } else {
-                // SIGN UP & MIGRATION
-                const result = await AppDB.register(email, password);
-                
-                if (result && result.requiresVerification) {
-                    alert("Account created! 🚨 IMPORTANT: Please check your email inbox to verify your account before logging in.");
-                    toggleModalMode(); // Swap to login screen so they are ready
-                    passwordInput.value = ''; // clear password
-                } else {
-                    alert("Account created! Your local data is now synced.");
-                    emailInput.value = ''; passwordInput.value = '';
-                    authModalOverlay.style.display = 'none';
-                    await checkSession();
-                }
-            }
-        } catch (error) {
-            if (error.message.includes("Email not confirmed")) {
-                alert("Please check your email and click the confirmation link before logging in!");
-            } else {
-                alert(error.message || "Authentication failed. Please check your details.");
-            }
-        } finally {
-            primaryAuthBtn.textContent = originalText;
-            primaryAuthBtn.disabled = false;
-        }
-    });
-
-    // --- FORGOT PASSWORD ---
-    if (forgotPasswordBtn) {
-        forgotPasswordBtn.addEventListener('click', async () => {
-            const email = emailInput.value.trim();
-            if(!email) return alert("Please type your email address in the box above first.");
-            
-            try {
-                await AppDB.resetPassword(email);
-                alert(`A password reset link has been sent to: ${email}`);
-            } catch (error) {
-                alert(error.message || "Failed to send reset link.");
-            }
-        });
-    }
-
-    // --- UPDATE PASSWORD ---
-    saveNewPasswordBtn.addEventListener('click', async () => {
-        const newPass = newPasswordInput.value;
-        if(!newPass || newPass.length < 6) return alert("New password must be at least 6 characters.");
-        
-        const originalText = saveNewPasswordBtn.textContent;
-        saveNewPasswordBtn.textContent = "Updating...";
-        saveNewPasswordBtn.disabled = true;
-
-        try {
-            await AppDB.updatePassword(newPass);
-            alert("Password updated successfully!");
-            newPasswordInput.value = '';
-            updatePasswordModalOverlay.style.display = 'none';
-        } catch (error) {
-            alert(error.message || "Failed to update password.");
-        } finally {
-            saveNewPasswordBtn.textContent = originalText;
-            saveNewPasswordBtn.disabled = false;
-        }
-    });
-
-    // --- LOGOUT ---
-    logoutBtn.addEventListener('click', async () => {
-        const originalText = logoutBtn.textContent;
-        logoutBtn.textContent = "Logging out...";
-        logoutBtn.disabled = true;
-
-        try {
-            await AppDB.logout();
-            await checkSession();
-        } catch (error) {
-            alert(error.message || "Failed to log out.");
-        } finally {
-            logoutBtn.textContent = originalText;
-            logoutBtn.disabled = false;
-        }
-    });
-
-    // Run on boot to check if user is already logged in
     checkSession();
-
-    // --- SMART RECOVERY INTERCEPTOR ---
-    // If the user just clicked a "Reset Password" link in their email...
-    if (window.location.hash.includes('type=recovery')) {
-        // Clean the ugly token out of the address bar
-        window.history.replaceState(null, document.title, window.location.pathname);
-        
-        // Wait a split second for the Supabase session to lock in, then pop the modal!
-        setTimeout(() => {
-            alert("Welcome back! Please enter your new password now.");
-            updatePasswordModalOverlay.style.display = 'flex';
-        }, 500);
-    }
 }

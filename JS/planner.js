@@ -14,7 +14,7 @@ function initPlannerTab() {
     
     const returnTodayBtn = document.getElementById('returnTodayBtn');
     let todayObserver = null;
-    let isFirstTimeOpeningPlanner = true; // THE FIX: Tracks the very first boot-up
+    let isFirstTimeOpeningPlanner = true; 
     
     const pillsContainer = document.getElementById('subjectPillsContainer');
     const topicInput = document.getElementById('targetTopicInput');
@@ -26,7 +26,6 @@ function initPlannerTab() {
     let activeSelectedDateStr = null;
     let currentSheetSubjectId = null;
 
-    // --- 1. DATA HELPERS ---
     const defaultSubjects = [{ id: 'off', name: 'Day Off', color: '#555555' }];
     const getSubjects = () => JSON.parse(localStorage.getItem('plannerSubjects')) || defaultSubjects;
     
@@ -42,19 +41,31 @@ function initPlannerTab() {
     };
     
     const getTargets = () => JSON.parse(localStorage.getItem('plannerTargets')) || {};
+    
+    // DEFENSIVE CODING: Local Storage Wrappers
     const saveTargets = (targs) => { 
-        localStorage.setItem('plannerTargets', JSON.stringify(targs)); 
-        updateHomeWidget(); 
-        if (window.AppEvents) AppEvents.emit('PLANNER_UPDATED'); 
+        try {
+            localStorage.setItem('plannerTargets', JSON.stringify(targs)); 
+            if (window.AppEvents) AppEvents.emit('PLANNER_UPDATED'); 
+        } catch (e) {
+            console.error('Storage error: Could not save planner targets.', e);
+        }
     };
 
     const getCompleted = () => JSON.parse(localStorage.getItem('plannerCompleted')) || [];
+    
     const saveCompleted = (arr) => {
-        localStorage.setItem('plannerCompleted', JSON.stringify(arr));
-        if (window.AppEvents) AppEvents.emit('PLANNER_UPDATED');
+        try {
+            localStorage.setItem('plannerCompleted', JSON.stringify(arr));
+            if (window.AppEvents) AppEvents.emit('PLANNER_UPDATED');
+        } catch (e) {
+            console.error('Storage error: Could not save completed dates.', e);
+        }
     };
 
+    // DEFENSIVE CODING: NaN Date Prevention
     const getDateKey = (date) => {
+        if (!(date instanceof Date) || isNaN(date)) date = new Date();
         const y = date.getFullYear();
         const m = String(date.getMonth() + 1).padStart(2, '0');
         const d = String(date.getDate()).padStart(2, '0');
@@ -63,7 +74,6 @@ function initPlannerTab() {
 
     window.forcePlannerRefresh = () => { renderCalendarAndCards(true); updateHomeWidget(); };
 
-    // --- 2. THE RENDER ENGINE ---
     const renderCalendarAndCards = (skipAutoScroll = false) => {
         gridEl.innerHTML = '';
         sliderEl.innerHTML = '';
@@ -116,7 +126,6 @@ function initPlannerTab() {
                 
                 document.getElementById(`card-${dateKey}`)?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
                 
-                // THE TITANIUM FIX: Absolute assurance the pill appears if clicking away from today
                 if (dateKey !== todayStr) {
                     returnTodayBtn.classList.remove('hidden');
                 } else {
@@ -178,7 +187,6 @@ function initPlannerTab() {
             sliderEl.appendChild(card);
         }
 
-        // THE TITANIUM FIX: 50% Visibility Rule
         if (todayObserver) todayObserver.disconnect();
         const isCurrentMonth = (year === todayObjReal.getFullYear() && month === todayObjReal.getMonth());
 
@@ -191,20 +199,17 @@ function initPlannerTab() {
                     const plannerTab = document.getElementById('tab-planner');
                     if (!plannerTab || !plannerTab.classList.contains('active')) return;
                     
-                    // The card must be at least 50% visible, otherwise the button appears
                     entries[0].isIntersecting ? returnTodayBtn.classList.add('hidden') : returnTodayBtn.classList.remove('hidden');
                 }, { root: sliderEl, threshold: 0.5 }); 
                 todayObserver.observe(todayCard);
             }
         }
 
-        // Normal auto-scroll for when user manually changes months
         if (!skipAutoScroll && !isFirstTimeOpeningPlanner) {
             setTimeout(() => document.getElementById(`card-${todayStr}`)?.scrollIntoView({ behavior: 'auto', block: 'nearest', inline: 'center' }), 50);
         }
     };
 
-    // --- 3. BOTTOM SHEET LOGIC ---
     const openBottomSheet = (dateStr, dateObj) => {
         activeSelectedDateStr = dateStr;
         sheetDateDisplay.textContent = dateObj.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
@@ -258,7 +263,10 @@ function initPlannerTab() {
 
     document.getElementById('saveTargetBtn').addEventListener('click', () => {
         const textInput = topicInput.value.trim();
-        if (!textInput) { alert("Please enter a target to save."); return; }
+        if (!textInput) { 
+            alert("Please enter a target to save."); 
+            return; 
+        }
         const targets = getTargets();
         targets[activeSelectedDateStr] = { subjectId: currentSheetSubjectId, topic: textInput };
         saveTargets(targets);
@@ -274,7 +282,6 @@ function initPlannerTab() {
         renderCalendarAndCards(true);
     });
 
-    // --- 4. DRAG PHYSICS ---
     let startY = 0;
     let currentY = 0;
     dragZone.addEventListener('touchstart', (e) => startY = e.touches[0].clientY, { passive: true });
@@ -293,7 +300,6 @@ function initPlannerTab() {
         else sheet.style.transform = ''; 
     });
 
-    // --- 5. CALENDAR SWIPING ---
     let calTouchStartX = 0;
     calWrapper.addEventListener('touchstart', (e) => calTouchStartX = e.changedTouches[0].screenX, { passive: true });
     calWrapper.addEventListener('touchend', (e) => {
@@ -302,7 +308,6 @@ function initPlannerTab() {
         if (calTouchEndX > calTouchStartX + 60) { currentViewDate.setMonth(currentViewDate.getMonth() - 1); renderCalendarAndCards(true); }
     }, { passive: true });
 
-    // --- 6. HOME WIDGET LINK ---
     const updateHomeWidget = () => {
         const taskContainer = document.getElementById('dashTaskContainer');
         const widgetCard = document.getElementById('homeTargetWidget');
@@ -331,11 +336,12 @@ function initPlannerTab() {
         }
     };
 
-    // --- 7. BUTTON NAV & EVENT LISTENERS ---
     document.getElementById('plannerPrevMonth').addEventListener('click', () => { currentViewDate.setMonth(currentViewDate.getMonth() - 1); renderCalendarAndCards(true); });
     document.getElementById('plannerNextMonth').addEventListener('click', () => { currentViewDate.setMonth(currentViewDate.getMonth() + 1); renderCalendarAndCards(true); });
 
     returnTodayBtn.addEventListener('click', () => {
+        if (returnTodayBtn.classList.contains('hidden')) return; 
+        
         const todayStr = getDateKey(new Date());
         const todayCard = document.getElementById(`card-${todayStr}`);
         
@@ -351,21 +357,20 @@ function initPlannerTab() {
         if (navigator.vibrate) navigator.vibrate(50);
     });
 
-    // THE TITANIUM FIX: Instantly snap to today ONLY on the very first time the tab is opened
     if (window.AppEvents) {
         AppEvents.on('TAB_CHANGED', ({ tab }) => {
             if (tab === 'tab-planner') {
                 if (isFirstTimeOpeningPlanner) {
                     isFirstTimeOpeningPlanner = false;
                     const todayStr = getDateKey(new Date());
-                    // A tiny 10ms delay ensures the CSS 'display: block' has painted before scrolling
                     setTimeout(() => document.getElementById(`card-${todayStr}`)?.scrollIntoView({ behavior: 'auto', block: 'nearest', inline: 'center' }), 10);
                 }
             }
         });
+        
+        AppEvents.on('PLANNER_UPDATED', () => updateHomeWidget());
     }
 
-    // Boot
     renderCalendarAndCards();
     updateHomeWidget();
 }
