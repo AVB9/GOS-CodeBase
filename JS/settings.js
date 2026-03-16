@@ -339,12 +339,13 @@ function initAuthUI() {
     const authToggleText = document.getElementById('authToggleText');
     const toggleAuthModeBtn = document.getElementById('toggleAuthModeBtn');
     
-    // NEW GOOGLE ELEMENTS
     const googleAuthBtn = document.getElementById('googleAuthBtn');
     const googleAuthText = document.getElementById('googleAuthText');
-    
     const authFeedback = document.getElementById('authFeedback');
-    const updateAuthFeedback = document.getElementById('updateAuthFeedback');
+
+    // CRITICAL FIX: Cage the password manager by disabling inputs by default
+    if (emailInput) emailInput.disabled = true;
+    if (passwordInput) passwordInput.disabled = true;
 
     const showFeedback = (element, msg, type = 'error') => {
         if (!element) return;
@@ -361,12 +362,10 @@ function initAuthUI() {
         }
     };
 
-    const clearFeedback = (element) => {
-        if (element) element.style.display = 'none';
-    };
+    const clearFeedback = (element) => { if (element) element.style.display = 'none'; };
 
-    emailInput.addEventListener('input', () => clearFeedback(authFeedback));
-    passwordInput.addEventListener('input', () => clearFeedback(authFeedback));
+    if (emailInput) emailInput.addEventListener('input', () => clearFeedback(authFeedback));
+    if (passwordInput) passwordInput.addEventListener('input', () => clearFeedback(authFeedback));
 
     const checkSession = async () => {
         try {
@@ -379,9 +378,7 @@ function initAuthUI() {
                 loggedOutSettingsView.style.display = 'flex';
                 loggedInSettingsView.style.display = 'none';
             }
-        } catch (error) {
-            console.error("Session check failed:", error);
-        }
+        } catch (error) { console.error("Session check failed:", error); }
     };
 
     let isLoginMode = true;
@@ -396,7 +393,7 @@ function initAuthUI() {
             primaryAuthBtn.textContent = "Login";
             authToggleText.textContent = "New here?";
             toggleAuthModeBtn.textContent = "Create an account";
-            if (googleAuthText) googleAuthText.textContent = "Log in with Google"; // UPDATE
+            if (googleAuthText) googleAuthText.textContent = "Log in with Google"; 
             if (forgotPasswordBtn) forgotPasswordBtn.style.display = 'block';
         } else {
             authModalTitle.textContent = "Create Account";
@@ -404,7 +401,7 @@ function initAuthUI() {
             primaryAuthBtn.textContent = "Sign Up";
             authToggleText.textContent = "Already have an account?";
             toggleAuthModeBtn.textContent = "Log in";
-            if (googleAuthText) googleAuthText.textContent = "Sign up with Google"; // UPDATE
+            if (googleAuthText) googleAuthText.textContent = "Sign up with Google"; 
             if (forgotPasswordBtn) forgotPasswordBtn.style.display = 'none'; 
         }
     };
@@ -412,15 +409,21 @@ function initAuthUI() {
     if (toggleAuthModeBtn) toggleAuthModeBtn.addEventListener('click', toggleModalMode);
 
     openAuthModalBtn.addEventListener('click', () => {
-        isLoginMode = false; 
-        toggleModalMode(); 
+        isLoginMode = true; // Always default to login when opening
+        toggleModalMode(); toggleModalMode(); // Hack to reset text cleanly
         clearFeedback(authFeedback);
+        if (emailInput) emailInput.disabled = false;
+        if (passwordInput) passwordInput.disabled = false;
         authModalOverlay.style.display = 'flex';
     });
     
-    closeAuthModalBtn.addEventListener('click', () => authModalOverlay.style.display = 'none');
+    closeAuthModalBtn.addEventListener('click', () => {
+        if (emailInput) { emailInput.value = ''; emailInput.disabled = true; }
+        if (passwordInput) { passwordInput.value = ''; passwordInput.disabled = true; }
+        authModalOverlay.style.display = 'none';
+    });
 
-primaryAuthBtn.addEventListener('click', async () => {
+    primaryAuthBtn.addEventListener('click', async () => {
         const email = emailInput.value.trim();
         const password = passwordInput.value;
         if(!email || !password) return showFeedback(authFeedback, "Please enter both email and password.", "error");
@@ -432,10 +435,10 @@ primaryAuthBtn.addEventListener('click', async () => {
         try {
             if (isLoginMode) {
                 await AppDB.login(email, password);
-                window.location.reload(); // FIX: Instant UI Reload
+                window.location.reload(); 
             } else {
                 await AppDB.register(email, password);
-                window.location.reload(); // FIX: Instant UI Reload
+                window.location.reload(); 
             }
         } catch (error) {
             let msg = error.message;
@@ -457,32 +460,11 @@ primaryAuthBtn.addEventListener('click', async () => {
 
             try {
                 await AppDB.loginWithGoogle();
-                window.location.reload(); // FIX: Instant UI Reload
+                window.location.reload(); 
             } catch (error) {
                 let msg = error.message;
                 if (error.code === 'auth/popup-closed-by-user') msg = "Google sign-in was canceled."; 
                 showFeedback(authFeedback, msg, "error");
-                googleAuthText.textContent = originalText;
-                googleAuthBtn.disabled = false;
-            }
-        });
-    }
-
-    if (googleAuthBtn) {
-        googleAuthBtn.addEventListener('click', async () => {
-            const originalText = googleAuthText.textContent;
-            googleAuthText.textContent = "Connecting...";
-            googleAuthBtn.disabled = true;
-
-            try {
-                await AppDB.loginWithGoogle();
-                authModalOverlay.style.display = 'none';
-                await checkSession();
-            } catch (error) {
-                let msg = error.message;
-                if (error.code === 'auth/popup-closed-by-user') msg = "Google sign-in was canceled."; 
-                showFeedback(authFeedback, msg, "error");
-            } finally {
                 googleAuthText.textContent = originalText;
                 googleAuthBtn.disabled = false;
             }
@@ -505,52 +487,6 @@ primaryAuthBtn.addEventListener('click', async () => {
         });
     }
 
-    const openUpdatePasswordBtn = document.getElementById('openUpdatePasswordBtn');
-    const updatePasswordModalOverlay = document.getElementById('updatePasswordModalOverlay');
-    const closeUpdatePasswordBtn = document.getElementById('closeUpdatePasswordBtn');
-    const saveNewPasswordBtn = document.getElementById('saveNewPasswordBtn');
-    const newPasswordInput = document.getElementById('newPasswordInput');
-
-    if (openUpdatePasswordBtn) {
-        openUpdatePasswordBtn.addEventListener('click', () => {
-            clearFeedback(updateAuthFeedback);
-            updatePasswordModalOverlay.style.display = 'flex';
-        });
-    }
-    
-    if (closeUpdatePasswordBtn) {
-        closeUpdatePasswordBtn.addEventListener('click', () => updatePasswordModalOverlay.style.display = 'none');
-    }
-
-    if (newPasswordInput) {
-        newPasswordInput.addEventListener('input', () => clearFeedback(updateAuthFeedback));
-    }
-
-    if (saveNewPasswordBtn) {
-        saveNewPasswordBtn.addEventListener('click', async () => {
-            const newPass = newPasswordInput.value;
-            if(!newPass || newPass.length < 6) return showFeedback(updateAuthFeedback, "Password must be at least 6 characters.", "error");
-            
-            const originalText = saveNewPasswordBtn.textContent;
-            saveNewPasswordBtn.textContent = "Updating...";
-            saveNewPasswordBtn.disabled = true;
-
-            try {
-                await AppDB.updatePassword(newPass);
-                showFeedback(updateAuthFeedback, "Password updated successfully!", "success");
-                setTimeout(() => {
-                    newPasswordInput.value = '';
-                    updatePasswordModalOverlay.style.display = 'none';
-                }, 1500);
-            } catch (error) {
-                showFeedback(updateAuthFeedback, error.message, "error");
-            } finally {
-                saveNewPasswordBtn.textContent = originalText;
-                saveNewPasswordBtn.disabled = false;
-            }
-        });
-    }
-
     logoutBtn.addEventListener('click', async () => {
         const originalText = logoutBtn.textContent;
         logoutBtn.textContent = "Logging out...";
@@ -564,41 +500,6 @@ primaryAuthBtn.addEventListener('click', async () => {
             logoutBtn.disabled = false;
         } 
     });
-
-    const togglePasswordVisBtn = document.getElementById('togglePasswordVisBtn');
-    const eyeIconHidden = document.getElementById('eyeIconHidden');
-    const eyeIconVisible = document.getElementById('eyeIconVisible');
-    const toggleUpdatePasswordVisBtn = document.getElementById('toggleUpdatePasswordVisBtn');
-    const updateEyeIconHidden = document.getElementById('updateEyeIconHidden');
-    const updateEyeIconVisible = document.getElementById('updateEyeIconVisible');
-
-    if (togglePasswordVisBtn) {
-        togglePasswordVisBtn.addEventListener('click', () => {
-            if (passwordInput.type === 'password') {
-                passwordInput.type = 'text';
-                eyeIconHidden.style.display = 'none';
-                eyeIconVisible.style.display = 'block';
-            } else {
-                passwordInput.type = 'password';
-                eyeIconHidden.style.display = 'block';
-                eyeIconVisible.style.display = 'none';
-            }
-        });
-    }
-
-    if (toggleUpdatePasswordVisBtn) {
-        toggleUpdatePasswordVisBtn.addEventListener('click', () => {
-            if (newPasswordInput.type === 'password') {
-                newPasswordInput.type = 'text';
-                updateEyeIconHidden.style.display = 'none';
-                updateEyeIconVisible.style.display = 'block';
-            } else {
-                newPasswordInput.type = 'password';
-                updateEyeIconHidden.style.display = 'block';
-                updateEyeIconVisible.style.display = 'none';
-            }
-        });
-    }
 
     checkSession();
 }

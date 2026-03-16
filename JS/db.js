@@ -1,5 +1,5 @@
 // =================================================================
-// BILLU'S DIARY: FIREBASE KERNEL (STRICT WHITELIST SYNC)
+// BILLU'S DIARY: FIREBASE KERNEL (SILENT SYNC UPGRADE)
 // =================================================================
 
 const firebaseConfig = {
@@ -127,14 +127,11 @@ const AppDB = {
                 const state = doc.data();
                 let needsRefresh = false;
                 isInjectingCloudData = true;
-
-                // CRITICAL FIX: The Strict Whitelist. Only checks strings we explicitly care about.
                 
                 // 1. Check Static Keys
                 SYNC_CONFIG.staticKeys.forEach(key => {
                     const cloudVal = state[key];
                     const localVal = localStorage.getItem(key);
-                    // Safely ignore objects, arrays, timestamps, and nulls
                     if (typeof cloudVal === 'string' && cloudVal !== localVal) {
                         originalSetItem.call(localStorage, key, cloudVal);
                         needsRefresh = true;
@@ -156,8 +153,19 @@ const AppDB = {
                 isInjectingCloudData = false;
                 hasInitialSyncCompleted = true;
 
+                // CRITICAL FIX: The Soft Sync Engine. No more reloading the page.
                 if (needsRefresh) {
-                    window.location.reload(); 
+                    console.log("Cloud data synced, updating UI silently...");
+                    if (window.AppEvents) {
+                        // Adding 0 days forces the UI to gracefully re-read from memory
+                        window.AppEvents.emit('DATE_CHANGE', { tab: 'todo', direction: 0 });
+                        window.AppEvents.emit('DATE_CHANGE', { tab: 'journal', direction: 0 });
+                        window.AppEvents.emit('PLANNER_UPDATED'); 
+                        window.AppEvents.emit('SUBJECTS_UPDATED');
+                    }
+                    if (typeof window.forcePlannerRefresh === 'function') {
+                        window.forcePlannerRefresh();
+                    }
                 }
             });
     }
