@@ -246,23 +246,23 @@
         </section>
     </main>
 
-<form class="todo-input-group glass-panel" id="floatingTodoInput" autocomplete="off" onsubmit="return false;">
-        <input 
-            type="text" 
+<div class="todo-input-group glass-panel" id="floatingTodoInput">
+        <textarea 
             id="newTaskInput" 
+            rows="1" 
             placeholder="What needs to be done?" 
             autocomplete="off" 
-            readonly 
-            onfocus="this.removeAttribute('readonly');" 
-            style="cursor: text;" 
-        />
+            spellcheck="false"
+            style="flex: 1; background: transparent; border: none; color: var(--color-text); outline: none; resize: none; overflow: hidden; white-space: nowrap; height: 24px; line-height: 24px; font-family: inherit; font-size: 1rem; padding: 0;"
+        ></textarea>
+        
         <button id="addTaskBtn" type="button" aria-label="Add task" style="background: var(--color-primary); color: var(--color-bg);">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <line x1="12" y1="5" x2="12" y2="19"></line>
                 <line x1="5" y1="12" x2="19" y2="12"></line>
             </svg>
         </button>
-    </form>
+    </div>
 
 
     <nav class="bottom-pill-nav" id="bottomNav">
