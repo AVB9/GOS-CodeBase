@@ -1,5 +1,5 @@
 // =================================================================
-// BILLU'S DIARY: FIREBASE KERNEL (DYNAMIC SYNC & GOOGLE AUTH)
+// BILLU'S DIARY: FIREBASE KERNEL (THE SHIELD UPGRADE)
 // =================================================================
 
 const firebaseConfig = {
@@ -12,27 +12,21 @@ const firebaseConfig = {
     measurementId: "G-12LLL4M7EL"
 };
 
-if (!firebase.apps.length) {
-    firebase.initializeApp(firebaseConfig);
-}
+if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
 
-db.enablePersistence({ synchronizeTabs: true }).catch((err) => console.warn("Offline Mode Error:", err.code));
+db.enablePersistence({ synchronizeTabs: true }).catch(err => console.warn("Offline Mode Error:", err.code));
 
 let isInjectingCloudData = false;
 let realTimeListener = null;
 let authPromise = null; 
 
+// THE SHIELD: Prevents an empty phone from wiping the cloud on boot
+let hasInitialSyncCompleted = false; 
+
 const SYNC_CONFIG = {
-    staticKeys: [
-        'plannerTargets', 
-        'plannerCompleted', 
-        'plannerSubjects', 
-        'userDisplayName', 
-        'userUltimateGoalName', 
-        'userUltimateGoalDate'
-    ],
+    staticKeys: ['plannerTargets', 'plannerCompleted', 'plannerSubjects', 'userDisplayName', 'userUltimateGoalName', 'userUltimateGoalDate'],
     dynamicPrefixes: ['todo_', 'journal_']
 };
 
@@ -63,7 +57,6 @@ const AppDB = {
     async login(email, password) {
         const userCredential = await auth.signInWithEmailAndPassword(email, password);
         this.session = userCredential.user;
-        // CRITICAL FIX: Do NOT push to cloud here. Wait for the cloud to download to the phone!
         this.startRealTimeSync();
         return userCredential.user;
     },
@@ -72,12 +65,6 @@ const AppDB = {
         const provider = new firebase.auth.GoogleAuthProvider();
         const result = await auth.signInWithPopup(provider);
         this.session = result.user;
-        
-        // CRITICAL FIX: Only push empty local data if this is a BRAND NEW account.
-        if (result.additionalUserInfo && result.additionalUserInfo.isNewUser) {
-            this.pushToCloud();
-        }
-        
         this.startRealTimeSync();
         return result.user;
     },
@@ -91,9 +78,7 @@ const AppDB = {
         const keysToRemove = [];
         for (let i = 0; i < localStorage.length; i++) {
             const key = localStorage.key(i);
-            if (SYNC_CONFIG.dynamicPrefixes.some(prefix => key.startsWith(prefix))) {
-                keysToRemove.push(key);
-            }
+            if (SYNC_CONFIG.dynamicPrefixes.some(prefix => key.startsWith(prefix))) keysToRemove.push(key);
         }
         keysToRemove.forEach(k => localStorage.removeItem(k));
         window.location.reload();
@@ -102,25 +87,28 @@ const AppDB = {
     async resetPassword(email) { await auth.sendPasswordResetEmail(email); },
     async updatePassword(newPassword) { if (this.session) await this.session.updatePassword(newPassword); },
 
+    // THE FLAT PAYLOAD ENGINE: Prevents nested array wiping
     async pushToCloud() {
-        if (!this.session) return;
-        const appState = { todos: {}, journals: {} };
+        // THE SHIELD: DO NOT UPLOAD UNTIL WE HAVE DOWNLOADED FIRST
+        if (!this.session || !hasInitialSyncCompleted) return;
 
+        const payload = {};
         SYNC_CONFIG.staticKeys.forEach(key => {
-            appState[key] = localStorage.getItem(key) || null;
+            payload[key] = localStorage.getItem(key) || null;
         });
 
         for (let i = 0; i < localStorage.length; i++) {
             const key = localStorage.key(i);
-            if (key.startsWith('todo_')) appState.todos[key] = localStorage.getItem(key);
-            if (key.startsWith('journal_')) appState.journals[key] = localStorage.getItem(key);
+            if (SYNC_CONFIG.dynamicPrefixes.some(prefix => key.startsWith(prefix))) {
+                payload[key] = localStorage.getItem(key);
+            }
         }
+        
+        payload.updated_at = firebase.firestore.FieldValue.serverTimestamp();
 
         try {
-            await db.collection('users').doc(this.session.uid).set({
-                app_state: appState,
-                updated_at: firebase.firestore.FieldValue.serverTimestamp()
-            }, { merge: true });
+            await db.collection('users').doc(this.session.uid).set(payload, { merge: true });
+            console.log("Firebase Sync Successful!");
         } catch (error) { console.error("Firebase Sync Failed:", error); }
     },
 
@@ -129,48 +117,36 @@ const AppDB = {
 
         realTimeListener = db.collection('users').doc(this.session.uid)
             .onSnapshot((doc) => {
-                if (!doc.exists || !doc.data().app_state) return;
-                const state = doc.data().app_state;
+                // If brand new account, unlock shield and push their local data up
+                if (!doc.exists) {
+                    hasInitialSyncCompleted = true;
+                    AppDB.pushToCloud();
+                    return;
+                }
+
+                const state = doc.data();
                 let needsRefresh = false;
                 isInjectingCloudData = true;
 
-                // Sync Static Keys
-                SYNC_CONFIG.staticKeys.forEach(key => {
+                Object.keys(state).forEach(key => {
+                    if (key === 'updated_at') return; // Ignore timestamp
+                    
                     const localVal = localStorage.getItem(key);
                     const cloudVal = state[key];
-                    // Strict type check to prevent ghost data
-                    if (cloudVal && typeof cloudVal === 'string' && cloudVal !== localVal) {
+                    
+                    if (cloudVal !== undefined && cloudVal !== null && cloudVal !== localVal) {
                         originalSetItem.call(localStorage, key, cloudVal);
                         needsRefresh = true;
                     }
                 });
 
-                // Sync Dynamic Todos
-                if (state.todos) {
-                    Object.keys(state.todos).forEach(dateKey => {
-                        const localVal = localStorage.getItem(dateKey);
-                        const cloudVal = state.todos[dateKey];
-                        if (cloudVal && typeof cloudVal === 'string' && cloudVal !== localVal) {
-                            originalSetItem.call(localStorage, dateKey, cloudVal);
-                            needsRefresh = true;
-                        }
-                    });
-                }
-
-                // Sync Dynamic Journals
-                if (state.journals) {
-                    Object.keys(state.journals).forEach(dateKey => {
-                        const localVal = localStorage.getItem(dateKey);
-                        const cloudVal = state.journals[dateKey];
-                        if (cloudVal && typeof cloudVal === 'string' && cloudVal !== localVal) {
-                            originalSetItem.call(localStorage, dateKey, cloudVal);
-                            needsRefresh = true;
-                        }
-                    });
-                }
-
                 isInjectingCloudData = false;
-                if (needsRefresh) window.location.reload(); 
+                hasInitialSyncCompleted = true; // THE SHIELD IS UNLOCKED
+
+                if (needsRefresh) {
+                    console.log("Cloud data injected, refreshing UI...");
+                    window.location.reload(); 
+                }
             });
     }
 };
@@ -184,9 +160,7 @@ const originalSetItem = localStorage.setItem;
 localStorage.setItem = function(key, value) {
     try { 
         originalSetItem.apply(window.localStorage, [key, value]); 
-    } catch (e) { 
-        return; 
-    }
+    } catch (e) { return; }
 
     if (isInjectingCloudData) return;
     const isTracked = SYNC_CONFIG.staticKeys.includes(key) || 
