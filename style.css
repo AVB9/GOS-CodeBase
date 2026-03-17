@@ -421,7 +421,11 @@ input:checked + .slider:before { transform: translateX(24px); background-color: 
 .day-cell.today:hover .date-num { color: var(--color-primary); }
 
 .task-content { display: flex; flex-direction: column; gap: 5px; margin-top: 15px; }
+<<<<<<< HEAD
 .desktop-task-topic { font-size: 0.9rem; color: var(--color-text); line-height: 1.3; overflow: hidden; display: -webkit-box; line-clamp: 3; -webkit-box-orient: vertical; }
+=======
+.desktop-task-topic { font-size: 0.9rem; color: var(--color-text); line-height: 1.3; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; }
+>>>>>>> 74aa1e85da4922b441833d830f27430937c49661
 
 .stats-footer { width: 100%; padding: var(--pad-lg); background: var(--color-glass-bg); border-radius: var(--rad-md); border: 1px solid var(--color-glass-border); margin-top: 10px; }
 .progress-container { background: rgba(0, 0, 0, 0.5); border-radius: 20px; border: 1px solid var(--color-glass-border); padding: 4px; height: 24px; overflow: hidden; }
