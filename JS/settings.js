@@ -341,6 +341,12 @@ function initAuthUI() {
     const googleAuthText = document.getElementById('googleAuthText');
     const authFeedback = document.getElementById('authFeedback');
 
+    const openUpdatePasswordBtn = document.getElementById('openUpdatePasswordBtn');
+    const updatePasswordModalOverlay = document.getElementById('updatePasswordModalOverlay');
+    const closeUpdatePasswordBtn = document.getElementById('closeUpdatePasswordBtn');
+    const saveNewPasswordBtn = document.getElementById('saveNewPasswordBtn');
+    const updateAuthFeedback = document.getElementById('updateAuthFeedback');
+
     const showFeedback = (element, msg, type = 'error') => {
         if (!element) return;
         element.textContent = msg;
@@ -399,18 +405,21 @@ function initAuthUI() {
 
     if (toggleAuthModeBtn) toggleAuthModeBtn.addEventListener('click', toggleModalMode);
 
+    // ==========================================
+    // MAIN AUTH MODAL LOGIC
+    // ==========================================
     openAuthModalBtn.addEventListener('click', () => {
         isLoginMode = true; 
         toggleModalMode(); toggleModalMode(); 
         clearFeedback(authFeedback);
         
-        // NUCLEAR FIX: Inject BOTH Email and Password dynamically
-        const container = document.getElementById('authInputContainer');
+        // BUILD THE INPUTS
+        const container = document.getElementById('mainAuthInputContainer');
         if (container) {
             container.innerHTML = `
-                <input type="email" id="authEmail" class="auth-input" placeholder="Email address" autocomplete="username" style="margin-bottom: 15px;" />
-                <div class="password-wrapper">
-                    <input type="password" id="authPassword" class="auth-input" placeholder="Password" autocomplete="current-password" style="margin-bottom: 0; padding-right: 40px;" />
+                <input type="email" id="authEmail" class="auth-input" placeholder="Email address" autocomplete="username" style="margin-bottom: 15px; width: 100%;" />
+                <div class="password-wrapper" style="width: 100%;">
+                    <input type="password" id="authPassword" class="auth-input" placeholder="Password" autocomplete="current-password" style="margin-bottom: 0; padding-right: 40px; width: 100%;" />
                     <button id="togglePasswordVisBtn" class="password-eye-btn" type="button">
                         <svg id="eyeIconHidden" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/><path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/><line x1="2" y1="2" x2="22" y2="22"/></svg>
                         <svg id="eyeIconVisible" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display: none;"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
@@ -441,8 +450,8 @@ function initAuthUI() {
     });
     
     closeAuthModalBtn.addEventListener('click', () => {
-        // NUCLEAR FIX: Physically destroy both fields to clear Chrome's memory
-        const container = document.getElementById('authInputContainer');
+        // DESTROY THE INPUTS
+        const container = document.getElementById('mainAuthInputContainer');
         if (container) container.innerHTML = '';
         authModalOverlay.style.display = 'none';
     });
@@ -515,6 +524,85 @@ function initAuthUI() {
         });
     }
 
+    // ==========================================
+    // UPDATE PASSWORD MODAL LOGIC
+    // ==========================================
+    if (openUpdatePasswordBtn) {
+        openUpdatePasswordBtn.addEventListener('click', () => {
+            clearFeedback(updateAuthFeedback);
+            
+            // BUILD THE NEW PASSWORD INPUT
+            const container = document.getElementById('updatePasswordContainer');
+            if (container) {
+                container.innerHTML = `
+                    <div class="password-wrapper" style="width: 100%;">
+                        <input type="password" id="newPasswordInput" class="auth-input" placeholder="Enter new password..." style="margin-bottom: 0; padding-right: 40px; width: 100%;" />
+                        <button id="toggleUpdatePasswordVisBtn" class="password-eye-btn" type="button">
+                            <svg id="updateEyeIconHidden" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/><path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/><line x1="2" y1="2" x2="22" y2="22"/></svg>
+                            <svg id="updateEyeIconVisible" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display: none;"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+                        </button>
+                    </div>
+                `;
+
+                document.getElementById('toggleUpdatePasswordVisBtn').addEventListener('click', () => {
+                    const passInput = document.getElementById('newPasswordInput');
+                    const eyeHidden = document.getElementById('updateEyeIconHidden');
+                    const eyeVisible = document.getElementById('updateEyeIconVisible');
+                    if (passInput.type === 'password') {
+                        passInput.type = 'text';
+                        eyeHidden.style.display = 'none';
+                        eyeVisible.style.display = 'block';
+                    } else {
+                        passInput.type = 'password';
+                        eyeHidden.style.display = 'block';
+                        eyeVisible.style.display = 'none';
+                    }
+                });
+
+                document.getElementById('newPasswordInput').addEventListener('input', () => clearFeedback(updateAuthFeedback));
+            }
+            
+            updatePasswordModalOverlay.style.display = 'flex';
+        });
+    }
+    
+    if (closeUpdatePasswordBtn) {
+        closeUpdatePasswordBtn.addEventListener('click', () => {
+            // DESTROY THE INPUT
+            const container = document.getElementById('updatePasswordContainer');
+            if (container) container.innerHTML = '';
+            updatePasswordModalOverlay.style.display = 'none';
+        });
+    }
+
+    if (saveNewPasswordBtn) {
+        saveNewPasswordBtn.addEventListener('click', async () => {
+            const passInput = document.getElementById('newPasswordInput');
+            const newPass = passInput ? passInput.value : '';
+            
+            if(!newPass || newPass.length < 6) return showFeedback(updateAuthFeedback, "Password must be at least 6 characters.", "error");
+            
+            const originalText = saveNewPasswordBtn.textContent;
+            saveNewPasswordBtn.textContent = "Updating...";
+            saveNewPasswordBtn.disabled = true;
+
+            try {
+                await AppDB.updatePassword(newPass);
+                showFeedback(updateAuthFeedback, "Password updated successfully!", "success");
+                setTimeout(() => {
+                    const container = document.getElementById('updatePasswordContainer');
+                    if (container) container.innerHTML = '';
+                    updatePasswordModalOverlay.style.display = 'none';
+                }, 1500);
+            } catch (error) {
+                showFeedback(updateAuthFeedback, error.message, "error");
+            } finally {
+                saveNewPasswordBtn.textContent = originalText;
+                saveNewPasswordBtn.disabled = false;
+            }
+        });
+    }
+
     logoutBtn.addEventListener('click', async () => {
         const originalText = logoutBtn.textContent;
         logoutBtn.textContent = "Logging out...";
@@ -529,6 +617,5 @@ function initAuthUI() {
         } 
     });
 
-    // This will now successfully run and load your actual logged-in state!
     checkSession();
 }

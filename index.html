@@ -248,16 +248,13 @@
 
     <div class="todo-input-group glass-panel" id="floatingTodoInput">
         <div id="todoSubjectTray" class="todo-subject-tray"></div>
-        
         <input 
             type="text" 
             id="newTaskInput" 
             placeholder="What needs to be done?" 
-            autocomplete="new-password" 
-            role="presentation"
+            autocomplete="off" 
             spellcheck="false" 
         />
-        
         <button id="addTaskBtn" type="button" aria-label="Add task">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <line x1="12" y1="5" x2="12" y2="19"></line>
@@ -370,7 +367,7 @@
             
             <form id="authForm" novalidate onsubmit="return false;" style="width: 100%;">
                 <div class="modal-form-group">
-                    <div id="authInputContainer"></div>
+                    <div id="mainAuthInputContainer" style="width: 100%;"></div>
                     
                     <div style="display: flex; justify-content: flex-end; margin-top: 5px;">
                         <button type="button" id="forgotPasswordBtn" class="standalone-forgot-btn">Forgot password?</button>
@@ -410,12 +407,8 @@
             <div id="updateAuthFeedback" style="display: none; padding: 10px; border-radius: 8px; margin-bottom: 15px; font-size: 0.85rem; text-align: center; font-weight: bold; transition: all 0.3s ease;"></div>
 
             <div class="modal-form-group">
-                    <div id="authInputContainer"></div>
-                    
-                    <div style="display: flex; justify-content: flex-end; margin-top: 5px;">
-                        <button type="button" id="forgotPasswordBtn" class="standalone-forgot-btn">Forgot password?</button>
-                    </div>
-                </div>
+                <div id="updatePasswordContainer" style="width: 100%;"></div>
+            </div>
             <div class="modal-buttons expanded">
                 <button id="closeUpdatePasswordBtn" class="btn-ghost">Cancel</button>
                 <button id="saveNewPasswordBtn" class="btn-primary">Update</button>
