@@ -108,6 +108,10 @@ input, textarea {
 .bento-card { display: flex; flex-direction: column; justify-content: center; min-width: 0; overflow: hidden; padding: var(--pad-lg); min-height: 110px; cursor: pointer; transition: transform 0.2s ease, background 0.2s ease; }
 .bento-card:active { transform: scale(0.97); background: rgba(255, 255, 255, 0.05); }
 .bento-danger { background: var(--color-danger-bg); border: 1px solid var(--color-danger-border); }
+.bento-accent { background: var(--color-primary); border: none; }
+.bento-accent .bento-value, .bento-accent .bento-sub { color: var(--color-text); }
+.bento-centered { align-items: center; justify-content: center; text-align: center; }
+.text-main-color { color: var(--color-text); }
 .bento-title { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px; color: var(--color-text-muted); margin-bottom: var(--pad-sm); }
 .bento-value { font-size: 2.5rem; font-weight: 800; color: var(--color-primary); line-height: 1; margin-bottom: var(--pad-sm); }
 .bento-sub { font-size: 0.85rem; color: var(--color-text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
