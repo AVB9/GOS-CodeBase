@@ -23,7 +23,7 @@
     
     /* Spacing & Layout (HARDWARE AWARE) */
     --max-mobile-width: 480px;
-    --max-desktop-width: 1000px;
+    --max-desktop-width: 1200px;
     --safe-bottom: env(safe-area-inset-bottom, 20px); /* Adjusts for iPhone Notch/Gesture Bar */
     --nav-height: calc(120px + var(--safe-bottom));
     --planner-bottom-clear: calc(90px + var(--safe-bottom));
@@ -53,6 +53,32 @@
     --trans-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     --trans-slow: all 0.8s ease-in-out;
     --font-main: 'Nova Flat', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+/* =================================================================
+   NATIVE APP ILLUSION (Selection Locks & Custom Highlights)
+================================================================= */
+/* 1. Disable text selection and mobile long-press popups globally */
+body {
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none; /* Kills the iOS native popup menu */
+}
+
+/* 2. Re-enable selection ONLY for text boxes and search inputs */
+input, textarea {
+    -webkit-user-select: auto !important;
+    user-select: auto !important;
+}
+
+/* 3. Custom PC Text Highlight (Tied to User's Accent Color) */
+::selection {
+    background-color: color-mix(in srgb, var(--color-primary) 30%, transparent);
+    color: var(--color-text);
+}
+::-moz-selection { /* Firefox support */
+    background-color: color-mix(in srgb, var(--color-primary) 30%, transparent);
+    color: var(--color-text);
 }
 
 /* =================================================================
@@ -436,7 +462,7 @@ input:checked + .slider:before { transform: translateX(24px); background-color: 
     left: 8px;
     z-index: 5;
     border-radius: 4px;
-    max-width: calc(100% - 16px);
+    max-width: calc(100% - 40px);
 }
 
 .day-edit-btn {

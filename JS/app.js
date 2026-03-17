@@ -267,3 +267,46 @@ function initGlobalModals() {
         });
     });
 }
+
+// =================================================================
+// PWA HARDWARE BACK-BUTTON INTERCEPTOR
+// Prevents Android/iOS back swipe from killing the app when a modal is open
+// =================================================================
+window.addEventListener('load', () => {
+    // 1. Push a "dummy" state into the browser history immediately
+    history.pushState({ page: 'pwa-root' }, '');
+});
+
+window.addEventListener('popstate', (e) => {
+    const overlays = document.querySelectorAll('.modal-overlay');
+    const sheet = document.getElementById('agendaBottomSheet');
+    let closedSomething = false;
+
+    // 2. Check if any standard modals are open, and force them closed
+    overlays.forEach(o => {
+        if (window.getComputedStyle(o).display !== 'none') {
+            o.style.display = 'none';
+            closedSomething = true;
+        }
+    });
+
+    // 3. Check if the bottom sheet is open, and force it closed
+    if (sheet && sheet.classList.contains('active')) {
+        sheet.classList.remove('active');
+        sheet.style.transform = ''; // Reset drag physics
+        document.getElementById('dailySlider')?.classList.remove('hidden');
+        if (window.AppEvents) AppEvents.emit('TAB_CHANGED', { tab: 'show-nav' });
+        closedSomething = true;
+    }
+
+    // 4. The Magic Logic
+    if (closedSomething) {
+        // If we intercepted the back button to close a modal, the dummy state was just consumed.
+        // We MUST push a new dummy state immediately so the NEXT back press doesn't kill the app!
+        history.pushState({ page: 'pwa-root' }, '');
+    } else {
+        // If NO modals were open, the user genuinely wants to leave the app.
+        // We just popped the dummy state, so firing history.back() will cleanly exit the app.
+        history.back();
+    }
+});
