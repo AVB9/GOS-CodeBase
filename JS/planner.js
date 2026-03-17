@@ -157,7 +157,7 @@ function initPlannerTab() {
 
             // Slider Card
             const card = document.createElement('div');
-            card.className = `daily-card ${day.isCompleted ? 'completed' : ''}`;
+            card.className = `daily-card ${day.isCompleted ? 'completed' : ''} ${day.isOverdue ? 'overdue' : ''}`;
             card.id = `card-${day.dateKey}`;
             
             const dayName = day.dateObj.toLocaleDateString('en-US', { weekday: 'short' });

@@ -100,7 +100,7 @@ input, textarea {
 .btn-ghost { flex: 1; border: 1px solid var(--color-glass-border); background: rgba(255,255,255,0.05); border-radius: var(--rad-md); color: var(--color-text-muted); font-weight: 600; cursor: pointer; transition: transform 0.2s ease, background 0.2s ease; }
 .btn-ghost:active { transform: scale(0.95); }
 .swipe-container { width: 100%; min-height: 60vh; touch-action: pan-y; }
-.subject-tag { font-size: 0.7rem; font-weight: 700; padding: 3px var(--pad-sm); border-radius: var(--rad-pill); width: fit-content; text-transform: uppercase; letter-spacing: 0.5px; color: var(--color-text); text-shadow: 0 1px 2px rgba(0,0,0,0.5); }
+.subject-tag { font-size: 0.7rem; font-weight: 700; padding: 3px var(--pad-sm); border-radius: var(--rad-pill); width: fit-content; text-transform: uppercase; letter-spacing: 0.5px; box-shadow: var(--shadow-sm); }
 
 /* =================================================================
    5. UI COMPONENTS (Bento Cards, Navigators)
@@ -465,6 +465,11 @@ input:checked + .slider:before { transform: translateX(24px); background-color: 
     color: var(--color-text); 
     border-color: var(--color-primary); 
     transform: scale(1.1);
+}
+
+.day-cell.overdue, .daily-card.overdue {
+    background-color: color-mix(in srgb, var(--color-danger) 15%, var(--color-glass-bg)) !important;
+    border-color: color-mix(in srgb, var(--color-danger) 35%, transparent) !important;
 }
 
 /* =================================================================
