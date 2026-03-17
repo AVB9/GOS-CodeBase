@@ -7,7 +7,6 @@ function initPlannerTab() {
     const gridEl = document.getElementById('miniCalGrid');
     const calWrapper = document.getElementById('miniCalWrapper');
     const sliderEl = document.getElementById('dailySlider');
-    const monthDisplay = document.getElementById('plannerMonthDisplay');
     const sheet = document.getElementById('agendaBottomSheet');
     const dragZone = document.getElementById('sheetDragZone');
     const sheetDateDisplay = document.getElementById('sheetDateDisplay');
@@ -17,7 +16,6 @@ function initPlannerTab() {
 
     // Desktop (NEET OS) DOM
     const desktopGrid = document.getElementById('desktopCalendarGrid');
-    const desktopMonthLabel = document.getElementById('desktopMonthLabel');
     const desktopEditModal = document.getElementById('desktopEditModalOverlay');
     const desktopModalDateTitle = document.getElementById('desktopModalDateTitle');
     const desktopPillsContainer = document.getElementById('desktopModalSubjectPills');
@@ -25,13 +23,14 @@ function initPlannerTab() {
     const desktopProgressText = document.getElementById('desktopProgressText');
     const desktopProgressBar = document.getElementById('desktopProgressBar');
 
+    // SHARED DOM
+    const monthDisplay = document.getElementById('plannerMonthDisplay');
+
     if (!gridEl || !sliderEl || !desktopGrid) return;
 
+    // THE SINGLE BRAIN: One date object controls BOTH planners
     let currentViewDate = new Date();
     currentViewDate.setDate(1); 
-    
-    let desktopViewDate = new Date();
-    desktopViewDate.setDate(1);
 
     let activeSelectedDateStr = null;
     let currentSheetSubjectId = null;
@@ -98,6 +97,8 @@ function initPlannerTab() {
         
         const year = currentViewDate.getFullYear();
         const month = currentViewDate.getMonth();
+        
+        // Update the Shared Master Header
         monthDisplay.textContent = currentViewDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
         
         const daysInMonth = new Date(year, month + 1, 0).getDate();
@@ -203,9 +204,9 @@ function initPlannerTab() {
         const completed = getCompleted();
         const subjects = getSubjects();
         
-        const year = desktopViewDate.getFullYear();
-        const month = desktopViewDate.getMonth();
-        desktopMonthLabel.textContent = desktopViewDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+        // Use the EXACT same date as mobile
+        const year = currentViewDate.getFullYear();
+        const month = currentViewDate.getMonth();
         
         const daysInMonth = new Date(year, month + 1, 0).getDate();
         let startDay = new Date(year, month, 1).getDay();
@@ -244,19 +245,31 @@ function initPlannerTab() {
                 const sub = subjects.find(s => s.id === dayTask.subjectId) || subjects[0];
                 const textColor = getContrastColor(sub.color); 
                 contentHTML += `
-                    <div class="task-content">
-                        <span class="subject-tag" style="background-color:${sub.color}; color:${textColor};">${sub.name}</span>
+                    <span class="subject-tag desktop-tag" style="background-color:${sub.color}; color:${textColor};">${sub.name}</span>
+                    <div class="task-content" style="margin-top: 25px;">
                         <span class="desktop-task-topic">${dayTask.topic || 'No topic details'}</span>
                     </div>
+                    <button class="day-edit-btn" title="Edit Plan">✎</button>
                 `;
+            } else {
+                // If it's an empty cell, show a plus icon on hover
+                contentHTML += `<button class="day-edit-btn" title="Add Plan">＋</button>`;
             }
 
             cell.innerHTML = contentHTML;
 
-            // Clicking opens the Desktop Modal
-            cell.addEventListener('click', (e) => {
-                // If they click on the cell while it has a task, toggle completion (unless they click the top half to edit)
-                if (dayTask && e.offsetY > 40) {
+            // Wire up the separate buttons
+            const editBtn = cell.querySelector('.day-edit-btn');
+            if (editBtn) {
+                editBtn.addEventListener('click', (e) => {
+                    e.stopPropagation(); // Stops the completion toggle from firing
+                    openDesktopModal(dateKey, dateObj);
+                });
+            }
+
+            // Clicking the background of the cell toggles completion (or opens modal if empty)
+            cell.addEventListener('click', () => {
+                if (dayTask) {
                     toggleCompletion(dateKey, dateObj, todayObjReal);
                 } else {
                     openDesktopModal(dateKey, dateObj);
@@ -285,8 +298,7 @@ function initPlannerTab() {
             if (navigator.vibrate) navigator.vibrate(50);
         }
         saveCompleted(compArr);
-        renderCalendarAndCards(true);
-        renderDesktopCalendar();
+        forcePlannerRefresh();
     };
 
     // ==========================================
@@ -393,15 +405,6 @@ function initPlannerTab() {
         forcePlannerRefresh();
     });
 
-    document.getElementById('desktopClearAllBtn').addEventListener('click', () => {
-        if(confirm("Are you sure you want to delete ALL planner data?")) {
-            localStorage.removeItem('plannerTargets');
-            localStorage.removeItem('plannerCompleted');
-            forcePlannerRefresh();
-            if (window.AppEvents) AppEvents.emit('PLANNER_UPDATED');
-        }
-    });
-
     // ==========================================
     // UI EVENT LISTENERS
     // ==========================================
@@ -421,13 +424,16 @@ function initPlannerTab() {
         (currentY - startY > 60) ? closeBottomSheet() : sheet.style.transform = ''; 
     });
 
-    // Month Navigation (Mobile)
-    document.getElementById('plannerPrevMonth').addEventListener('click', () => { currentViewDate.setMonth(currentViewDate.getMonth() - 1); renderCalendarAndCards(true); });
-    document.getElementById('plannerNextMonth').addEventListener('click', () => { currentViewDate.setMonth(currentViewDate.getMonth() + 1); renderCalendarAndCards(true); });
+    // SHARED Month Navigation!
+    document.getElementById('plannerPrevMonth').addEventListener('click', () => { 
+        currentViewDate.setMonth(currentViewDate.getMonth() - 1); 
+        forcePlannerRefresh();
+    });
     
-    // Month Navigation (Desktop)
-    document.getElementById('desktopPrevMonth').addEventListener('click', () => { desktopViewDate.setMonth(desktopViewDate.getMonth() - 1); renderDesktopCalendar(); });
-    document.getElementById('desktopNextMonth').addEventListener('click', () => { desktopViewDate.setMonth(desktopViewDate.getMonth() + 1); renderDesktopCalendar(); });
+    document.getElementById('plannerNextMonth').addEventListener('click', () => { 
+        currentViewDate.setMonth(currentViewDate.getMonth() + 1); 
+        forcePlannerRefresh();
+    });
 
     // Home Widget Sync
     const updateHomeWidget = () => {
