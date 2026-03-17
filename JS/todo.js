@@ -69,6 +69,7 @@ function initTodoTab() {
         tray.innerHTML = '';
         const subjects = getSubjects().filter(s => s.id !== 'off');
 
+        // Empty State: Shows button to redirect to Settings
         if (subjects.length === 0) {
             const emptyPill = document.createElement('div');
             emptyPill.className = `todo-tint-pill`;
@@ -112,27 +113,40 @@ function initTodoTab() {
     };
 
     // =========================================================
-    // THE IRONCLAD MOBILE TRAY ACTIVATOR
+    // THE "KEYBOARD POP" TRAY ACTIVATOR (YOUR MASTERPIECE)
     // =========================================================
-    const forceOpenTray = () => {
-        if (tray && !tray.classList.contains('active')) {
-            tray.classList.add('active');
-        }
-    };
+    
+    // 1. Standard focus for PC users (no virtual keyboard)
+    input.addEventListener('focus', () => {
+        if (tray) tray.classList.add('active');
+    });
 
-    const forceCloseTray = (e) => {
+    // 2. Mobile Keyboard Detection (Visual Viewport API)
+    if (window.visualViewport) {
+        let baseHeight = window.visualViewport.height;
+        window.visualViewport.addEventListener('resize', () => {
+            // Update base height if screen rotates/resizes while not typing
+            if (document.activeElement !== input) {
+                baseHeight = Math.max(baseHeight, window.visualViewport.height);
+            }
+            // If the screen height shrinks by > 100px, the keyboard just popped up!
+            if (window.visualViewport.height < baseHeight - 100) {
+                if (document.activeElement === input && tray) {
+                    tray.classList.add('active');
+                }
+            }
+        });
+    }
+
+    // 3. The Close Trigger (Physical touch outside the box)
+    const closeTrayIfOutside = (e) => {
         if (tray && tray.classList.contains('active') && !e.target.closest('#floatingTodoInput')) {
             tray.classList.remove('active');
         }
     };
 
-    // Bind to every possible interaction vector so the phone CANNOT ignore it
-    input.addEventListener('focus', forceOpenTray);
-    input.addEventListener('click', forceOpenTray);
-    input.addEventListener('touchstart', forceOpenTray, { passive: true });
-
-    document.addEventListener('click', forceCloseTray);
-    document.addEventListener('touchstart', forceCloseTray, { passive: true });
+    document.addEventListener('mousedown', closeTrayIfOutside);
+    document.addEventListener('touchstart', closeTrayIfOutside, { passive: true });
     // =========================================================
 
     const updateArrayOrderFromDOM = () => {
@@ -227,6 +241,7 @@ function initTodoTab() {
                 });
             });
 
+            // DRAG AND DROP
             let holdTimer;
             let isDragging = false;
             let currentClone = null; 
@@ -376,6 +391,7 @@ function initTodoTab() {
         renderTasks();
     });
 
+    // Boot-up Sequence
     renderSubjectTray();
     loadTasks();
 }

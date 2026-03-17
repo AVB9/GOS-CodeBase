@@ -145,7 +145,7 @@
                     <div class="settings-group">
                         <label>Display Name (For Greeting)</label>
                         <div class="settings-input-row">
-                            <input type="text" id="settingsNameInput" placeholder="jiruuuu... :)" />  
+                            <input type="search" id="settingsNameInput" placeholder="jiruuuu... :)" />  
                             <button id="saveNameBtn" class="btn-primary">Save</button>
                         </div>
                     </div>
@@ -248,6 +248,7 @@
 
     <div class="todo-input-group glass-panel" id="floatingTodoInput">
         <div id="todoSubjectTray" class="todo-subject-tray"></div>
+        
         <input 
             type="search" 
             name="q"
@@ -255,7 +256,9 @@
             placeholder="What needs to be done?" 
             autocomplete="off" 
             spellcheck="false" 
+            enterkeyhint="done"
         />
+        
         <button id="addTaskBtn" type="button" aria-label="Add task">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <line x1="12" y1="5" x2="12" y2="19"></line>
@@ -293,7 +296,7 @@
     <div id="goalModalOverlay" class="modal-overlay">
         <div class="modal-box glass-panel">
             <h2>Your Ultimate Goal</h2>
-            <input type="text" id="goalInput" placeholder="Enter your ultimate goal..." />
+            <input type="search" id="goalInput" placeholder="Enter your ultimate goal..." />
             <input type="date" id="goalDateInput" class="settings-input modal-input-lg" />
             <div class="modal-buttons">
                 <button id="closeGoalModalBtn" class="btn-secondary">Cancel</button>
@@ -307,7 +310,7 @@
             <h2 id="targetModalTitle">Plan Target</h2>
             <div class="modal-form-group">
                 <select id="targetSubjectSelect" class="settings-input"></select>
-                <input type="text" id="targetTopicInput" placeholder="Enter topic or chapter..." />
+                <input type="search" id="targetTopicInput" placeholder="Enter topic or chapter..." autocomplete="off" spellcheck="false" enterkeyhint="done" />
             </div>
             <div class="modal-buttons">
                 <button id="clearTargetBtn" class="btn-secondary align-left">Clear</button>
@@ -326,7 +329,7 @@
                 <div class="color-picker-wrapper" id="colorPickerWrapper">
                     <input type="color" id="newSubjectColor" value="#ff3b3b" class="color-input" />
                 </div>
-                <input type="text" id="newSubjectName" class="settings-input" placeholder="New subject..." maxlength="20" />
+                <input type="search" id="newSubjectName" class="settings-input" placeholder="New subject..." maxlength="20" autocomplete="off" spellcheck="false" enterkeyhint="done" />
                 <button id="addSubjectBtn" class="btn-primary">Add</button>
             </div>
             <div class="modal-buttons expanded">
