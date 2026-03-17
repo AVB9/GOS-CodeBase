@@ -61,16 +61,16 @@
         <section id="tab-planner" class="app-tab">
             <div class="central-column">
                 
-                <div id="mobilePlannerView">
-                    <div class="tab-header">
-                        <h2 class="tab-title">Planner</h2>
-                        <div class="date-navigator">
-                            <button id="plannerPrevMonth" class="icon-btn">‹</button>
-                            <span id="plannerMonthDisplay" class="date-display">March</span>
-                            <button id="plannerNextMonth" class="icon-btn">›</button>
-                        </div>
+                <div class="tab-header" style="margin-bottom: 15px;">
+                    <h2 class="tab-title">Planner</h2>
+                    <div class="date-navigator">
+                        <button id="plannerPrevMonth" class="icon-btn">‹</button>
+                        <span id="plannerMonthDisplay" class="date-display">March</span>
+                        <button id="plannerNextMonth" class="icon-btn">›</button>
                     </div>
+                </div>
 
+                <div id="mobilePlannerView">
                     <div class="glass-panel mini-calendar-wrapper" id="miniCalWrapper">
                         <div class="cal-header">
                             <span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span><span>S</span>
@@ -88,19 +88,6 @@
                 </div>
 
                 <div id="desktopPlannerView">
-                    <div class="tab-header" style="margin-bottom: 20px;">
-                        <h2 class="tab-title">Revision Planner</h2>
-                        <div>
-                            <button class="btn-danger settings-action-btn" style="padding: 8px 15px;" id="desktopClearAllBtn">Clear All</button>
-                        </div>
-                    </div>
-                
-                    <div class="calendar-header">
-                        <button class="btn-secondary" id="desktopPrevMonth">❮ Prev</button>
-                        <div class="month-label" id="desktopMonthLabel">Month Year</div>
-                        <button class="btn-secondary" id="desktopNextMonth">Next ❯</button>
-                    </div>
-                
                     <div class="calendar-header" style="margin-bottom: 5px;">
                         <div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 10px; width: 100%; text-align: center; color: var(--color-text-muted); font-weight: bold; font-size: 0.9rem;">
                             <span>MON</span><span>TUE</span><span>WED</span><span>THU</span><span>FRI</span><span>SAT</span><span style="color: var(--color-primary);">SUN</span>
