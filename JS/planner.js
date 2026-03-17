@@ -3,6 +3,9 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function initPlannerTab() {
+    // Shared DOM
+    const monthDisplay = document.getElementById('plannerMonthDisplay');
+
     // Mobile DOM
     const gridEl = document.getElementById('miniCalGrid');
     const calWrapper = document.getElementById('miniCalWrapper');
@@ -23,12 +26,9 @@ function initPlannerTab() {
     const desktopProgressText = document.getElementById('desktopProgressText');
     const desktopProgressBar = document.getElementById('desktopProgressBar');
 
-    // SHARED DOM
-    const monthDisplay = document.getElementById('plannerMonthDisplay');
-
     if (!gridEl || !sliderEl || !desktopGrid) return;
 
-    // THE SINGLE BRAIN: One date object controls BOTH planners
+    // THE MASTER CLOCK
     let currentViewDate = new Date();
     currentViewDate.setDate(1); 
 
@@ -38,7 +38,7 @@ function initPlannerTab() {
     let isFirstTimeOpeningPlanner = true; 
 
     // ==========================================
-    // DATA LAYER
+    // DATA LAYER UTILITIES
     // ==========================================
     const defaultSubjects = [{ id: 'off', name: 'Day Off', color: '#555555' }];
     const getSubjects = () => JSON.parse(localStorage.getItem('plannerSubjects')) || defaultSubjects;
@@ -56,18 +56,14 @@ function initPlannerTab() {
     
     const getTargets = () => JSON.parse(localStorage.getItem('plannerTargets')) || {};
     const saveTargets = (targs) => { 
-        try {
-            localStorage.setItem('plannerTargets', JSON.stringify(targs)); 
-            if (window.AppEvents) AppEvents.emit('PLANNER_UPDATED'); 
-        } catch (e) { console.error('Storage error', e); }
+        try { localStorage.setItem('plannerTargets', JSON.stringify(targs)); if (window.AppEvents) AppEvents.emit('PLANNER_UPDATED'); } 
+        catch (e) {} 
     };
 
     const getCompleted = () => JSON.parse(localStorage.getItem('plannerCompleted')) || [];
     const saveCompleted = (arr) => {
-        try {
-            localStorage.setItem('plannerCompleted', JSON.stringify(arr));
-            if (window.AppEvents) AppEvents.emit('PLANNER_UPDATED');
-        } catch (e) { console.error('Storage error', e); }
+        try { localStorage.setItem('plannerCompleted', JSON.stringify(arr)); if (window.AppEvents) AppEvents.emit('PLANNER_UPDATED'); } 
+        catch (e) {} 
     };
 
     const getDateKey = (date) => {
@@ -78,29 +74,12 @@ function initPlannerTab() {
         return `${y}-${m}-${d}`;
     };
 
-    window.forcePlannerRefresh = () => { 
-        renderCalendarAndCards(true); 
-        renderDesktopCalendar();
-        updateHomeWidget(); 
-    };
-
     // ==========================================
-    // 1. MOBILE SLIDER PLANNER LOGIC
+    // THE CORE ENGINE (Single Source of Truth)
     // ==========================================
-    const renderCalendarAndCards = (skipAutoScroll = false) => {
-        gridEl.innerHTML = '';
-        sliderEl.innerHTML = '';
-        
-        const targets = getTargets();
-        const completed = getCompleted();
-        const subjects = getSubjects();
-        
+    const generateMonthData = () => {
         const year = currentViewDate.getFullYear();
         const month = currentViewDate.getMonth();
-        
-        // Update the Shared Master Header
-        monthDisplay.textContent = currentViewDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-        
         const daysInMonth = new Date(year, month + 1, 0).getDate();
         let startDay = new Date(year, month, 1).getDay();
         if (startDay === 0) startDay = 7; 
@@ -109,215 +88,215 @@ function initPlannerTab() {
         todayObjReal.setHours(0,0,0,0);
         const todayStr = getDateKey(todayObjReal);
 
-        for(let i = 1; i < startDay; i++) {
+        const targets = getTargets();
+        const completed = getCompleted();
+        const subjects = getSubjects();
+
+        const monthData = { year, month, startDay, daysInMonth, todayStr, todayObjReal, days: [] };
+
+        // One loop to rule them all. No ghosting, no timezone shifts.
+        for (let d = 1; d <= daysInMonth; d++) {
+            const dateObj = new Date(year, month, d);
+            const dateKey = getDateKey(dateObj);
+            const dayTask = targets[dateKey] || null;
+            const isCompleted = completed.includes(dateKey);
+            const isOverdue = (dayTask && !isCompleted && dateObj < todayObjReal);
+            const isFuture = dateObj > todayObjReal;
+            let subjectData = null;
+
+            if (dayTask) subjectData = subjects.find(s => s.id === dayTask.subjectId) || subjects[0];
+
+            monthData.days.push({
+                dayNum: d, dateObj, dateKey,
+                isToday: dateKey === todayStr,
+                isCompleted, isOverdue, isFuture,
+                hasTask: !!dayTask,
+                taskTopic: dayTask ? dayTask.topic : '',
+                subject: subjectData
+            });
+        }
+        return monthData;
+    };
+
+    window.forcePlannerRefresh = () => { 
+        const monthData = generateMonthData();
+        renderMobile(monthData); 
+        renderDesktop(monthData);
+        updateHomeWidget(); 
+    };
+
+    // ==========================================
+    // UI RENDERERS (Driven by the Core Engine)
+    // ==========================================
+    const renderMobile = (data) => {
+        gridEl.innerHTML = '';
+        sliderEl.innerHTML = '';
+        monthDisplay.textContent = currentViewDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+        
+        // Blank leading days
+        for(let i = 1; i < data.startDay; i++) {
             const empty = document.createElement('div');
             empty.className = 'cal-day empty';
             gridEl.appendChild(empty);
         }
 
-        for (let d = 1; d <= daysInMonth; d++) {
-            const dateObj = new Date(year, month, d);
-            const dateKey = getDateKey(dateObj);
-            const dayTask = targets[dateKey];
-            const isCompleted = completed.includes(dateKey);
-            
+        data.days.forEach(day => {
+            // Mini Grid Cell
             const cell = document.createElement('div');
-            cell.className = 'cal-day';
-            cell.textContent = d;
-            if (dateKey === todayStr) cell.classList.add('today');
-            if (dateKey === activeSelectedDateStr) cell.classList.add('selected');
-
-            if (dayTask) {
-                if (dateObj <= todayObjReal) cell.classList.add('has-task'); 
-                else cell.classList.add('future-task'); 
-            }
-            if (isCompleted) cell.classList.add('completed');
+            cell.className = `cal-day ${day.isToday ? 'today' : ''} ${day.dateKey === activeSelectedDateStr ? 'selected' : ''} ${day.isCompleted ? 'completed' : ''}`;
+            if (day.hasTask) cell.classList.add(day.isFuture ? 'future-task' : 'has-task');
+            cell.textContent = day.dayNum;
 
             cell.addEventListener('click', () => {
                 document.querySelectorAll('#miniCalGrid .cal-day').forEach(el => el.classList.remove('selected'));
                 cell.classList.add('selected');
-                document.getElementById(`card-${dateKey}`)?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
-                returnTodayBtn.classList.toggle('hidden', dateKey === todayStr);
-                openBottomSheet(dateKey, dateObj);
+                document.getElementById(`card-${day.dateKey}`)?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+                openBottomSheet(day.dateKey, day.dateObj);
             });
             gridEl.appendChild(cell);
 
+            // Slider Card
             const card = document.createElement('div');
-            card.className = `daily-card ${isCompleted ? 'completed' : ''}`;
-            card.id = `card-${dateKey}`;
+            card.className = `daily-card ${day.isCompleted ? 'completed' : ''}`;
+            card.id = `card-${day.dateKey}`;
             
-            const dayName = dateObj.toLocaleDateString('en-US', { weekday: 'short' });
+            const dayName = day.dateObj.toLocaleDateString('en-US', { weekday: 'short' });
             let cardContentHTML = `<span class="empty-task-text">Tap to plan this day</span>`;
             
-            if (dayTask) {
-                const sub = subjects.find(s => s.id === dayTask.subjectId) || subjects[0];
-                const textColor = getContrastColor(sub.color); 
+            if (day.hasTask) {
+                const textColor = getContrastColor(day.subject.color); 
                 cardContentHTML = `
                     <div style="display:flex; flex-direction:column; gap: 8px;">
-                        <span class="subject-tag" style="background-color:${sub.color}; color:${textColor};">${sub.name}</span>
-                        <span class="daily-card-topic">${dayTask.topic || 'No topic details'}</span>
+                        <span class="subject-tag" style="background-color:${day.subject.color}; color:${textColor};">${day.subject.name}</span>
+                        <span class="daily-card-topic">${day.taskTopic}</span>
                     </div>
                 `;
             }
 
             card.innerHTML = `
-                <div class="daily-card-date">
-                    <span class="daily-card-day">${dayName}</span>
-                    <span class="daily-card-num">${d}</span>
-                </div>
-                <div class="daily-card-content">
-                    ${cardContentHTML}
-                </div>
+                <div class="daily-card-date"><span class="daily-card-day">${dayName}</span><span class="daily-card-num">${day.dayNum}</span></div>
+                <div class="daily-card-content">${cardContentHTML}</div>
             `;
 
-            card.addEventListener('click', () => toggleCompletion(dateKey, dateObj, todayObjReal));
+            card.addEventListener('click', () => toggleCompletion(day.dateKey, day.dateObj, data.todayObjReal));
             sliderEl.appendChild(card);
-        }
+        });
 
+        // Fixed Today Button Logic
         if (todayObserver) todayObserver.disconnect();
-        if (year !== todayObjReal.getFullYear() || month !== todayObjReal.getMonth()) {
+        const isCurrentMonth = (data.year === data.todayObjReal.getFullYear() && data.month === data.todayObjReal.getMonth());
+
+        if (!isCurrentMonth) {
             returnTodayBtn.classList.remove('hidden');
         } else {
-            const todayCard = document.getElementById(`card-${todayStr}`);
+            const todayCard = document.getElementById(`card-${data.todayStr}`);
             if (todayCard) {
                 todayObserver = new IntersectionObserver((entries) => {
-                    const plannerTab = document.getElementById('tab-planner');
-                    if (plannerTab?.classList.contains('active')) {
-                        returnTodayBtn.classList.toggle('hidden', entries[0].isIntersecting);
-                    }
-                }, { root: sliderEl, threshold: 0.5 }); 
+                    returnTodayBtn.classList.toggle('hidden', entries[0].isIntersecting);
+                }, { root: sliderEl, threshold: 0.2 }); 
                 todayObserver.observe(todayCard);
             }
         }
-
-        if (!skipAutoScroll && !isFirstTimeOpeningPlanner) {
-            setTimeout(() => document.getElementById(`card-${todayStr}`)?.scrollIntoView({ behavior: 'auto', block: 'nearest', inline: 'center' }), 50);
-        }
     };
 
-    // ==========================================
-    // 2. DESKTOP (NEET OS) PLANNER LOGIC
-    // ==========================================
-    const renderDesktopCalendar = () => {
+    const renderDesktop = (data) => {
         desktopGrid.innerHTML = '';
-        const targets = getTargets();
-        const completed = getCompleted();
-        const subjects = getSubjects();
-        
-        // Use the EXACT same date as mobile
-        const year = currentViewDate.getFullYear();
-        const month = currentViewDate.getMonth();
-        
-        const daysInMonth = new Date(year, month + 1, 0).getDate();
-        let startDay = new Date(year, month, 1).getDay();
-        if (startDay === 0) startDay = 7; 
+        let totalTasks = 0;
+        let completedTasks = 0;
 
-        const todayObjReal = new Date();
-        todayObjReal.setHours(0,0,0,0);
-        const todayStr = getDateKey(todayObjReal);
-
-        let totalTasksThisMonth = 0;
-        let completedTasksThisMonth = 0;
-
-        for(let i = 1; i < startDay; i++) {
+        for(let i = 1; i < data.startDay; i++) {
             const empty = document.createElement('div');
             empty.className = 'day-cell empty';
             desktopGrid.appendChild(empty);
         }
 
-        for (let d = 1; d <= daysInMonth; d++) {
-            const dateObj = new Date(year, month, d);
-            const dateKey = getDateKey(dateObj);
-            const dayTask = targets[dateKey];
-            const isCompleted = completed.includes(dateKey);
-            
-            if (dayTask) {
-                totalTasksThisMonth++;
-                if (isCompleted) completedTasksThisMonth++;
+        data.days.forEach(day => {
+            if (day.hasTask) {
+                totalTasks++;
+                if (day.isCompleted) completedTasks++;
             }
 
             const cell = document.createElement('div');
-            cell.className = `day-cell ${dateKey === todayStr ? 'today' : ''} ${isCompleted ? 'completed' : ''}`;
+            cell.className = `day-cell ${day.isToday ? 'today' : ''} ${day.isCompleted ? 'completed' : ''} ${day.isOverdue ? 'overdue' : ''}`;
             
-            let contentHTML = `<div class="date-num">${d}</div>`;
+            let contentHTML = `<div class="date-num">${day.dayNum}</div>`;
             
-            if (dayTask) {
-                const sub = subjects.find(s => s.id === dayTask.subjectId) || subjects[0];
-                const textColor = getContrastColor(sub.color); 
+            if (day.hasTask) {
+                const textColor = getContrastColor(day.subject.color); 
                 contentHTML += `
-                    <span class="subject-tag desktop-tag" style="background-color:${sub.color}; color:${textColor};">${sub.name}</span>
+                    <span class="subject-tag desktop-tag" style="background-color:${day.subject.color}; color:${textColor};">${day.subject.name}</span>
                     <div class="task-content" style="margin-top: 25px;">
-                        <span class="desktop-task-topic">${dayTask.topic || 'No topic details'}</span>
+                        <span class="desktop-task-topic">${day.taskTopic}</span>
                     </div>
                     <button class="day-edit-btn" title="Edit Plan">✎</button>
                 `;
             } else {
-                // If it's an empty cell, show a plus icon on hover
                 contentHTML += `<button class="day-edit-btn" title="Add Plan">＋</button>`;
             }
 
             cell.innerHTML = contentHTML;
 
-            // Wire up the separate buttons
             const editBtn = cell.querySelector('.day-edit-btn');
             if (editBtn) {
                 editBtn.addEventListener('click', (e) => {
-                    e.stopPropagation(); // Stops the completion toggle from firing
-                    openDesktopModal(dateKey, dateObj);
+                    e.stopPropagation(); 
+                    openDesktopModal(day.dateKey, day.dateObj);
                 });
             }
 
-            // Clicking the background of the cell toggles completion (or opens modal if empty)
             cell.addEventListener('click', () => {
-                if (dayTask) {
-                    toggleCompletion(dateKey, dateObj, todayObjReal);
-                } else {
-                    openDesktopModal(dateKey, dateObj);
-                }
+                if (day.hasTask) toggleCompletion(day.dateKey, day.dateObj, data.todayObjReal);
+                else openDesktopModal(day.dateKey, day.dateObj);
             });
             
             desktopGrid.appendChild(cell);
-        }
+        });
 
         // Update Stats
-        desktopProgressText.textContent = `${completedTasksThisMonth} / ${totalTasksThisMonth} Tasks`;
-        const percent = totalTasksThisMonth === 0 ? 0 : (completedTasksThisMonth / totalTasksThisMonth) * 100;
-        desktopProgressBar.style.width = `${percent}%`;
+        desktopProgressText.textContent = `${completedTasks} / ${totalTasks} Tasks`;
+        desktopProgressBar.style.width = `${totalTasks === 0 ? 0 : (completedTasks / totalTasks) * 100}%`;
     };
 
+    // ==========================================
+    // ACTIONS & MODALS
+    // ==========================================
     const toggleCompletion = (dateKey, dateObj, todayObjReal) => {
         const targets = getTargets();
         if (!targets[dateKey]) return; 
         if (dateObj > todayObjReal) { alert("Cannot mark future days as complete."); return; }
 
         let compArr = getCompleted();
-        if (compArr.includes(dateKey)) {
-            compArr = compArr.filter(id => id !== dateKey);
-        } else {
-            compArr.push(dateKey);
-            if (navigator.vibrate) navigator.vibrate(50);
-        }
+        if (compArr.includes(dateKey)) compArr = compArr.filter(id => id !== dateKey);
+        else { compArr.push(dateKey); if (navigator.vibrate) navigator.vibrate(50); }
+        
         saveCompleted(compArr);
         forcePlannerRefresh();
     };
 
-    // ==========================================
-    // 3. EDIT MODALS (Mobile Sheet vs Desktop Box)
-    // ==========================================
+    const handleClearTask = () => {
+        const targets = getTargets();
+        delete targets[activeSelectedDateStr];
+        saveTargets(targets);
+
+        let compArr = getCompleted();
+        if (compArr.includes(activeSelectedDateStr)) {
+            compArr = compArr.filter(id => id !== activeSelectedDateStr);
+            saveCompleted(compArr);
+        }
+        forcePlannerRefresh();
+    };
+
     const renderSubjectPills = (container, currentId, onSelect) => {
         container.innerHTML = '';
-        const subjects = getSubjects();
-        subjects.forEach(sub => {
+        getSubjects().forEach(sub => {
             const btn = document.createElement('button');
             btn.className = `subject-pill ${sub.id === currentId ? 'active' : ''}`;
             btn.textContent = sub.name;
-            
             if (sub.id === currentId) {
                 btn.style.backgroundColor = sub.color;
                 btn.style.borderColor = sub.color;
                 btn.style.color = getContrastColor(sub.color);
             }
-
             btn.addEventListener('click', (e) => {
                 e.preventDefault();
                 container.querySelectorAll('.subject-pill').forEach(p => { p.classList.remove('active'); p.style.cssText = ''; });
@@ -334,13 +313,10 @@ function initPlannerTab() {
     const openBottomSheet = (dateStr, dateObj) => {
         activeSelectedDateStr = dateStr;
         sheetDateDisplay.textContent = dateObj.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
-        
         const targets = getTargets();
         currentSheetSubjectId = targets[dateStr] ? targets[dateStr].subjectId : getSubjects()[0].id;
-        
         renderSubjectPills(pillsContainer, currentSheetSubjectId, (id) => currentSheetSubjectId = id);
         topicInput.value = targets[dateStr] ? (targets[dateStr].topic || '') : '';
-        
         AppEvents.emit('TAB_CHANGED', { tab: 'hide-nav' }); 
         sliderEl.classList.add('hidden');
         sheet.classList.add('active');
@@ -357,17 +333,14 @@ function initPlannerTab() {
     const openDesktopModal = (dateStr, dateObj) => {
         activeSelectedDateStr = dateStr;
         desktopModalDateTitle.textContent = dateObj.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
-        
         const targets = getTargets();
         currentSheetSubjectId = targets[dateStr] ? targets[dateStr].subjectId : getSubjects()[0].id;
-        
         renderSubjectPills(desktopPillsContainer, currentSheetSubjectId, (id) => currentSheetSubjectId = id);
         desktopTopicInput.value = targets[dateStr] ? (targets[dateStr].topic || '') : '';
-        
         desktopEditModal.style.display = 'flex';
     };
 
-    // Save/Clear Listeners (Mobile)
+    // Save/Clear Listeners
     document.getElementById('saveTargetBtn').addEventListener('click', () => {
         const textInput = topicInput.value.trim();
         if (!textInput) { alert("Please enter a target to save."); return; }
@@ -378,15 +351,8 @@ function initPlannerTab() {
         forcePlannerRefresh();
     });
 
-    document.getElementById('clearTargetBtn').addEventListener('click', () => {
-        const targets = getTargets();
-        delete targets[activeSelectedDateStr];
-        saveTargets(targets);
-        closeBottomSheet();
-        forcePlannerRefresh();
-    });
+    document.getElementById('clearTargetBtn').addEventListener('click', () => { handleClearTask(); closeBottomSheet(); });
 
-    // Save/Clear Listeners (Desktop)
     document.getElementById('desktopSaveTaskBtn').addEventListener('click', () => {
         const textInput = desktopTopicInput.value.trim();
         if (!textInput) { alert("Please enter a target to save."); return; }
@@ -397,18 +363,11 @@ function initPlannerTab() {
         forcePlannerRefresh();
     });
 
-    document.getElementById('desktopClearTaskBtn').addEventListener('click', () => {
-        const targets = getTargets();
-        delete targets[activeSelectedDateStr];
-        saveTargets(targets);
-        desktopEditModal.style.display = 'none';
-        forcePlannerRefresh();
-    });
+    document.getElementById('desktopClearTaskBtn').addEventListener('click', () => { handleClearTask(); desktopEditModal.style.display = 'none'; });
 
     // ==========================================
-    // UI EVENT LISTENERS
+    // UI EVENT CONTROLS
     // ==========================================
-    // Mobile Sheet Drag Physics
     let startY = 0, currentY = 0;
     dragZone.addEventListener('touchstart', (e) => startY = e.touches[0].clientY, { passive: true });
     dragZone.addEventListener('touchmove', (e) => {
@@ -424,7 +383,6 @@ function initPlannerTab() {
         (currentY - startY > 60) ? closeBottomSheet() : sheet.style.transform = ''; 
     });
 
-    // SHARED Month Navigation!
     document.getElementById('plannerPrevMonth').addEventListener('click', () => { 
         currentViewDate.setMonth(currentViewDate.getMonth() - 1); 
         forcePlannerRefresh();
@@ -435,7 +393,20 @@ function initPlannerTab() {
         forcePlannerRefresh();
     });
 
-    // Home Widget Sync
+    returnTodayBtn.addEventListener('click', () => {
+        currentViewDate = new Date(); // Resets the master clock to right now
+        currentViewDate.setDate(1);
+        forcePlannerRefresh();
+        
+        // Let the DOM render, then smoothly scroll
+        setTimeout(() => {
+            const todayStr = getDateKey(new Date());
+            document.getElementById(`card-${todayStr}`)?.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
+        }, 50);
+        
+        if (navigator.vibrate) navigator.vibrate(50);
+    });
+
     const updateHomeWidget = () => {
         const taskContainer = document.getElementById('dashTaskContainer');
         const widgetCard = document.getElementById('homeTargetWidget');
@@ -463,7 +434,6 @@ function initPlannerTab() {
         }
     };
 
-    // Global Events
     if (window.AppEvents) {
         AppEvents.on('TAB_CHANGED', ({ tab }) => {
             if (tab === 'tab-planner' && isFirstTimeOpeningPlanner) {
@@ -474,8 +444,9 @@ function initPlannerTab() {
         AppEvents.on('PLANNER_UPDATED', () => updateHomeWidget());
     }
 
-    // Boot Up
-    renderCalendarAndCards();
-    renderDesktopCalendar();
+    // Initialize the Engine
+    const initialData = generateMonthData();
+    renderMobile(initialData);
+    renderDesktop(initialData);
     updateHomeWidget();
 }
