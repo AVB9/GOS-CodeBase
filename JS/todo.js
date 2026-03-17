@@ -17,7 +17,6 @@ function initTodoTab() {
     let tasks = [];
     let selectedSubjectId = null;
 
-    // DEFENSIVE CODING: NaN Date Prevention
     const getDateKey = (date) => {
         if (!(date instanceof Date) || isNaN(date)) date = new Date();
         const y = date.getFullYear();
@@ -57,7 +56,6 @@ function initTodoTab() {
         updateDateDisplay();
     };
 
-    // DEFENSIVE CODING: Local Storage Wrapper
     const saveTasks = () => {
         try {
             localStorage.setItem(getDateKey(currentDate), JSON.stringify(tasks));
@@ -66,10 +64,28 @@ function initTodoTab() {
         }
     };
 
+    // PROPERLY SCOPED renderSubjectTray function
     const renderSubjectTray = () => {
         if (!tray) return;
         tray.innerHTML = '';
         const subjects = getSubjects().filter(s => s.id !== 'off');
+
+        if (subjects.length === 0) {
+            const emptyPill = document.createElement('div');
+            emptyPill.className = `todo-tint-pill`;
+            emptyPill.textContent = "Add Subjects in Settings →";
+            
+            const handleEmptyTap = (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                document.querySelector('.bottom-pill-btn[data-target="tab-settings"]')?.click();
+            };
+            emptyPill.addEventListener('mousedown', handleEmptyTap);
+            emptyPill.addEventListener('touchstart', handleEmptyTap, { passive: false });
+            
+            tray.appendChild(emptyPill);
+            return;
+        }
 
         subjects.forEach(sub => {
             const pill = document.createElement('div');
@@ -82,11 +98,15 @@ function initTodoTab() {
                 pill.style.color = sub.color;
             }
 
-            pill.addEventListener('mousedown', (e) => {
+            const handlePillTap = (e) => {
                 e.preventDefault(); 
+                e.stopPropagation();
                 selectedSubjectId = selectedSubjectId === sub.id ? null : sub.id;
                 renderSubjectTray(); 
-            });
+            };
+            
+            pill.addEventListener('mousedown', handlePillTap);
+            pill.addEventListener('touchstart', handlePillTap, { passive: false });
 
             tray.appendChild(pill);
         });
@@ -100,7 +120,6 @@ function initTodoTab() {
     const updateArrayOrderFromDOM = () => {
         const newArray = [];
         listEl.querySelectorAll('.todo-item').forEach(item => {
-            // DEFENSIVE CODING: Prevent drag-and-drop array corruption
             const rawId = item.getAttribute('data-task-id');
             if (!rawId) return; 
 
@@ -190,7 +209,6 @@ function initTodoTab() {
                 });
             });
 
-            // DRAG AND DROP
             let holdTimer;
             let isDragging = false;
             let currentClone = null; 
@@ -241,7 +259,7 @@ function initTodoTab() {
                 
                 if (overItem && overItem !== li) {
                     const draggedTaskData = tasks.find(t => t.id === task.id);
-                    const overTaskData = tasks.find(t => t.id === parseInt(overItem.getAttribute('data-task-id'), 10)); // Fixed mapping here too
+                    const overTaskData = tasks.find(t => t.id === parseInt(overItem.getAttribute('data-task-id'), 10));
                     
                     if (draggedTaskData && overTaskData && draggedTaskData.subjectId === overTaskData.subjectId) {
                         const allItems = [...listEl.querySelectorAll('.todo-item')];
@@ -307,7 +325,7 @@ function initTodoTab() {
     addBtn.addEventListener('click', addTask);
     input.addEventListener('keypress', (e) => { 
         if (e.key === 'Enter') {
-            e.preventDefault(); // Blocks the new line
+            e.preventDefault(); 
             addTask(); 
         } 
     });
@@ -336,54 +354,7 @@ function initTodoTab() {
     });
 
     AppEvents.on('SUBJECTS_UPDATED', () => {
-        const renderSubjectTray = () => {
-        if (!tray) return;
-        tray.innerHTML = '';
-        const subjects = getSubjects().filter(s => s.id !== 'off');
-
-        if (subjects.length === 0) {
-            const emptyPill = document.createElement('div');
-            emptyPill.className = `todo-tint-pill`;
-            emptyPill.textContent = "Add Subjects in Settings →";
-            
-            // MOBILE FIX: Bind both mousedown AND touchstart
-            const handleEmptyTap = (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                document.querySelector('.bottom-pill-btn[data-target="tab-settings"]').click();
-            };
-            emptyPill.addEventListener('mousedown', handleEmptyTap);
-            emptyPill.addEventListener('touchstart', handleEmptyTap, { passive: false });
-            
-            tray.appendChild(emptyPill);
-            return;
-        }
-
-        subjects.forEach(sub => {
-            const pill = document.createElement('div');
-            pill.className = `todo-tint-pill ${selectedSubjectId === sub.id ? 'selected' : ''}`;
-            pill.textContent = sub.name;
-            
-            if (selectedSubjectId === sub.id) {
-                pill.style.backgroundColor = hexToRgba(sub.color, 0.2); 
-                pill.style.borderColor = sub.color;
-                pill.style.color = sub.color;
-            }
-
-            // MOBILE FIX: Bind both mousedown AND touchstart to keep the keyboard open
-            const handlePillTap = (e) => {
-                e.preventDefault(); 
-                e.stopPropagation();
-                selectedSubjectId = selectedSubjectId === sub.id ? null : sub.id;
-                renderSubjectTray(); 
-            };
-            
-            pill.addEventListener('mousedown', handlePillTap);
-            pill.addEventListener('touchstart', handlePillTap, { passive: false });
-
-            tray.appendChild(pill);
-        });
-    };
+        renderSubjectTray();
         renderTasks();
     });
 
