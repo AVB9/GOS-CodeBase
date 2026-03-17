@@ -341,10 +341,6 @@ function initAuthUI() {
     const googleAuthText = document.getElementById('googleAuthText');
     const authFeedback = document.getElementById('authFeedback');
 
-    // CRITICAL FIX: Cage the password manager by disabling inputs by default
-    if (emailInput) emailInput.disabled = true;
-    if (passwordInput) passwordInput.disabled = true;
-
     const showFeedback = (element, msg, type = 'error') => {
         if (!element) return;
         element.textContent = msg;
@@ -361,9 +357,6 @@ function initAuthUI() {
     };
 
     const clearFeedback = (element) => { if (element) element.style.display = 'none'; };
-
-    if (emailInput) emailInput.addEventListener('input', () => clearFeedback(authFeedback));
-    if (passwordInput) passwordInput.addEventListener('input', () => clearFeedback(authFeedback));
 
     const checkSession = async () => {
         try {
@@ -412,50 +405,45 @@ function initAuthUI() {
         clearFeedback(authFeedback);
         
         // NUCLEAR FIX: Inject BOTH Email and Password dynamically
-        document.getElementById('authInputContainer').innerHTML = `
-            <input type="email" id="authEmail" class="auth-input" placeholder="Email address" autocomplete="username" style="margin-bottom: 15px;" />
-            <div class="password-wrapper">
-                <input type="password" id="authPassword" class="auth-input" placeholder="Password" autocomplete="current-password" style="margin-bottom: 0; padding-right: 40px;" />
-                <button id="togglePasswordVisBtn" class="password-eye-btn" type="button">
-                    <svg id="eyeIconHidden" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/><path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/><line x1="2" y1="2" x2="22" y2="22"/></svg>
-                    <svg id="eyeIconVisible" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display: none;"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
-                </button>
-            </div>
-        `;
+        const container = document.getElementById('authInputContainer');
+        if (container) {
+            container.innerHTML = `
+                <input type="email" id="authEmail" class="auth-input" placeholder="Email address" autocomplete="username" style="margin-bottom: 15px;" />
+                <div class="password-wrapper">
+                    <input type="password" id="authPassword" class="auth-input" placeholder="Password" autocomplete="current-password" style="margin-bottom: 0; padding-right: 40px;" />
+                    <button id="togglePasswordVisBtn" class="password-eye-btn" type="button">
+                        <svg id="eyeIconHidden" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/><path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/><line x1="2" y1="2" x2="22" y2="22"/></svg>
+                        <svg id="eyeIconVisible" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display: none;"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+                    </button>
+                </div>
+            `;
 
-        document.getElementById('togglePasswordVisBtn').addEventListener('click', () => {
-            const passInput = document.getElementById('authPassword');
-            const eyeHidden = document.getElementById('eyeIconHidden');
-            const eyeVisible = document.getElementById('eyeIconVisible');
-            if (passInput.type === 'password') {
-                passInput.type = 'text';
-                eyeHidden.style.display = 'none';
-                eyeVisible.style.display = 'block';
-            } else {
-                passInput.type = 'password';
-                eyeHidden.style.display = 'block';
-                eyeVisible.style.display = 'none';
-            }
-        });
+            document.getElementById('togglePasswordVisBtn').addEventListener('click', () => {
+                const passInput = document.getElementById('authPassword');
+                const eyeHidden = document.getElementById('eyeIconHidden');
+                const eyeVisible = document.getElementById('eyeIconVisible');
+                if (passInput.type === 'password') {
+                    passInput.type = 'text';
+                    eyeHidden.style.display = 'none';
+                    eyeVisible.style.display = 'block';
+                } else {
+                    passInput.type = 'password';
+                    eyeHidden.style.display = 'block';
+                    eyeVisible.style.display = 'none';
+                }
+            });
 
-        document.getElementById('authEmail').addEventListener('input', () => clearFeedback(authFeedback));
-        document.getElementById('authPassword').addEventListener('input', () => clearFeedback(authFeedback));
+            document.getElementById('authEmail').addEventListener('input', () => clearFeedback(authFeedback));
+            document.getElementById('authPassword').addEventListener('input', () => clearFeedback(authFeedback));
+        }
 
         authModalOverlay.style.display = 'flex';
     });
     
     closeAuthModalBtn.addEventListener('click', () => {
         // NUCLEAR FIX: Physically destroy both fields to clear Chrome's memory
-        document.getElementById('authInputContainer').innerHTML = '';
-        authModalOverlay.style.display = 'none';
-    });
-    
-    closeAuthModalBtn.addEventListener('click', () => {
-        if (emailInput) emailInput.value = '';
-        
-        // NUCLEAR FIX: Physically destroy the password field so Chrome forgets it exists
-        document.getElementById('authPasswordContainer').innerHTML = '';
-        
+        const container = document.getElementById('authInputContainer');
+        if (container) container.innerHTML = '';
         authModalOverlay.style.display = 'none';
     });
 
@@ -541,5 +529,6 @@ function initAuthUI() {
         } 
     });
 
+    // This will now successfully run and load your actual logged-in state!
     checkSession();
 }
