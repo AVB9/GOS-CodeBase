@@ -64,7 +64,6 @@ function initTodoTab() {
         }
     };
 
-    // PROPERLY SCOPED renderSubjectTray function
     const renderSubjectTray = () => {
         if (!tray) return;
         tray.innerHTML = '';
@@ -112,10 +111,29 @@ function initTodoTab() {
         });
     };
 
-    input.addEventListener('focus', () => tray.classList.add('active'));
-    document.addEventListener('click', (e) => {
-        if (!e.target.closest('#floatingTodoInput')) tray.classList.remove('active');
-    });
+    // =========================================================
+    // THE IRONCLAD MOBILE TRAY ACTIVATOR
+    // =========================================================
+    const forceOpenTray = () => {
+        if (tray && !tray.classList.contains('active')) {
+            tray.classList.add('active');
+        }
+    };
+
+    const forceCloseTray = (e) => {
+        if (tray && tray.classList.contains('active') && !e.target.closest('#floatingTodoInput')) {
+            tray.classList.remove('active');
+        }
+    };
+
+    // Bind to every possible interaction vector so the phone CANNOT ignore it
+    input.addEventListener('focus', forceOpenTray);
+    input.addEventListener('click', forceOpenTray);
+    input.addEventListener('touchstart', forceOpenTray, { passive: true });
+
+    document.addEventListener('click', forceCloseTray);
+    document.addEventListener('touchstart', forceCloseTray, { passive: true });
+    // =========================================================
 
     const updateArrayOrderFromDOM = () => {
         const newArray = [];
