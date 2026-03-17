@@ -303,7 +303,7 @@ input:checked + .slider:before { transform: translateX(24px); background-color: 
 .upload-btn svg { margin-right: 8px; }
 
 /* =================================================================
-   10. PLANNER (MINI CALENDAR, CARDS, & BOTTOM SHEET)
+   10.1 PLANNER MOBILE (MINI CALENDAR, CARDS, & BOTTOM SHEET)
    ================================================================= */
 #tab-planner { padding-bottom: var(--planner-bottom-clear) !important; height: auto; }
 #tab-planner .central-column { padding-bottom: 0 !important; }
@@ -359,6 +359,73 @@ input:checked + .slider:before { transform: translateX(24px); background-color: 
 .subject-pill { background: rgba(255, 255, 255, 0.05); border: 1px solid var(--color-glass-border); color: var(--color-text-muted); padding: 8px 16px; border-radius: var(--rad-pill); font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: transform 0.2s ease, color 0.2s ease, background-color 0.2s ease; }
 .subject-pill.active { color: var(--color-text) !important; box-shadow: var(--shadow-md); transform: scale(1.05); }
 .flex-2 { flex: 2; border-radius: var(--rad-md); font-weight: 700; font-size: 1.05rem; }
+
+/* =================================================================
+   10.2 PLANNER PC (FULL CALENDAR, STATS & TASK MANAGEMENT)
+   ================================================================= */
+
+/* Default (Mobile): Hide the Desktop Planner */
+#desktopPlannerView { display: none; }
+#mobilePlannerView { display: block; }
+
+@media (min-width: 768px) { 
+    /* Desktop: Hide Mobile Planner, Show Desktop Planner */
+    #desktopPlannerView { display: block; }
+    #mobilePlannerView { display: none; }
+    #tab-planner { padding-bottom: 0 !important; } /* Removes huge bottom pad on PC */
+}
+
+/* =================================================================
+   NEET OS DESKTOP CALENDAR STYLES (Adapted to your theme)
+================================================================= */
+.month-label { font-size: 1.5rem; font-weight: bold; color: var(--color-text); text-transform: uppercase; }
+.calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 10px; width: 100%; margin-bottom: 20px; }
+
+.day-cell {
+    background: var(--color-glass-tint);
+    backdrop-filter: var(--blur-glass);
+    -webkit-backdrop-filter: var(--blur-glass);
+    border: 1px solid var(--color-glass-border);
+    border-radius: var(--rad-sm);
+    min-height: 120px;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    position: relative;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+}
+
+.day-cell:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+    border-color: rgba(255, 255, 255, 0.3);
+}
+
+.day-cell.empty { background: transparent; border: none; cursor: default; }
+.day-cell.empty:hover { transform: none; box-shadow: none; }
+
+.day-cell.today { border: 2px solid var(--color-primary); box-shadow: 0 0 15px color-mix(in srgb, var(--color-primary) 30%, transparent); }
+.day-cell.today .date-num { color: var(--color-primary); }
+
+.day-cell.completed { background-color: rgba(0, 0, 0, 0.4); border-color: rgba(255, 255, 255, 0.05); }
+.day-cell.completed .task-content { opacity: 0.4; text-decoration: line-through; }
+.day-cell.completed::after {
+    content: '✓'; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    font-size: 4rem; color: var(--color-success); opacity: 0.15; pointer-events: none;
+}
+
+.date-num { font-size: 1.1rem; font-weight: bold; color: var(--color-text-muted); align-self: flex-end; z-index: 2; transition: color 0.2s; }
+.day-cell:hover .date-num { color: var(--color-text); }
+.day-cell.today:hover .date-num { color: var(--color-primary); }
+
+.task-content { display: flex; flex-direction: column; gap: 5px; margin-top: 15px; }
+.desktop-task-topic { font-size: 0.9rem; color: var(--color-text); line-height: 1.3; overflow: hidden; display: -webkit-box; line-clamp: 3; -webkit-box-orient: vertical; }
+
+.stats-footer { width: 100%; padding: var(--pad-lg); background: var(--color-glass-bg); border-radius: var(--rad-md); border: 1px solid var(--color-glass-border); margin-top: 10px; }
+.progress-container { background: rgba(0, 0, 0, 0.5); border-radius: 20px; border: 1px solid var(--color-glass-border); padding: 4px; height: 24px; overflow: hidden; }
+.progress-fill { height: 100%; border-radius: 16px; background: var(--color-primary); width: 0%; transition: width 0.5s ease; box-shadow: 0 0 10px var(--color-primary); }
 
 /* =================================================================
    11. UI POLISH (Alignments, Custom Pickers & Scrollbars)

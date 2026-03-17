@@ -3,29 +3,44 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function initPlannerTab() {
+    // Mobile DOM
     const gridEl = document.getElementById('miniCalGrid');
     const calWrapper = document.getElementById('miniCalWrapper');
     const sliderEl = document.getElementById('dailySlider');
     const monthDisplay = document.getElementById('plannerMonthDisplay');
-    
     const sheet = document.getElementById('agendaBottomSheet');
     const dragZone = document.getElementById('sheetDragZone');
     const sheetDateDisplay = document.getElementById('sheetDateDisplay');
-    
     const returnTodayBtn = document.getElementById('returnTodayBtn');
-    let todayObserver = null;
-    let isFirstTimeOpeningPlanner = true; 
-    
     const pillsContainer = document.getElementById('subjectPillsContainer');
     const topicInput = document.getElementById('targetTopicInput');
 
-    if (!gridEl || !sliderEl) return;
+    // Desktop (NEET OS) DOM
+    const desktopGrid = document.getElementById('desktopCalendarGrid');
+    const desktopMonthLabel = document.getElementById('desktopMonthLabel');
+    const desktopEditModal = document.getElementById('desktopEditModalOverlay');
+    const desktopModalDateTitle = document.getElementById('desktopModalDateTitle');
+    const desktopPillsContainer = document.getElementById('desktopModalSubjectPills');
+    const desktopTopicInput = document.getElementById('desktopEditTopicInput');
+    const desktopProgressText = document.getElementById('desktopProgressText');
+    const desktopProgressBar = document.getElementById('desktopProgressBar');
+
+    if (!gridEl || !sliderEl || !desktopGrid) return;
 
     let currentViewDate = new Date();
     currentViewDate.setDate(1); 
+    
+    let desktopViewDate = new Date();
+    desktopViewDate.setDate(1);
+
     let activeSelectedDateStr = null;
     let currentSheetSubjectId = null;
+    let todayObserver = null;
+    let isFirstTimeOpeningPlanner = true; 
 
+    // ==========================================
+    // DATA LAYER
+    // ==========================================
     const defaultSubjects = [{ id: 'off', name: 'Day Off', color: '#555555' }];
     const getSubjects = () => JSON.parse(localStorage.getItem('plannerSubjects')) || defaultSubjects;
     
@@ -41,29 +56,21 @@ function initPlannerTab() {
     };
     
     const getTargets = () => JSON.parse(localStorage.getItem('plannerTargets')) || {};
-    
-    // DEFENSIVE CODING: Local Storage Wrappers
     const saveTargets = (targs) => { 
         try {
             localStorage.setItem('plannerTargets', JSON.stringify(targs)); 
             if (window.AppEvents) AppEvents.emit('PLANNER_UPDATED'); 
-        } catch (e) {
-            console.error('Storage error: Could not save planner targets.', e);
-        }
+        } catch (e) { console.error('Storage error', e); }
     };
 
     const getCompleted = () => JSON.parse(localStorage.getItem('plannerCompleted')) || [];
-    
     const saveCompleted = (arr) => {
         try {
             localStorage.setItem('plannerCompleted', JSON.stringify(arr));
             if (window.AppEvents) AppEvents.emit('PLANNER_UPDATED');
-        } catch (e) {
-            console.error('Storage error: Could not save completed dates.', e);
-        }
+        } catch (e) { console.error('Storage error', e); }
     };
 
-    // DEFENSIVE CODING: NaN Date Prevention
     const getDateKey = (date) => {
         if (!(date instanceof Date) || isNaN(date)) date = new Date();
         const y = date.getFullYear();
@@ -72,8 +79,15 @@ function initPlannerTab() {
         return `${y}-${m}-${d}`;
     };
 
-    window.forcePlannerRefresh = () => { renderCalendarAndCards(true); updateHomeWidget(); };
+    window.forcePlannerRefresh = () => { 
+        renderCalendarAndCards(true); 
+        renderDesktopCalendar();
+        updateHomeWidget(); 
+    };
 
+    // ==========================================
+    // 1. MOBILE SLIDER PLANNER LOGIC
+    // ==========================================
     const renderCalendarAndCards = (skipAutoScroll = false) => {
         gridEl.innerHTML = '';
         sliderEl.innerHTML = '';
@@ -109,8 +123,6 @@ function initPlannerTab() {
             const cell = document.createElement('div');
             cell.className = 'cal-day';
             cell.textContent = d;
-            cell.id = `cal-cell-${dateKey}`;
-
             if (dateKey === todayStr) cell.classList.add('today');
             if (dateKey === activeSelectedDateStr) cell.classList.add('selected');
 
@@ -121,17 +133,10 @@ function initPlannerTab() {
             if (isCompleted) cell.classList.add('completed');
 
             cell.addEventListener('click', () => {
-                document.querySelectorAll('.cal-day').forEach(el => el.classList.remove('selected'));
+                document.querySelectorAll('#miniCalGrid .cal-day').forEach(el => el.classList.remove('selected'));
                 cell.classList.add('selected');
-                
                 document.getElementById(`card-${dateKey}`)?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
-                
-                if (dateKey !== todayStr) {
-                    returnTodayBtn.classList.remove('hidden');
-                } else {
-                    returnTodayBtn.classList.add('hidden');
-                }
-
+                returnTodayBtn.classList.toggle('hidden', dateKey === todayStr);
                 openBottomSheet(dateKey, dateObj);
             });
             gridEl.appendChild(cell);
@@ -164,42 +169,21 @@ function initPlannerTab() {
                 </div>
             `;
 
-            card.addEventListener('click', () => {
-                if (!dayTask) return; 
-                if (dateObj > todayObjReal) { alert("Cannot mark future days as complete."); return; }
-
-                let compArr = getCompleted();
-                const currentlyCompleted = compArr.includes(dateKey);
-
-                if (currentlyCompleted) {
-                    compArr = compArr.filter(id => id !== dateKey);
-                    card.classList.remove('completed');
-                    cell.classList.remove('completed');
-                } else {
-                    compArr.push(dateKey);
-                    card.classList.add('completed');
-                    cell.classList.add('completed');
-                    if (navigator.vibrate) navigator.vibrate(50);
-                }
-                saveCompleted(compArr);
-            });
-
+            card.addEventListener('click', () => toggleCompletion(dateKey, dateObj, todayObjReal));
             sliderEl.appendChild(card);
         }
 
         if (todayObserver) todayObserver.disconnect();
-        const isCurrentMonth = (year === todayObjReal.getFullYear() && month === todayObjReal.getMonth());
-
-        if (!isCurrentMonth) {
+        if (year !== todayObjReal.getFullYear() || month !== todayObjReal.getMonth()) {
             returnTodayBtn.classList.remove('hidden');
         } else {
             const todayCard = document.getElementById(`card-${todayStr}`);
             if (todayCard) {
                 todayObserver = new IntersectionObserver((entries) => {
                     const plannerTab = document.getElementById('tab-planner');
-                    if (!plannerTab || !plannerTab.classList.contains('active')) return;
-                    
-                    entries[0].isIntersecting ? returnTodayBtn.classList.add('hidden') : returnTodayBtn.classList.remove('hidden');
+                    if (plannerTab?.classList.contains('active')) {
+                        returnTodayBtn.classList.toggle('hidden', entries[0].isIntersecting);
+                    }
                 }, { root: sliderEl, threshold: 0.5 }); 
                 todayObserver.observe(todayCard);
             }
@@ -210,21 +194,113 @@ function initPlannerTab() {
         }
     };
 
-    const openBottomSheet = (dateStr, dateObj) => {
-        activeSelectedDateStr = dateStr;
-        sheetDateDisplay.textContent = dateObj.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
-        
+    // ==========================================
+    // 2. DESKTOP (NEET OS) PLANNER LOGIC
+    // ==========================================
+    const renderDesktopCalendar = () => {
+        desktopGrid.innerHTML = '';
         const targets = getTargets();
+        const completed = getCompleted();
         const subjects = getSubjects();
-        currentSheetSubjectId = targets[dateStr] ? targets[dateStr].subjectId : subjects[0].id;
+        
+        const year = desktopViewDate.getFullYear();
+        const month = desktopViewDate.getMonth();
+        desktopMonthLabel.textContent = desktopViewDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+        
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+        let startDay = new Date(year, month, 1).getDay();
+        if (startDay === 0) startDay = 7; 
 
-        pillsContainer.innerHTML = '';
+        const todayObjReal = new Date();
+        todayObjReal.setHours(0,0,0,0);
+        const todayStr = getDateKey(todayObjReal);
+
+        let totalTasksThisMonth = 0;
+        let completedTasksThisMonth = 0;
+
+        for(let i = 1; i < startDay; i++) {
+            const empty = document.createElement('div');
+            empty.className = 'day-cell empty';
+            desktopGrid.appendChild(empty);
+        }
+
+        for (let d = 1; d <= daysInMonth; d++) {
+            const dateObj = new Date(year, month, d);
+            const dateKey = getDateKey(dateObj);
+            const dayTask = targets[dateKey];
+            const isCompleted = completed.includes(dateKey);
+            
+            if (dayTask) {
+                totalTasksThisMonth++;
+                if (isCompleted) completedTasksThisMonth++;
+            }
+
+            const cell = document.createElement('div');
+            cell.className = `day-cell ${dateKey === todayStr ? 'today' : ''} ${isCompleted ? 'completed' : ''}`;
+            
+            let contentHTML = `<div class="date-num">${d}</div>`;
+            
+            if (dayTask) {
+                const sub = subjects.find(s => s.id === dayTask.subjectId) || subjects[0];
+                const textColor = getContrastColor(sub.color); 
+                contentHTML += `
+                    <div class="task-content">
+                        <span class="subject-tag" style="background-color:${sub.color}; color:${textColor};">${sub.name}</span>
+                        <span class="desktop-task-topic">${dayTask.topic || 'No topic details'}</span>
+                    </div>
+                `;
+            }
+
+            cell.innerHTML = contentHTML;
+
+            // Clicking opens the Desktop Modal
+            cell.addEventListener('click', (e) => {
+                // If they click on the cell while it has a task, toggle completion (unless they click the top half to edit)
+                if (dayTask && e.offsetY > 40) {
+                    toggleCompletion(dateKey, dateObj, todayObjReal);
+                } else {
+                    openDesktopModal(dateKey, dateObj);
+                }
+            });
+            
+            desktopGrid.appendChild(cell);
+        }
+
+        // Update Stats
+        desktopProgressText.textContent = `${completedTasksThisMonth} / ${totalTasksThisMonth} Tasks`;
+        const percent = totalTasksThisMonth === 0 ? 0 : (completedTasksThisMonth / totalTasksThisMonth) * 100;
+        desktopProgressBar.style.width = `${percent}%`;
+    };
+
+    const toggleCompletion = (dateKey, dateObj, todayObjReal) => {
+        const targets = getTargets();
+        if (!targets[dateKey]) return; 
+        if (dateObj > todayObjReal) { alert("Cannot mark future days as complete."); return; }
+
+        let compArr = getCompleted();
+        if (compArr.includes(dateKey)) {
+            compArr = compArr.filter(id => id !== dateKey);
+        } else {
+            compArr.push(dateKey);
+            if (navigator.vibrate) navigator.vibrate(50);
+        }
+        saveCompleted(compArr);
+        renderCalendarAndCards(true);
+        renderDesktopCalendar();
+    };
+
+    // ==========================================
+    // 3. EDIT MODALS (Mobile Sheet vs Desktop Box)
+    // ==========================================
+    const renderSubjectPills = (container, currentId, onSelect) => {
+        container.innerHTML = '';
+        const subjects = getSubjects();
         subjects.forEach(sub => {
             const btn = document.createElement('button');
-            btn.className = `subject-pill ${sub.id === currentSheetSubjectId ? 'active' : ''}`;
+            btn.className = `subject-pill ${sub.id === currentId ? 'active' : ''}`;
             btn.textContent = sub.name;
             
-            if (sub.id === currentSheetSubjectId) {
+            if (sub.id === currentId) {
                 btn.style.backgroundColor = sub.color;
                 btn.style.borderColor = sub.color;
                 btn.style.color = getContrastColor(sub.color);
@@ -232,22 +308,27 @@ function initPlannerTab() {
 
             btn.addEventListener('click', (e) => {
                 e.preventDefault();
-                currentSheetSubjectId = sub.id;
-                
-                pillsContainer.querySelectorAll('.subject-pill').forEach(p => {
-                    p.classList.remove('active');
-                    p.style.cssText = ''; 
-                });
-                
+                container.querySelectorAll('.subject-pill').forEach(p => { p.classList.remove('active'); p.style.cssText = ''; });
                 btn.classList.add('active');
                 btn.style.backgroundColor = sub.color;
                 btn.style.borderColor = sub.color;
                 btn.style.color = getContrastColor(sub.color);
+                onSelect(sub.id);
             });
-            pillsContainer.appendChild(btn);
+            container.appendChild(btn);
         });
+    };
 
+    const openBottomSheet = (dateStr, dateObj) => {
+        activeSelectedDateStr = dateStr;
+        sheetDateDisplay.textContent = dateObj.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+        
+        const targets = getTargets();
+        currentSheetSubjectId = targets[dateStr] ? targets[dateStr].subjectId : getSubjects()[0].id;
+        
+        renderSubjectPills(pillsContainer, currentSheetSubjectId, (id) => currentSheetSubjectId = id);
         topicInput.value = targets[dateStr] ? (targets[dateStr].topic || '') : '';
+        
         AppEvents.emit('TAB_CHANGED', { tab: 'hide-nav' }); 
         sliderEl.classList.add('hidden');
         sheet.classList.add('active');
@@ -256,22 +337,33 @@ function initPlannerTab() {
     const closeBottomSheet = () => {
         sheet.classList.remove('active');
         sheet.style.transform = ''; 
-        document.querySelectorAll('.cal-day').forEach(el => el.classList.remove('selected'));
+        document.querySelectorAll('#miniCalGrid .cal-day').forEach(el => el.classList.remove('selected'));
         AppEvents.emit('TAB_CHANGED', { tab: 'show-nav' }); 
         sliderEl.classList.remove('hidden');
     };
 
+    const openDesktopModal = (dateStr, dateObj) => {
+        activeSelectedDateStr = dateStr;
+        desktopModalDateTitle.textContent = dateObj.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+        
+        const targets = getTargets();
+        currentSheetSubjectId = targets[dateStr] ? targets[dateStr].subjectId : getSubjects()[0].id;
+        
+        renderSubjectPills(desktopPillsContainer, currentSheetSubjectId, (id) => currentSheetSubjectId = id);
+        desktopTopicInput.value = targets[dateStr] ? (targets[dateStr].topic || '') : '';
+        
+        desktopEditModal.style.display = 'flex';
+    };
+
+    // Save/Clear Listeners (Mobile)
     document.getElementById('saveTargetBtn').addEventListener('click', () => {
         const textInput = topicInput.value.trim();
-        if (!textInput) { 
-            alert("Please enter a target to save."); 
-            return; 
-        }
+        if (!textInput) { alert("Please enter a target to save."); return; }
         const targets = getTargets();
         targets[activeSelectedDateStr] = { subjectId: currentSheetSubjectId, topic: textInput };
         saveTargets(targets);
         closeBottomSheet();
-        renderCalendarAndCards(true);
+        forcePlannerRefresh();
     });
 
     document.getElementById('clearTargetBtn').addEventListener('click', () => {
@@ -279,35 +371,65 @@ function initPlannerTab() {
         delete targets[activeSelectedDateStr];
         saveTargets(targets);
         closeBottomSheet();
-        renderCalendarAndCards(true);
+        forcePlannerRefresh();
     });
 
-    let startY = 0;
-    let currentY = 0;
+    // Save/Clear Listeners (Desktop)
+    document.getElementById('desktopSaveTaskBtn').addEventListener('click', () => {
+        const textInput = desktopTopicInput.value.trim();
+        if (!textInput) { alert("Please enter a target to save."); return; }
+        const targets = getTargets();
+        targets[activeSelectedDateStr] = { subjectId: currentSheetSubjectId, topic: textInput };
+        saveTargets(targets);
+        desktopEditModal.style.display = 'none';
+        forcePlannerRefresh();
+    });
+
+    document.getElementById('desktopClearTaskBtn').addEventListener('click', () => {
+        const targets = getTargets();
+        delete targets[activeSelectedDateStr];
+        saveTargets(targets);
+        desktopEditModal.style.display = 'none';
+        forcePlannerRefresh();
+    });
+
+    document.getElementById('desktopClearAllBtn').addEventListener('click', () => {
+        if(confirm("Are you sure you want to delete ALL planner data?")) {
+            localStorage.removeItem('plannerTargets');
+            localStorage.removeItem('plannerCompleted');
+            forcePlannerRefresh();
+            if (window.AppEvents) AppEvents.emit('PLANNER_UPDATED');
+        }
+    });
+
+    // ==========================================
+    // UI EVENT LISTENERS
+    // ==========================================
+    // Mobile Sheet Drag Physics
+    let startY = 0, currentY = 0;
     dragZone.addEventListener('touchstart', (e) => startY = e.touches[0].clientY, { passive: true });
     dragZone.addEventListener('touchmove', (e) => {
         currentY = e.touches[0].clientY;
-        const deltaY = currentY - startY;
-        if (deltaY > 0) {
+        if (currentY - startY > 0) {
             e.preventDefault(); 
-            sheet.style.transform = `translateY(${deltaY}px)`;
+            sheet.style.transform = `translateY(${currentY - startY}px)`;
             sheet.style.transition = 'none';
         }
     }, { passive: false }); 
     dragZone.addEventListener('touchend', () => {
         sheet.style.transition = 'transform 0.4s cubic-bezier(0.4, 0, 0.2, 1)';
-        if (currentY - startY > 60) closeBottomSheet(); 
-        else sheet.style.transform = ''; 
+        (currentY - startY > 60) ? closeBottomSheet() : sheet.style.transform = ''; 
     });
 
-    let calTouchStartX = 0;
-    calWrapper.addEventListener('touchstart', (e) => calTouchStartX = e.changedTouches[0].screenX, { passive: true });
-    calWrapper.addEventListener('touchend', (e) => {
-        const calTouchEndX = e.changedTouches[0].screenX;
-        if (calTouchEndX < calTouchStartX - 60) { currentViewDate.setMonth(currentViewDate.getMonth() + 1); renderCalendarAndCards(true); }
-        if (calTouchEndX > calTouchStartX + 60) { currentViewDate.setMonth(currentViewDate.getMonth() - 1); renderCalendarAndCards(true); }
-    }, { passive: true });
+    // Month Navigation (Mobile)
+    document.getElementById('plannerPrevMonth').addEventListener('click', () => { currentViewDate.setMonth(currentViewDate.getMonth() - 1); renderCalendarAndCards(true); });
+    document.getElementById('plannerNextMonth').addEventListener('click', () => { currentViewDate.setMonth(currentViewDate.getMonth() + 1); renderCalendarAndCards(true); });
+    
+    // Month Navigation (Desktop)
+    document.getElementById('desktopPrevMonth').addEventListener('click', () => { desktopViewDate.setMonth(desktopViewDate.getMonth() - 1); renderDesktopCalendar(); });
+    document.getElementById('desktopNextMonth').addEventListener('click', () => { desktopViewDate.setMonth(desktopViewDate.getMonth() + 1); renderDesktopCalendar(); });
 
+    // Home Widget Sync
     const updateHomeWidget = () => {
         const taskContainer = document.getElementById('dashTaskContainer');
         const widgetCard = document.getElementById('homeTargetWidget');
@@ -315,8 +437,7 @@ function initPlannerTab() {
 
         const targets = getTargets();
         const subjects = getSubjects();
-        const todayStr = getDateKey(new Date());
-        const dayTask = targets[todayStr];
+        const dayTask = targets[getDateKey(new Date())];
 
         if (dayTask && dayTask.subjectId !== 'off') {
             const sub = subjects.find(s => s.id === dayTask.subjectId) || subjects[0];
@@ -336,41 +457,19 @@ function initPlannerTab() {
         }
     };
 
-    document.getElementById('plannerPrevMonth').addEventListener('click', () => { currentViewDate.setMonth(currentViewDate.getMonth() - 1); renderCalendarAndCards(true); });
-    document.getElementById('plannerNextMonth').addEventListener('click', () => { currentViewDate.setMonth(currentViewDate.getMonth() + 1); renderCalendarAndCards(true); });
-
-    returnTodayBtn.addEventListener('click', () => {
-        if (returnTodayBtn.classList.contains('hidden')) return; 
-        
-        const todayStr = getDateKey(new Date());
-        const todayCard = document.getElementById(`card-${todayStr}`);
-        
-        if (todayCard) {
-            todayCard.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
-            returnTodayBtn.classList.add('hidden'); 
-        } else {
-            currentViewDate = new Date();
-            currentViewDate.setDate(1); 
-            activeSelectedDateStr = null; 
-            renderCalendarAndCards(false); 
-        }
-        if (navigator.vibrate) navigator.vibrate(50);
-    });
-
+    // Global Events
     if (window.AppEvents) {
         AppEvents.on('TAB_CHANGED', ({ tab }) => {
-            if (tab === 'tab-planner') {
-                if (isFirstTimeOpeningPlanner) {
-                    isFirstTimeOpeningPlanner = false;
-                    const todayStr = getDateKey(new Date());
-                    setTimeout(() => document.getElementById(`card-${todayStr}`)?.scrollIntoView({ behavior: 'auto', block: 'nearest', inline: 'center' }), 10);
-                }
+            if (tab === 'tab-planner' && isFirstTimeOpeningPlanner) {
+                isFirstTimeOpeningPlanner = false;
+                setTimeout(() => document.getElementById(`card-${getDateKey(new Date())}`)?.scrollIntoView({ behavior: 'auto', block: 'nearest', inline: 'center' }), 10);
             }
         });
-        
         AppEvents.on('PLANNER_UPDATED', () => updateHomeWidget());
     }
 
+    // Boot Up
     renderCalendarAndCards();
+    renderDesktopCalendar();
     updateHomeWidget();
 }

@@ -60,29 +60,66 @@
         
         <section id="tab-planner" class="app-tab">
             <div class="central-column">
-                <div class="tab-header">
-                    <h2 class="tab-title">Planner</h2>
-                    <div class="date-navigator">
-                        <button id="plannerPrevMonth" class="icon-btn">‹</button>
-                        <span id="plannerMonthDisplay" class="date-display">March</span>
-                        <button id="plannerNextMonth" class="icon-btn">›</button>
+                
+                <div id="mobilePlannerView">
+                    <div class="tab-header">
+                        <h2 class="tab-title">Planner</h2>
+                        <div class="date-navigator">
+                            <button id="plannerPrevMonth" class="icon-btn">‹</button>
+                            <span id="plannerMonthDisplay" class="date-display">March</span>
+                            <button id="plannerNextMonth" class="icon-btn">›</button>
+                        </div>
+                    </div>
+
+                    <div class="glass-panel mini-calendar-wrapper" id="miniCalWrapper">
+                        <div class="cal-header">
+                            <span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span><span>S</span>
+                        </div>
+                        <div class="cal-grid" id="miniCalGrid"></div>
+                    </div>
+
+                    <div class="slider-wrapper">
+                        <div class="daily-slider-container" id="dailySlider"></div>
+                    </div>
+
+                    <div class="today-btn-wrapper">
+                        <button id="returnTodayBtn" class="return-today-btn hidden">Today</button>
                     </div>
                 </div>
 
-                <div class="glass-panel mini-calendar-wrapper" id="miniCalWrapper">
-                    <div class="cal-header">
-                        <span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span><span>S</span>
+                <div id="desktopPlannerView">
+                    <div class="tab-header" style="margin-bottom: 20px;">
+                        <h2 class="tab-title">Revision Planner</h2>
+                        <div>
+                            <button class="btn-danger settings-action-btn" style="padding: 8px 15px;" id="desktopClearAllBtn">Clear All</button>
+                        </div>
                     </div>
-                    <div class="cal-grid" id="miniCalGrid"></div>
+                
+                    <div class="calendar-header">
+                        <button class="btn-secondary" id="desktopPrevMonth">❮ Prev</button>
+                        <div class="month-label" id="desktopMonthLabel">Month Year</div>
+                        <button class="btn-secondary" id="desktopNextMonth">Next ❯</button>
+                    </div>
+                
+                    <div class="calendar-header" style="margin-bottom: 5px;">
+                        <div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 10px; width: 100%; text-align: center; color: var(--color-text-muted); font-weight: bold; font-size: 0.9rem;">
+                            <span>MON</span><span>TUE</span><span>WED</span><span>THU</span><span>FRI</span><span>SAT</span><span style="color: var(--color-primary);">SUN</span>
+                        </div>
+                    </div>
+
+                    <div class="calendar-grid" id="desktopCalendarGrid"></div>
+                
+                    <div id="plannerStats" class="stats-footer">
+                        <div class="flex-between mb-5">
+                            <span style="color: var(--color-text-muted); font-size: 0.8rem; font-weight: bold;">TASK COMPLETION</span>
+                            <span id="desktopProgressText" style="color: var(--color-text); font-size: 0.9rem; font-weight: bold;">0 / 0 Tasks</span>
+                        </div>
+                        <div class="progress-container">
+                            <div class="progress-fill" id="desktopProgressBar"></div>
+                        </div>
+                    </div>
                 </div>
 
-                <div class="slider-wrapper">
-                    <div class="daily-slider-container" id="dailySlider"></div>
-                </div>
-
-                <div class="today-btn-wrapper">
-                    <button id="returnTodayBtn" class="return-today-btn hidden">Today</button>
-                </div>
             </div>
         </section>
 
@@ -419,6 +456,27 @@
             </div>
         </div>
     </div>
+
+    <div id="desktopEditModalOverlay" class="modal-overlay">
+            <div class="modal-box glass-panel" style="max-width: 450px;">
+                
+                <div style="text-align: center; margin-bottom: 20px; border-bottom: 1px solid var(--color-glass-border); padding-bottom: 15px;">
+                    <h3 id="desktopModalDateTitle" class="sheet-title" style="margin: 0;">Select a Date</h3>
+                </div>
+                
+                <div class="sheet-content" style="padding-bottom: 0;">
+                    <div id="desktopModalSubjectPills" class="subject-pills-wrapper mb-md" style="justify-content: center;"></div>
+                    
+                    <textarea id="desktopEditTopicInput" class="settings-input target-textarea" placeholder="What exactly do you want to accomplish?" rows="3"></textarea>
+                    
+                    <div class="sheet-actions">
+                        <button id="desktopClearTaskBtn" class="btn-ghost">Clear</button>
+                        <button id="desktopSaveTaskBtn" class="btn-primary flex-2">Save</button>
+                    </div>
+                </div>
+                
+            </div>
+        </div>
 
 </body>
 </html>
