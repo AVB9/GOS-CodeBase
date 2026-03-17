@@ -23,7 +23,7 @@
     
     /* Spacing & Layout (HARDWARE AWARE) */
     --max-mobile-width: 480px;
-    --max-desktop-width: 650px;
+    --max-desktop-width: 850px;
     --safe-bottom: env(safe-area-inset-bottom, 20px); /* Adjusts for iPhone Notch/Gesture Bar */
     --nav-height: calc(120px + var(--safe-bottom));
     --planner-bottom-clear: calc(90px + var(--safe-bottom));
@@ -259,7 +259,23 @@ input, textarea {
 /* =================================================================
    8. RESPONSIVENESS
    ================================================================= */
-@media (min-width: 768px) { .central-column { max-width: var(--max-desktop-width); gap: var(--pad-xl); } .home-grid { grid-template-columns: repeat(2, 1fr); gap: var(--pad-xl); } .bento-card { min-height: 130px; padding: var(--pad-xl); } .greeting-widget { padding: 30px; } .todo-input-group, .todo-list { max-width: 500px; margin: 0 auto; width: 100%; } .tab-title { font-size: 2.2rem; } .greeting-text h2 { font-size: 1.8rem; } .bento-value { font-size: 2.8rem; } }
+@media (min-width: 768px) { 
+    .central-column { max-width: var(--max-desktop-width); gap: var(--pad-xl); } 
+    .home-grid { grid-template-columns: repeat(2, 1fr); gap: var(--pad-xl); } 
+    
+    /* NEW: Stretches the Focus Widget across the bottom of the grid */
+    #focusModeWidget { grid-column: span 2; }
+    
+    .bento-card { min-height: 130px; padding: var(--pad-xl); } 
+    .greeting-widget { padding: 30px; } 
+    
+    /* NEW: Widened To-Do list to match the new 850px app width */
+    .todo-input-group, .todo-list { max-width: 650px; margin: 0 auto; width: 100%; } 
+    
+    .tab-title { font-size: 2.2rem; } 
+    .greeting-text h2 { font-size: 1.8rem; } 
+    .bento-value { font-size: 2.8rem; } 
+}
 @media (max-width: 380px) { .home-grid { grid-template-columns: 1fr; gap: 10px; } .bento-card { padding: var(--pad-md); min-height: 95px; } .bento-value { font-size: 2rem; } .greeting-widget { padding: var(--pad-md); gap: 10px; } .greeting-text h2 { font-size: 1.2rem; } }
 
 /* =================================================================
