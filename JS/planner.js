@@ -141,9 +141,9 @@ function initPlannerTab() {
         }
 
         data.days.forEach(day => {
-            // Mini Grid Cell
+            // Mini Grid Cell (Now includes the overdue class for the tint)
             const cell = document.createElement('div');
-            cell.className = `cal-day ${day.isToday ? 'today' : ''} ${day.dateKey === activeSelectedDateStr ? 'selected' : ''} ${day.isCompleted ? 'completed' : ''}`;
+            cell.className = `cal-day ${day.isToday ? 'today' : ''} ${day.dateKey === activeSelectedDateStr ? 'selected' : ''} ${day.isCompleted ? 'completed' : ''} ${day.isOverdue ? 'overdue' : ''}`;
             if (day.hasTask) cell.classList.add(day.isFuture ? 'future-task' : 'has-task');
             cell.textContent = day.dayNum;
 
@@ -155,9 +155,9 @@ function initPlannerTab() {
             });
             gridEl.appendChild(cell);
 
-            // Slider Card
+            // Slider Card (Now includes the today class for the glow)
             const card = document.createElement('div');
-            card.className = `daily-card ${day.isCompleted ? 'completed' : ''} ${day.isOverdue ? 'overdue' : ''}`;
+            card.className = `daily-card ${day.isCompleted ? 'completed' : ''} ${day.isOverdue ? 'overdue' : ''} ${day.isToday ? 'today' : ''}`;
             card.id = `card-${day.dateKey}`;
             
             const dayName = day.dateObj.toLocaleDateString('en-US', { weekday: 'short' });

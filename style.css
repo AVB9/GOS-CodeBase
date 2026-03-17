@@ -633,3 +633,63 @@ input[type="search"]::-webkit-search-results-decoration {
     opacity: 0.6 !important;
     box-shadow: none !important;
 }
+
+/* =================================================================
+   MASTER PLANNER THEME (Monochromatic Accent & Native iOS Styling)
+================================================================= */
+
+/* 1. OVERDUE TASKS (Tinted Accent instead of Red) */
+.day-cell.overdue, .daily-card.overdue {
+    background-color: color-mix(in srgb, var(--color-primary) 8%, var(--color-glass-bg)) !important;
+    border-color: color-mix(in srgb, var(--color-primary) 25%, transparent) !important;
+}
+
+/* 2. TODAY'S MOBILE CARD (Glowing Accent Border) */
+.daily-card.today {
+    border-color: var(--color-primary) !important;
+    box-shadow: inset 0 0 0 1px var(--color-primary), 0 0 20px color-mix(in srgb, var(--color-primary) 15%, transparent) !important;
+}
+
+/* 3. NATIVE MINI-CALENDAR REVAMP (Frosted Glass System) */
+.cal-day {
+    transition: all 0.2s ease !important;
+    border: 1px solid transparent; /* Prevents layout jump on hover/select */
+}
+
+/* Today's ring */
+.cal-day.today {
+    color: var(--color-primary) !important;
+    font-weight: 800 !important;
+    border: 1px solid var(--color-primary) !important;
+    background: transparent !important;
+}
+
+/* Selected ring */
+.cal-day.selected {
+    border: 2px solid var(--color-text) !important;
+    background: color-mix(in srgb, var(--color-text) 10%, transparent) !important;
+    transform: scale(1.1);
+}
+
+/* Future/Current Tasks: Very faint frosted accent */
+.cal-day.has-task, .cal-day.future-task {
+    background: color-mix(in srgb, var(--color-primary) 15%, transparent) !important;
+    border-color: color-mix(in srgb, var(--color-primary) 20%, transparent) !important;
+    color: var(--color-text) !important;
+    font-weight: 700;
+}
+
+/* Overdue Tasks: Slightly deeper frosted accent */
+.cal-day.overdue {
+    background: color-mix(in srgb, var(--color-primary) 25%, transparent) !important;
+    border-color: color-mix(in srgb, var(--color-primary) 40%, transparent) !important;
+    color: var(--color-text) !important;
+}
+
+/* Completed Days: Faint success (green) frost so it doesn't clash */
+.cal-day.completed {
+    background: color-mix(in srgb, var(--color-success) 12%, transparent) !important;
+    border-color: color-mix(in srgb, var(--color-success) 20%, transparent) !important;
+    color: var(--color-success) !important;
+    font-weight: 700;
+}
