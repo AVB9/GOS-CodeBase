@@ -115,7 +115,7 @@ const AppDB = {
         } catch (error) { console.error("Firebase Sync Failed:", error); }
     },
 
-    startRealTimeSync() {
+startRealTimeSync() {
         if (!this.session || realTimeListener) return;
 
         realTimeListener = db.collection('users').doc(this.session.uid)
@@ -125,6 +125,12 @@ const AppDB = {
                     AppDB.pushToCloud();
                     return;
                 }
+
+                // ==========================================
+                // THE OPTIMISTIC UI SHIELD
+                // If the user is actively making changes, ignore the cloud echo!
+                // ==========================================
+                if (window.isLocalMutating) return; 
 
                 const state = doc.data();
                 let needsRefresh = false;
@@ -155,7 +161,7 @@ const AppDB = {
                     window.hasInitialSyncCompleted = true;
                 }
 
-                // SILENT UI REFRESH (NO MORE RELOADING)
+                // SILENT UI REFRESH
                 if (needsRefresh) {
                     if (window.AppEvents) {
                         window.AppEvents.emit('SUBJECTS_UPDATED');
@@ -173,8 +179,14 @@ const AppDB = {
 
 window.AppDB = AppDB;
 
-// THE UNBREAKABLE PROTOTYPE WIRETAP
+// =================================================================
+// THE UNBREAKABLE PROTOTYPE WIRETAP & SHIELD GENERATOR
+// =================================================================
 const originalSetItem = Storage.prototype.setItem;
+
+// Global Shield variables
+window.isLocalMutating = false;
+window.mutationShieldTimer = null;
 
 Storage.prototype.setItem = function(key, value) {
     try { 
@@ -190,9 +202,20 @@ Storage.prototype.setItem = function(key, value) {
                       SYNC_CONFIG.dynamicPrefixes.some(prefix => key.startsWith(prefix));
 
     if (isTracked && AppDB.session && window.hasInitialSyncCompleted) {
+        
+        // 1. RAISE THE SHIELD the millisecond the user changes data
+        window.isLocalMutating = true;
+        clearTimeout(window.mutationShieldTimer);
+
+        // 2. Drop the shield 2.5 seconds after they STOP making changes
+        window.mutationShieldTimer = setTimeout(() => {
+            window.isLocalMutating = false;
+        }, 2500);
+
+        // 3. Queue the cloud push for 1 second after they stop making changes
         clearTimeout(window.syncTimeout);
         window.syncTimeout = setTimeout(() => {
             AppDB.pushToCloud();
-        }, 1500);
+        }, 1000); 
     }
 };
