@@ -24,7 +24,7 @@
     /* Spacing & Layout (HARDWARE AWARE) */
     --max-mobile-width: 480px;
     --max-desktop-width: 1200px;
-    --safe-bottom: env(safe-area-inset-bottom, 20px); /* Adjusts for iPhone Notch/Gesture Bar */
+    --safe-bottom: env(safe-area-inset-bottom, 20px);
     --nav-height: calc(120px + var(--safe-bottom));
     --planner-bottom-clear: calc(90px + var(--safe-bottom));
     --pad-sm: 8px;
@@ -58,25 +58,20 @@
 /* =================================================================
    NATIVE APP ILLUSION (Selection Locks & Custom Highlights)
 ================================================================= */
-/* 1. Disable text selection and mobile long-press popups globally */
 body {
     -webkit-user-select: none;
     user-select: none;
-    -webkit-touch-callout: none; /* Kills the iOS native popup menu */
+    -webkit-touch-callout: none;
 }
-
-/* 2. Re-enable selection ONLY for text boxes and search inputs */
 input, textarea {
     -webkit-user-select: auto !important;
     user-select: auto !important;
 }
-
-/* 3. Custom PC Text Highlight (Tied to User's Accent Color) */
 ::selection {
     background-color: color-mix(in srgb, var(--color-primary) 30%, transparent);
     color: var(--color-text);
 }
-::-moz-selection { /* Firefox support */
+::-moz-selection {
     background-color: color-mix(in srgb, var(--color-primary) 30%, transparent);
     color: var(--color-text);
 }
@@ -89,17 +84,11 @@ body {
     background-color: var(--color-bg); 
     color: var(--color-text); 
     font-family: var(--font-main); 
-    overscroll-behavior: none; /* Prevents "pull-to-refresh" bounce native to browsers */
+    overscroll-behavior: none; 
 }
 h1, h2, h3 { color: var(--color-text); }
-button, input, textarea, select { 
-    font-family: inherit; 
-    font-size: 16px; /* DEFENSIVE: Prevents iOS Safari from violently zooming in on inputs */
-}
-input, textarea { 
-    appearance: none; 
-    -webkit-appearance: none; /* Strips ugly native Apple OS shadows from text boxes */
-}
+button, input, textarea, select { font-family: inherit; font-size: 16px; }
+input, textarea { appearance: none; -webkit-appearance: none; }
 .hidden-input { display: none !important; }
 .flex-between { display: flex; justify-content: space-between; align-items: center; }
 .text-md { font-size: 1.8rem !important; }
@@ -145,12 +134,9 @@ input, textarea {
 .tab-title { font-size: 1.8rem; font-weight: 700; color: var(--color-text); }
 .date-navigator { display: flex; align-items: center; gap: var(--pad-md); padding: 6px var(--pad-md); border-radius: var(--rad-lg); background: var(--color-glass-tint); backdrop-filter: var(--blur-glass); -webkit-backdrop-filter: var(--blur-glass); border: 1px solid var(--color-glass-border); }
 .date-display { font-weight: 600; font-size: 0.95rem; min-width: 80px; text-align: center; color: var(--color-text); }
-.task-preview { border-left: 3px solid var(--color-primary); padding-left: var(--pad-md); margin-top: 5px; display: flex; flex-direction: column; gap: 5px; }
-.task-preview-subject { font-size: 0.8rem; font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px; }
-.task-preview-topic { font-size: 1.3rem; font-weight: 600; color: var(--color-text); line-height: 1.3; word-break: break-word; }
 
 /* =================================================================
-   6. TAB & MODULE SPECIFICS (Home, Todo, Journal)
+   6. TAB SPECIFICS (Home, Journal)
    ================================================================= */
 .home-grid { display: grid; grid-template-columns: 1fr; gap: var(--pad-md); width: 100%; }
 .greeting-header { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: var(--pad-lg) 10px var(--pad-md) 10px; gap: 12px; }
@@ -158,25 +144,7 @@ input, textarea {
 .greeting-text h2 { font-size: clamp(1rem, 4.5vw, 1.6rem); font-weight: 700; margin-bottom: 5px; color: var(--color-text); }
 .greeting-text p { font-size: 0.95rem; color: var(--color-text-muted); font-weight: 500; letter-spacing: 1px; text-transform: uppercase; }
 #dashTaskContainer { flex: 1; display: flex; flex-direction: column; justify-content: center; }
-.empty-task-text { color: var(--color-text-muted); margin-top: 10px; font-style: italic; }
-
-/* PWA Hardware Fix: Pushed up to dodge the gesture bar */
-.todo-input-group { position: fixed; bottom: calc(110px + var(--safe-bottom)); left: 50%; width: calc(100% - 30px); max-width: 500px; display: flex; flex-direction: row; align-items: center; padding: 8px 10px 8px var(--pad-lg); gap: 10px; z-index: 990; border-radius: var(--rad-pill) !important; transform: translateX(-50%) translateY(20px); opacity: 0; pointer-events: none; transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease; will-change: transform, opacity; }
-.todo-input-group.active { opacity: 1; pointer-events: auto; transform: translateX(-50%) translateY(0); }
-.todo-input-group.keyboard-active { bottom: 30px; }
-.todo-input-group input { flex: 1; background: transparent; border: none; color: var(--color-text); outline: none; }
-.todo-input-group button { border-radius: var(--rad-circle); width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; padding: 0; flex-shrink: 0; transition: transform 0.2s ease; }
-.todo-input-group button:active { transform: scale(0.9); }
-#todoSwipeContainer { min-height: 40vh; }
-.todo-list { list-style: none; display: flex; flex-direction: column; gap: 10px; }
-.todo-item { border-radius: var(--pad-md); padding: var(--pad-md); display: flex; align-items: flex-start; gap: var(--pad-md); transition: background-color 0.2s ease; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; background: var(--color-glass-tint); backdrop-filter: var(--blur-glass); -webkit-backdrop-filter: var(--blur-glass); border: 1px solid var(--color-glass-border); }
-.todo-checkbox { width: 22px; height: 22px; border-radius: var(--rad-circle); border: 2px solid var(--color-text-muted); cursor: pointer; position: relative; flex-shrink: 0; margin-top: 2px; }
-.todo-checkbox:checked { background-color: var(--color-primary); border-color: var(--color-primary); }
-.todo-checkbox:checked::after { content: '✓'; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: var(--color-text); font-size: 12px; font-weight: bold; }
-.todo-text { flex: 1; font-size: 1rem; transition: color 0.3s ease, text-decoration 0.3s ease; line-height: 1.4; word-break: break-word; white-space: normal; }
-.todo-item.done .todo-text { color: var(--color-text-muted); text-decoration: line-through; }
-.todo-delete { background: none; border: none; color: var(--color-text-muted); font-size: 1.5rem; cursor: pointer; padding: 0 5px; flex-shrink: 0; margin-top: -2px; }
-.todo-edit-input { flex: 1; min-width: 0; background: transparent; border: none; border-bottom: 2px solid var(--color-primary); border-radius: 0; color: var(--color-text); font-size: 1rem; padding: 0 0 2px 0; margin: 0; outline: none; box-shadow: none; caret-color: var(--color-primary); }
+.empty-task-text { color: var(--color-text-muted); margin-top: 10px; font-style: italic; text-align: center; }
 
 #tab-journal { padding-bottom: 0 !important; height: 100vh; }
 #tab-journal.active { display: flex; flex-direction: column; }
@@ -207,75 +175,25 @@ input, textarea {
 .auth-modal { padding: 30px 25px; }
 .auth-header { display: flex; flex-direction: column; align-items: center; gap: 8px; margin-bottom: 25px; text-align: center; }
 .auth-subtitle { font-size: 0.85rem; color: var(--color-text-muted); margin-top: -5px; letter-spacing: 0.5px; }
-.google-btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 12px;
-    background: rgba(255, 255, 255, 0.05); 
-    color: var(--color-text);
-    border: 1px solid var(--color-glass-border);
-}
-.google-btn:hover {
-    background: rgba(255, 255, 255, 0.1);
-}
-.google-btn svg {
-    flex-shrink: 0;
-}
-
-.auth-separator { 
-    display: flex; 
-    align-items: center; 
-    text-align: center; 
-    margin: 15px 0; 
-    color: var(--color-text-muted); 
-    font-size: 0.85rem; 
-    font-weight: 700; 
-    letter-spacing: 2px; 
-    width: 100%; /* FIX: Forces it to stretch */
-}
-.auth-separator::before, .auth-separator::after { 
-    content: ''; 
-    flex: 1; 
-    border-bottom: 1px solid var(--color-glass-border); 
-}
-.auth-separator span { 
-    padding: 0 15px; 
-}
-
+.google-btn { display: flex; align-items: center; justify-content: center; gap: 12px; background: rgba(255, 255, 255, 0.05); color: var(--color-text); border: 1px solid var(--color-glass-border); }
+.google-btn:hover { background: rgba(255, 255, 255, 0.1); }
+.google-btn svg { flex-shrink: 0; }
+.auth-separator { display: flex; align-items: center; text-align: center; margin: 15px 0; color: var(--color-text-muted); font-size: 0.85rem; font-weight: 700; letter-spacing: 2px; width: 100%; }
+.auth-separator::before, .auth-separator::after { content: ''; flex: 1; border-bottom: 1px solid var(--color-glass-border); }
+.auth-separator span { padding: 0 15px; }
 .password-wrapper { position: relative; width: 100%; }
 .password-eye-btn { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: none; color: var(--color-text-muted); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: color 0.2s ease; padding: 5px; }
 .password-eye-btn:hover { color: var(--color-text); }
 .password-eye-btn:active { transform: translateY(-50%) scale(0.9); }
-
 .standalone-forgot-btn { background: none; border: none; color: var(--color-primary); font-size: 0.8rem; font-weight: 600; cursor: pointer; transition: opacity 0.2s ease; padding: 0; }
 .standalone-forgot-btn:hover { opacity: 0.8; text-decoration: underline; }
-
 .auth-action-stack { display: flex; flex-direction: column; gap: 12px; margin-top: 25px; }
 .btn-block { width: 100%; display: flex; justify-content: center; align-items: center; padding: 14px; font-size: 1.05rem; border-radius: 12px; }
 .auth-footer { text-align: center; margin-top: 15px; font-size: 0.85rem; color: var(--color-text-muted); }
 .auth-footer button { background: none; border: none; color: var(--color-primary); font-weight: bold; cursor: pointer; padding: 0 5px; }
 
 /* PWA Hardware Fix: GPU Accelerated & Notch Aware */
-.bottom-pill-nav { 
-    position: fixed; 
-    bottom: calc(30px + var(--safe-bottom)); 
-    left: 50%; 
-    display: flex; 
-    gap: 8px; 
-    padding: 8px 16px; 
-    border-radius: var(--rad-pill); 
-    z-index: 1000; 
-    background: var(--color-glass-bg); 
-    backdrop-filter: blur(20px); 
-    -webkit-backdrop-filter: blur(20px); 
-    border: 1px solid var(--color-glass-border); 
-    box-shadow: var(--shadow-lg); 
-    
-    transform: translateX(-50%) translateZ(0); /* Hardware acceleration lock */
-    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); 
-    will-change: transform;
-}
+.bottom-pill-nav { position: fixed; bottom: calc(30px + var(--safe-bottom)); left: 50%; display: flex; gap: 8px; padding: 8px 16px; border-radius: var(--rad-pill); z-index: 1000; background: var(--color-glass-bg); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid var(--color-glass-border); box-shadow: var(--shadow-lg); transform: translateX(-50%) translateZ(0); transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); will-change: transform; }
 .bottom-pill-nav.nav-hidden { transform: translate(-50%, 150px) translateZ(0); }
 .bottom-pill-btn { background: transparent; border: none; color: var(--color-text-muted); padding: 12px; border-radius: var(--rad-circle); cursor: pointer; transition: background-color 0.3s ease, transform 0.3s ease; display: flex; align-items: center; justify-content: center; }
 .bottom-pill-btn svg { transition: stroke 0.2s ease; }
@@ -288,16 +206,9 @@ input, textarea {
 @media (min-width: 768px) { 
     .central-column { max-width: var(--max-desktop-width); gap: var(--pad-xl); } 
     .home-grid { grid-template-columns: repeat(2, 1fr); gap: var(--pad-xl); } 
-    
-    /* NEW: Stretches the Focus Widget across the bottom of the grid */
     #focusModeWidget { grid-column: span 2; }
-    
     .bento-card { min-height: 130px; padding: var(--pad-xl); } 
     .greeting-widget { padding: 30px; } 
-    
-    /* NEW: Widened To-Do list to match the new 850px app width */
-    .todo-input-group, .todo-list { max-width: 650px; margin: 0 auto; width: 100%; } 
-    
     .tab-title { font-size: 2.2rem; } 
     .greeting-text h2 { font-size: 1.8rem; } 
     .bento-value { font-size: 2.8rem; } 
@@ -328,6 +239,12 @@ input:checked + .slider:before { transform: translateX(24px); background-color: 
 .upload-btn { display: flex; justify-content: center; align-items: center; cursor: pointer; margin-bottom: 10px; box-sizing: border-box; }
 .upload-btn svg { margin-right: 8px; }
 
+/* Modal Settings Subject Scroll */
+#subjectList { max-height: 50vh; overflow-y: auto; padding-right: 8px; display: flex; flex-direction: column; gap: 8px; margin: 15px 0; }
+#subjectList::-webkit-scrollbar { width: 6px; }
+#subjectList::-webkit-scrollbar-track { background: transparent; }
+#subjectList::-webkit-scrollbar-thumb { background: var(--color-glass-border); border-radius: 10px; }
+
 /* =================================================================
    10.1 PLANNER MOBILE (MINI CALENDAR, CARDS, & BOTTOM SHEET)
    ================================================================= */
@@ -339,10 +256,11 @@ input:checked + .slider:before { transform: translateX(24px); background-color: 
 .cal-day { width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: var(--rad-circle); font-size: 0.95rem; font-weight: 500; cursor: pointer; position: relative; transition: transform 0.2s ease, border-color 0.2s ease; color: var(--color-text); border: 1px solid transparent; }
 .cal-day.empty { visibility: hidden; }
 .cal-day:active { transform: scale(0.9); }
-.cal-day.today { color: var(--color-text); font-weight: 800; border: 1px solid var(--color-text-muted); }
-.cal-day.selected { border: 2px solid var(--color-text); transform: scale(1.1); }
-.cal-day.future-task { background: var(--color-glass-white); border-color: rgba(255, 255, 255, 0.2); color: var(--color-text); font-weight: 700; }
-.cal-day.completed { background: var(--color-success-bg); border-color: var(--color-success-border); color: var(--color-success); font-weight: 700; }
+.cal-day.today { color: var(--color-primary) !important; font-weight: 800 !important; border: 1px solid var(--color-primary) !important; background: transparent !important; }
+.cal-day.selected { border: 2px solid var(--color-text) !important; background: color-mix(in srgb, var(--color-text) 10%, transparent) !important; transform: scale(1.1); }
+.cal-day.has-task, .cal-day.future-task { background: color-mix(in srgb, var(--color-primary) 15%, transparent) !important; border-color: color-mix(in srgb, var(--color-primary) 20%, transparent) !important; color: var(--color-text) !important; font-weight: 700; }
+.cal-day.completed { background: color-mix(in srgb, var(--color-success) 12%, transparent) !important; border-color: color-mix(in srgb, var(--color-success) 20%, transparent) !important; color: var(--color-success) !important; font-weight: 700; }
+.cal-day.overdue { background: color-mix(in srgb, var(--color-primary) 25%, transparent) !important; border-color: color-mix(in srgb, var(--color-primary) 40%, transparent) !important; color: var(--color-text) !important; }
 
 .slider-wrapper { position: relative; width: 100%; margin-top: 5px; -webkit-mask-image: linear-gradient(to right, transparent 0px, black 30px, black calc(100% - 30px), transparent 100%); mask-image: linear-gradient(to right, transparent 0px, black 30px, black calc(100% - 30px), transparent 100%); }
 .daily-slider-container { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; scroll-behavior: smooth; gap: 15px; padding: 5px 30px 15px 30px; scrollbar-width: none; transition: opacity 0.3s ease, transform 0.3s ease; }
@@ -351,6 +269,8 @@ input:checked + .slider:before { transform: translateX(24px); background-color: 
 
 .daily-card { min-width: 85%; min-height: 125px; scroll-snap-align: center; border-radius: 18px; padding: 15px; display: flex; align-items: stretch; gap: 15px; cursor: pointer; transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.3s ease; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2); position: relative; overflow: hidden; background: rgba(10, 10, 10, 0.45); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); border: 1px solid var(--color-glass-border); will-change: transform; -webkit-transform: translateZ(0); transform: translateZ(0); }
 .daily-card:active { transform: scale(0.97) translateZ(0); -webkit-transform: scale(0.97) translateZ(0); }
+.daily-card.today { border-color: var(--color-primary) !important; box-shadow: inset 0 0 0 1px var(--color-primary), 0 0 20px color-mix(in srgb, var(--color-primary) 15%, transparent) !important; }
+.daily-card.overdue { background-color: color-mix(in srgb, var(--color-primary) 8%, var(--color-glass-bg)) !important; border-color: color-mix(in srgb, var(--color-primary) 25%, transparent) !important; }
 .daily-card-date { display: flex; flex-direction: column; align-items: center; justify-content: center; border-right: 1px solid var(--color-glass-border); padding-right: var(--pad-lg); min-width: 80px; height: 100%; }
 .daily-card-day { font-size: 0.9rem; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 1px; }
 .daily-card-num { font-size: 2.2rem; font-weight: 800; line-height: 1; color: var(--color-text); margin-top: 5px; }
@@ -366,7 +286,6 @@ input:checked + .slider:before { transform: translateX(24px); background-color: 
 .return-today-btn.hidden { opacity: 0; pointer-events: none; transform: translateY(-15px) scale(0.95); }
 .return-today-btn:active { transform: scale(0.92); }
 
-/* PWA Hardware Fix: Added bottom padding to lift sheet above the iPhone gesture bar */
 .bottom-sheet { position: fixed; bottom: 0; left: 0; width: 100%; height: auto; max-height: 75vh; background: var(--color-surface); border-radius: 30px 30px 0 0; border: 1px solid var(--color-glass-border); border-bottom: none; padding: 0 var(--pad-xl) calc(var(--pad-xl) + var(--safe-bottom)) var(--pad-xl); display: flex; flex-direction: column; z-index: 3000; transform: translateY(110%); transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), visibility 0.4s; touch-action: none; box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.6); visibility: hidden; pointer-events: none; will-change: transform; }
 .bottom-sheet.active { transform: translateY(0); visibility: visible; pointer-events: auto; }
 .sheet-swipe-zone { width: 100%; padding-top: var(--pad-md); cursor: grab; }
@@ -379,7 +298,6 @@ input:checked + .slider:before { transform: translateX(24px); background-color: 
 
 .target-textarea { resize: none; width: 100%; border-radius: var(--rad-md); padding: var(--pad-md); background: rgba(0,0,0,0.3); margin-bottom: var(--pad-md); color: var(--color-text) !important; caret-color: var(--color-primary); border: 1px solid var(--color-glass-border); outline: none; transition: border-color 0.2s ease, box-shadow 0.2s ease; }
 .target-textarea:focus { border-color: var(--color-primary); box-shadow: var(--shadow-inset); }
-
 .subject-pills-wrapper { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-bottom: var(--pad-md); padding: 5px; }
 .mb-md { margin-bottom: 15px; }
 .subject-pill { background: rgba(255, 255, 255, 0.05); border: 1px solid var(--color-glass-border); color: var(--color-text-muted); padding: 8px 16px; border-radius: var(--rad-pill); font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: transform 0.2s ease, color 0.2s ease, background-color 0.2s ease; }
@@ -389,58 +307,29 @@ input:checked + .slider:before { transform: translateX(24px); background-color: 
 /* =================================================================
    10.2 PLANNER PC (FULL CALENDAR, STATS & TASK MANAGEMENT)
    ================================================================= */
-   
-/* Default (Mobile): Hide the Desktop Planner */
 #desktopPlannerView { display: none; }
 #mobilePlannerView { display: block; }
 
 @media (min-width: 768px) { 
-    /* Desktop: Hide Mobile Planner, Show Desktop Planner */
     #desktopPlannerView { display: block; }
     #mobilePlannerView { display: none; }
-    #tab-planner { padding-bottom: 0 !important; } /* Removes huge bottom pad on PC */
+    #tab-planner { padding-bottom: 0 !important; } 
 }
 
-/* =================================================================
-   NEET OS DESKTOP CALENDAR STYLES (Adapted to your theme)
-================================================================= */
 .month-label { font-size: 1.5rem; font-weight: bold; color: var(--color-text); text-transform: uppercase; }
 .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 10px; width: 100%; margin-bottom: 20px; }
 
-.day-cell {
-    background: var(--color-glass-tint);
-    backdrop-filter: var(--blur-glass);
-    -webkit-backdrop-filter: var(--blur-glass);
-    border: 1px solid var(--color-glass-border);
-    border-radius: var(--rad-sm);
-    min-height: 160px;
-    padding: 10px;
-    display: flex;
-    flex-direction: column;
-    gap: 5px;
-    position: relative;
-    cursor: pointer;
-    transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
-}
-
-.day-cell:hover {
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-md);
-    border-color: rgba(255, 255, 255, 0.3);
-}
-
+.day-cell { background: var(--color-glass-tint); backdrop-filter: var(--blur-glass); -webkit-backdrop-filter: var(--blur-glass); border: 1px solid var(--color-glass-border); border-radius: var(--rad-sm); min-height: 160px; padding: 10px; display: flex; flex-direction: column; gap: 5px; position: relative; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s; }
+.day-cell:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); border-color: rgba(255, 255, 255, 0.3); }
 .day-cell.empty { background: transparent; border: none; cursor: default; }
 .day-cell.empty:hover { transform: none; box-shadow: none; }
-
 .day-cell.today { border: 2px solid var(--color-primary); box-shadow: 0 0 15px color-mix(in srgb, var(--color-primary) 30%, transparent); }
 .day-cell.today .date-num { color: var(--color-primary); }
+.day-cell.overdue { background-color: color-mix(in srgb, var(--color-primary) 8%, var(--color-glass-bg)) !important; border-color: color-mix(in srgb, var(--color-primary) 25%, transparent) !important; }
 
 .day-cell.completed { background-color: rgba(0, 0, 0, 0.4); border-color: rgba(255, 255, 255, 0.05); }
 .day-cell.completed .task-content { opacity: 0.4; text-decoration: line-through; }
-.day-cell.completed::after {
-    content: '✓'; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-    font-size: 4rem; color: var(--color-success); opacity: 0.15; pointer-events: none;
-}
+.day-cell.completed::after { content: '✓'; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 4rem; color: var(--color-success); opacity: 0.15; pointer-events: none; }
 
 .date-num { font-size: 1.1rem; font-weight: bold; color: var(--color-text-muted); align-self: flex-end; z-index: 2; transition: color 0.2s; }
 .day-cell:hover .date-num { color: var(--color-text); }
@@ -453,51 +342,10 @@ input:checked + .slider:before { transform: translateX(24px); background-color: 
 .progress-container { background: rgba(0, 0, 0, 0.5); border-radius: 20px; border: 1px solid var(--color-glass-border); padding: 4px; height: 24px; overflow: hidden; }
 .progress-fill { height: 100%; border-radius: 16px; background: var(--color-primary); width: 0%; transition: width 0.5s ease; box-shadow: 0 0 10px var(--color-primary); }
 
-/* =================================================================
-   DESKTOP PLANNER TWEAKS (Tags & Edit Button)
-================================================================= */
-.desktop-tag {
-    position: absolute;
-    top: 8px;
-    left: 8px;
-    z-index: 5;
-    border-radius: 4px;
-    max-width: calc(100% - 40px);
-}
-
-.day-edit-btn {
-    position: absolute;
-    bottom: 8px;
-    right: 8px;
-    width: 28px;
-    height: 28px;
-    background: var(--color-glass-white);
-    border: 1px solid var(--color-glass-border);
-    border-radius: 6px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    color: var(--color-text-muted);
-    font-size: 1rem;
-    font-weight: bold;
-    cursor: pointer;
-    opacity: 0;
-    transition: all 0.2s ease;
-    z-index: 10;
-}
-
+.desktop-tag { position: absolute; top: 8px; left: 8px; z-index: 5; border-radius: 4px; max-width: calc(100% - 40px); }
+.day-edit-btn { position: absolute; bottom: 8px; right: 8px; width: 28px; height: 28px; background: var(--color-glass-white); border: 1px solid var(--color-glass-border); border-radius: 6px; display: flex; justify-content: center; align-items: center; color: var(--color-text-muted); font-size: 1rem; font-weight: bold; cursor: pointer; opacity: 0; transition: all 0.2s ease; z-index: 10; }
 .day-cell:hover .day-edit-btn { opacity: 1; }
-.day-edit-btn:hover { 
-    background: var(--color-primary); 
-    color: var(--color-text); 
-    border-color: var(--color-primary); 
-    transform: scale(1.1);
-}
-
-.day-cell.overdue, .daily-card.overdue {
-    background-color: color-mix(in srgb, var(--color-danger) 15%, var(--color-glass-bg)) !important;
-    border-color: color-mix(in srgb, var(--color-danger) 35%, transparent) !important;
-}
+.day-edit-btn:hover { background: var(--color-primary); color: var(--color-text); border-color: var(--color-primary); transform: scale(1.1); }
 
 /* =================================================================
    11. UI POLISH (Alignments, Custom Pickers & Scrollbars)
@@ -525,11 +373,6 @@ input[type="date"] { position: relative; appearance: none; -webkit-appearance: n
 input[type="date"]::-webkit-calendar-picker-indicator { position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; background: transparent; }
 input[type="date"]::-webkit-inner-spin-button, input[type="date"]::-webkit-clear-button { display: none; }
 
-#subjectList { max-height: 250px; overflow-y: auto; padding-right: 10px; margin: 15px 0; display: flex; flex-direction: column; gap: 8px; }
-#subjectList::-webkit-scrollbar { width: 4px; }
-#subjectList::-webkit-scrollbar-track { background: rgba(255, 255, 255, 0.05); border-radius: 10px; }
-#subjectList::-webkit-scrollbar-thumb { background: var(--color-primary); border-radius: 10px; }
-
 /* =================================================================
    12. EFFECTS (Preloader, Noise, Trays)
    ================================================================= */
@@ -541,13 +384,6 @@ input[type="date"]::-webkit-inner-spin-button, input[type="date"]::-webkit-clear
 .preloader-text { font-size: 1.4rem; font-weight: 500; letter-spacing: 2px; color: var(--color-text); opacity: 0; animation: smoothFade 1s cubic-bezier(0.2, 0.8, 0.2, 1) 0.3s forwards; }
 @keyframes smoothFade { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes breathingGlow { from { opacity: 0.1; transform: translate(-50%, -50%) scale(0.8); } to { opacity: 0.25; transform: translate(-50%, -50%) scale(1.2); } }
-
-.todo-subject-tray { position: absolute; bottom: 100%; left: 0; width: 100%; padding-bottom: var(--pad-md); display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; opacity: 0; visibility: hidden; transform: translateY(15px); transition: transform 0.3s ease, opacity 0.3s ease; pointer-events: none; }
-.todo-subject-tray.active { opacity: 1; visibility: visible; transform: translateY(0); pointer-events: auto; }
-.todo-tint-pill { padding: 6px 14px; border-radius: var(--rad-lg); font-size: 0.8rem; font-weight: 600; cursor: pointer; color: var(--color-text-muted); border: 1px solid var(--color-glass-border); background: var(--color-glass-white); backdrop-filter: var(--blur-glass); -webkit-backdrop-filter: var(--blur-glass); -webkit-transform: translate3d(0, 0, 0); transform: translate3d(0, 0, 0); transition: transform 0.2s ease, box-shadow 0.2s ease; }
-.todo-tint-pill:active { transform: scale(0.92) translate3d(0, 0, 0); }
-.todo-tint-pill.selected { transform: translateY(-2px); box-shadow: var(--shadow-md); }
-.todo-subject-header { margin-top: var(--pad-md); margin-bottom: 5px; font-size: 0.85rem; font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px; padding-left: 5px; list-style: none; }
 
 .dynamic-bg { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-color: var(--color-bg); background-size: cover; background-position: center; filter: blur(7px) brightness(0.45); transform: scale(1.15); z-index: -2; transition: background-image 1s ease-in-out; }
 
@@ -589,315 +425,177 @@ input[type="date"]::-webkit-inner-spin-button, input[type="date"]::-webkit-clear
     -webkit-backdrop-filter: blur(20px) !important;
     border: 1px solid var(--color-primary) !important;
     box-shadow: 0 15px 35px rgba(0,0,0,0.6), 0 0 15px rgba(255, 59, 59, 0.2) !important;
-    
-    /* Optimized transform logic to work perfectly alongside JS translate3d */
     transition: box-shadow 0.25s ease, border-color 0.25s ease;
     will-change: transform;
 }
 
 /* =========================================================
-   1. AUTOFILL KRYPTONITE (HIDE NATIVE SEARCH 'X')
+   15. AUTOFILL & SEARCH BUTTON FIXES
 ========================================================= */
-input[type="search"] {
-    -webkit-appearance: none; /* Kills iOS default inner shadows */
-    appearance: none;
-}
+input[type="search"] { -webkit-appearance: none; appearance: none; }
 input[type="search"]::-webkit-search-decoration,
 input[type="search"]::-webkit-search-cancel-button,
 input[type="search"]::-webkit-search-results-button,
-input[type="search"]::-webkit-search-results-decoration {
-    display: none !important;
-    -webkit-appearance: none !important;
-}
+input[type="search"]::-webkit-search-results-decoration { display: none !important; -webkit-appearance: none !important; }
 
-/* =========================================================
-   2. MODERN TO-DO ADD BUTTON (NO RETRO SHADOWS)
-========================================================= */
-#addTaskBtn {
-    background: transparent !important; 
-    color: var(--color-primary) !important;
-    border: none !important;
-    box-shadow: none !important; /* Kills the retro shadow */
-    outline: none;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 6px;
-    border-radius: 50%;
-    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s ease !important;
-    -webkit-tap-highlight-color: transparent; /* Removes blue tap box on mobile */
-}
-
-#addTaskBtn:active {
-    transform: scale(0.80) !important; /* Smooth modern squish */
-    opacity: 0.6 !important;
-    box-shadow: none !important;
-}
+#addTaskBtn { background: transparent !important; color: var(--color-primary) !important; border: none !important; box-shadow: none !important; outline: none; display: flex; align-items: center; justify-content: center; padding: 6px; border-radius: 50%; transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s ease !important; -webkit-tap-highlight-color: transparent; }
+#addTaskBtn:active { transform: scale(0.80) !important; opacity: 0.6 !important; box-shadow: none !important; }
 
 /* =================================================================
-   MASTER PLANNER THEME (Monochromatic Accent & Native iOS Styling)
+   16. TODO TAB: COMPLETE UNIFIED ARCHITECTURE
 ================================================================= */
 
-/* 1. OVERDUE TASKS (Tinted Accent instead of Red) */
-.day-cell.overdue, .daily-card.overdue {
-    background-color: color-mix(in srgb, var(--color-primary) 8%, var(--color-glass-bg)) !important;
-    border-color: color-mix(in srgb, var(--color-primary) 25%, transparent) !important;
-}
-
-/* 2. TODAY'S MOBILE CARD (Glowing Accent Border) */
-.daily-card.today {
-    border-color: var(--color-primary) !important;
-    box-shadow: inset 0 0 0 1px var(--color-primary), 0 0 20px color-mix(in srgb, var(--color-primary) 15%, transparent) !important;
-}
-
-/* 3. NATIVE MINI-CALENDAR REVAMP (Frosted Glass System) */
-.cal-day {
-    transition: all 0.2s ease !important;
-    border: 1px solid transparent; /* Prevents layout jump on hover/select */
-}
-
-/* Today's ring */
-.cal-day.today {
-    color: var(--color-primary) !important;
-    font-weight: 800 !important;
-    border: 1px solid var(--color-primary) !important;
-    background: transparent !important;
-}
-
-/* Selected ring */
-.cal-day.selected {
-    border: 2px solid var(--color-text) !important;
-    background: color-mix(in srgb, var(--color-text) 10%, transparent) !important;
-    transform: scale(1.1);
-}
-
-/* Future/Current Tasks: Very faint frosted accent */
-.cal-day.has-task, .cal-day.future-task {
-    background: color-mix(in srgb, var(--color-primary) 15%, transparent) !important;
-    border-color: color-mix(in srgb, var(--color-primary) 20%, transparent) !important;
-    color: var(--color-text) !important;
-    font-weight: 700;
-}
-
-/* Overdue Tasks: Slightly deeper frosted accent */
-.cal-day.overdue {
-    background: color-mix(in srgb, var(--color-primary) 25%, transparent) !important;
-    border-color: color-mix(in srgb, var(--color-primary) 40%, transparent) !important;
-    color: var(--color-text) !important;
-}
-
-/* Completed Days: Faint success (green) frost so it doesn't clash */
-.cal-day.completed {
-    background: color-mix(in srgb, var(--color-success) 12%, transparent) !important;
-    border-color: color-mix(in srgb, var(--color-success) 20%, transparent) !important;
-    color: var(--color-success) !important;
-    font-weight: 700;
-}
-/* =================================================================
-   BUG REPORT 18/March/2016 - MASTER FIXES & UI PARITY
-================================================================= */
-
-/* --- SETTINGS B1: Subject Modal Scroll --- */
-#subjectList {
-    max-height: 50vh;
-    overflow-y: auto;
-    padding-right: 8px;
-}
-#subjectList::-webkit-scrollbar { width: 6px; }
-#subjectList::-webkit-scrollbar-track { background: transparent; }
-#subjectList::-webkit-scrollbar-thumb { background: var(--color-glass-border); border-radius: 10px; }
-
-
-/* --- TODO B6: Maximize Mobile Swipe Area & Fix Z-Index --- */
+/* --- A. CORE LAYOUT & VIEW TOGGLES --- */
 #tab-todo .central-column { display: flex; flex-direction: column; height: 100%; }
-#mobileTodoView { flex: 1; display: flex; flex-direction: column; z-index: 10; }
-#todoSwipeContainer { 
-    flex: 1; 
-    min-height: calc(100vh - 200px); 
-    padding-bottom: 120px; /* Gives room so the floating input doesn't cover tasks */
-    overflow-y: auto;
+#desktopTodoView { display: none !important; }
+#mobileTodoView { flex: 1; display: flex; flex-direction: column; z-index: 10; display: block !important; }
+
+/* --- B. FLOATING INPUT & SUBJECT TRAY --- */
+@media (min-width: 768px) {
+    .todo-input-group { max-width: 650px !important; }
 }
+.todo-input-group { position: fixed; bottom: calc(110px + var(--safe-bottom)); left: 50%; width: calc(100% - 30px); max-width: 500px; display: flex; flex-direction: row; align-items: center; padding: 8px 10px 8px var(--pad-lg); gap: 10px; z-index: 990; border-radius: var(--rad-pill) !important; transform: translateX(-50%) translateY(20px); opacity: 0; pointer-events: none; transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease; will-change: transform, opacity; }
+.todo-input-group.active { opacity: 1; pointer-events: auto; transform: translateX(-50%) translateY(0); }
+.todo-input-group.keyboard-active { bottom: 30px; }
+.todo-input-group input { flex: 1; background: transparent; border: none; color: var(--color-text); outline: none; }
 
+.todo-subject-tray { position: absolute; bottom: 100%; left: 0; width: 100%; padding-bottom: var(--pad-md); display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; opacity: 0; visibility: hidden; transform: translateY(15px); transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease, visibility 0s linear 0.3s !important; pointer-events: none; }
+.todo-subject-tray.active { opacity: 1; visibility: visible; transform: translateY(0); pointer-events: auto; transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease, visibility 0s linear 0s !important; }
+.todo-tint-pill { padding: 6px 14px; border-radius: var(--rad-lg); font-size: 0.8rem; font-weight: 600; cursor: pointer; color: var(--color-text-muted); border: 1px solid var(--color-glass-border); background: var(--color-glass-white); backdrop-filter: var(--blur-glass); -webkit-backdrop-filter: var(--blur-glass); transform: translate3d(0, 0, 0); transition: transform 0.2s ease, box-shadow 0.2s ease; }
+.todo-tint-pill:active { transform: scale(0.92) translate3d(0, 0, 0); }
+.todo-tint-pill.selected { transform: translateY(-2px); box-shadow: var(--shadow-md); background-color: color-mix(in srgb, var(--color-primary) 20%, transparent); border-color: var(--color-primary); color: var(--color-primary); }
 
-/* --- TODO B5: Tray Slide-Down Animation Fix --- */
-.todo-subject-tray {
-    /* The 0.3s delay on 'visibility' lets the opacity and transform finish animating first! */
-    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease, visibility 0s linear 0.3s !important;
-}
-.todo-subject-tray.active {
-    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease, visibility 0s linear 0s !important;
-}
+/* --- C. SHARED TASK ELEMENTS (Checkbox, Text, Buttons) --- */
+.todo-subject-header { margin-top: var(--pad-md); margin-bottom: 5px; font-size: 0.85rem; font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px; padding-left: 5px; list-style: none; }
+.todo-text { flex: 1; font-size: 1rem; transition: color 0.3s ease, text-decoration 0.3s ease; line-height: 1.4; word-break: break-word; white-space: normal; }
+.todo-delete { background: none; border: none; color: var(--color-text-muted); font-size: 1.5rem; cursor: pointer; padding: 0 5px; flex-shrink: 0; margin-top: -2px; }
+.todo-edit-input { flex: 1; min-width: 0; background: transparent; border: none; border-bottom: 2px solid var(--color-primary); border-radius: 0; color: var(--color-text); font-size: 1rem; padding: 0 0 2px 0; margin: 0; outline: none; box-shadow: none; caret-color: var(--color-primary); }
 
-
-/* =================================================================
-   TODO B3 & I1: 3-STATE SVG ANIMATIONS (Mobile & PC)
-================================================================= */
-.todo-checkbox {
-    width: 24px; height: 24px; border-radius: var(--rad-circle);
-    border: 2px solid var(--color-text-muted); background: transparent;
-    position: relative; cursor: pointer; 
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    display: flex; align-items: center; justify-content: center;
-}
-/* Overriding the old buggy pseudo-elements */
-.todo-checkbox::after { display: none !important; }
-
-/* The underlying SVG Paths */
+/* SVG 3-State Checkbox */
+.todo-checkbox { width: 24px; height: 24px; border-radius: var(--rad-circle); border: 2px solid color-mix(in srgb, var(--color-primary) 30%, var(--color-text-muted)); background: transparent; position: relative; cursor: pointer; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 2px; }
 .checkbox-svg { width: 14px; height: 14px; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; fill: none; }
-.dash-line { stroke: var(--color-primary); stroke-dasharray: 20; stroke-dashoffset: 20; transition: stroke-dashoffset 0.3s ease; }
+.dash-line { stroke: color-mix(in srgb, var(--color-primary) 70%, var(--color-text)); stroke-dasharray: 20; stroke-dashoffset: 20; transition: stroke-dashoffset 0.3s ease; }
 .tick-path { stroke: var(--color-bg); stroke-dasharray: 30; stroke-dashoffset: 30; transition: stroke-dashoffset 0.3s ease; }
 
-/* State 2: In Progress */
-.todo-checkbox.in-progress {
-    background-color: color-mix(in srgb, var(--color-primary) 20%, transparent);
-    border-color: var(--color-primary);
-}
-.todo-checkbox.in-progress .dash-line { stroke-dashoffset: 0; /* Draws the dash */ }
-
-/* State 3: Done */
+.todo-checkbox.in-progress { background-color: color-mix(in srgb, var(--color-primary) 15%, transparent); border-color: color-mix(in srgb, var(--color-primary) 70%, var(--color-text)); }
+.todo-checkbox.in-progress .dash-line { stroke-dashoffset: 0; }
 .todo-checkbox.done { background-color: var(--color-primary); border-color: var(--color-primary); }
-.todo-checkbox.done .tick-path { stroke-dashoffset: 0; /* Draws the tick */ }
+.todo-checkbox.done .tick-path { stroke-dashoffset: 0; }
 
+/* Text Done States */
+.todo-item.done { opacity: 0.65; }
+.kanban-task.done { opacity: 0.65; text-decoration: none !important; }
+.todo-item.done .todo-text, .kanban-task.done .todo-text { color: var(--color-primary); opacity: 0.8; text-decoration: line-through; }
 
-/* --- TODO B4: Prevent Button Strikethrough --- */
-.todo-item.done { opacity: 0.6; }
-.todo-item.done .todo-text { text-decoration: line-through; color: var(--color-text-muted); }
+/* --- D. MOBILE LIST VIEW --- */
+#todoSwipeContainer { min-height: calc(100vh - 200px); padding-bottom: 120px; overflow-y: auto; }
+.todo-list { list-style: none; display: flex; flex-direction: column; gap: 10px; }
+.todo-item { border-radius: var(--pad-md); padding: var(--pad-md); display: flex; align-items: flex-start; gap: var(--pad-md); transition: background-color 0.2s ease; user-select: none; background: var(--color-glass-tint); backdrop-filter: var(--blur-glass); -webkit-backdrop-filter: var(--blur-glass); border: 1px solid var(--color-glass-border); }
 
-
-/* =================================================================
-   TODO TAB: DESKTOP KANBAN UI (CLEAN & UNIFIED)
-================================================================= */
-
-/* 1. Base Mobile State: Show Swipe List, Hide Kanban */
-#desktopTodoView { display: none !important; }
-#mobileTodoView { display: block !important; }
-
-/* 2. PC Desktop State (768px+) */
+/* --- E. DESKTOP KANBAN VIEW --- */
 @media (min-width: 768px) {
     #mobileTodoView { display: none !important; }
     
-    #desktopTodoView {
-        display: grid !important; 
-        grid-template-columns: repeat(3, 1fr); 
-        gap: var(--pad-xl); 
-        align-items: start;
-        min-height: 60vh;
-        padding-bottom: 120px; /* Leaves room for the floating input box */
-    }
-
-    /* 3. The 3 State Containers (Todo, In Progress, Done) */
-    .kanban-column {
-        background: var(--color-glass-bg) !important;
-        backdrop-filter: var(--blur-glass) !important;
-        -webkit-backdrop-filter: var(--blur-glass) !important;
-        border: 1px solid var(--color-glass-border) !important;
-        border-radius: var(--rad-lg) !important;
-        display: flex; 
-        flex-direction: column; 
-        min-height: 500px;
-        overflow: hidden; /* CRITICAL: Clips the header to keep container corners rounded */
-        box-shadow: var(--shadow-sm);
-    }
-
-    /* 4. Column Headers */
-    .kanban-header {
-        padding: var(--pad-md) var(--pad-lg); 
-        font-weight: 800; 
-        text-transform: uppercase; 
-        letter-spacing: 1px;
-        border-bottom: 1px solid var(--color-glass-border); 
-        font-size: 0.95rem;
-        background: rgba(0, 0, 0, 0.2); /* Slight contrast from the list */
-    }
-    .kanban-column[data-status="todo"] .kanban-header { color: var(--color-text); }
-    .kanban-column[data-status="in-progress"] .kanban-header { color: var(--color-primary); }
-    .kanban-column[data-status="done"] .kanban-header { color: var(--color-success); }
-
-    /* 5. The Dropzone (Task List Area) */
-    .kanban-dropzone {
-        flex: 1; 
-        padding: var(--pad-md) !important; 
-        display: flex !important; 
-        flex-direction: column !important; 
-        gap: 12px !important; /* CRITICAL: Creates perfect padding between tasks */
-        overflow-y: auto;
-    }
-    .kanban-dropzone.drag-over { 
-        background: color-mix(in srgb, var(--color-primary) 10%, transparent) !important; 
-    }
-
-    /* 6. Subject Headers Inside Columns */
-    .kanban-subject-header {
-        font-size: 0.75rem; 
-        font-weight: 800; 
-        text-transform: uppercase; 
-        letter-spacing: 1px;
-        margin: 5px 0 0 5px; 
-        padding-bottom: 3px;
-        border-bottom: 1px solid color-mix(in srgb, var(--color-text) 10%, transparent);
-    }
+    #desktopTodoView { display: grid !important; grid-template-columns: repeat(3, 1fr); gap: var(--pad-xl); align-items: start; min-height: 60vh; padding-bottom: 120px; }
     
-    /* Hide the Subject Header if it's the very first element and is 'General' */
-    .kanban-subject-header[data-subject-id="null"]:first-child {
-        margin-top: 5px;
-    }
+    /* Columns & Headers */
+    .kanban-column { background: var(--color-glass-bg) !important; backdrop-filter: var(--blur-glass) !important; -webkit-backdrop-filter: var(--blur-glass) !important; border: 1px solid var(--color-glass-border) !important; border-radius: var(--rad-lg) !important; display: flex; flex-direction: column; min-height: 500px; overflow: hidden; box-shadow: var(--shadow-sm); padding-bottom: var(--pad-md); }
+    .kanban-header { padding: var(--pad-md) var(--pad-lg); font-weight: 800; text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid var(--color-glass-border); font-size: 0.95rem; background: rgba(0, 0, 0, 0.2); }
+    .kanban-column[data-status="todo"] .kanban-header { color: color-mix(in srgb, var(--color-primary) 30%, var(--color-text-muted)); }
+    .kanban-column[data-status="in-progress"] .kanban-header { color: color-mix(in srgb, var(--color-primary) 70%, var(--color-text)); }
+    .kanban-column[data-status="done"] .kanban-header { color: var(--color-primary); }
 
-    /* 7. The Task Cards (1:1 UI Match with Mobile .todo-item) */
-    .kanban-task {
-        display: flex !important;
-        align-items: flex-start !important;
-        gap: var(--pad-md) !important;
-        background: var(--color-glass-tint) !important;
-        backdrop-filter: var(--blur-glass) !important;
-        -webkit-backdrop-filter: var(--blur-glass) !important;
-        border: 1px solid var(--color-glass-border) !important;
-        border-radius: var(--rad-md) !important;
-        padding: var(--pad-md) !important;
-        margin: 0 !important; /* Reset margin, rely entirely on Flex Gap */
-        cursor: grab;
-        user-select: none;
-        transition: background-color 0.2s ease, transform 0.2s ease;
-    }
+    /* Dropzones & Subjects */
+    .kanban-dropzone { flex: 1; padding: var(--pad-lg) var(--pad-md) var(--pad-md) var(--pad-md) !important; display: flex !important; flex-direction: column !important; gap: 12px !important; overflow-y: auto; overflow-y: auto; }
+    .kanban-subject-header { font-size: 0.75rem; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; margin: 15px 0 5px 5px; padding-bottom: 3px; border-bottom: 1px solid color-mix(in srgb, var(--color-text) 10%, transparent); }
+    .kanban-subject-header[data-subject-id="null"]:first-child { margin-top: 5px; }
+
+    /* Task Cards */
+    .kanban-task { display: flex !important; align-items: flex-start !important; gap: var(--pad-md) !important; background: var(--color-glass-tint) !important; backdrop-filter: var(--blur-glass) !important; -webkit-backdrop-filter: var(--blur-glass) !important; border: 1px solid var(--color-glass-border) !important; border-radius: var(--rad-md) !important; padding: var(--pad-md) !important; margin: 0 !important; cursor: grab; user-select: none; transition: background-color 0.2s ease, transform 0.2s ease; }
     .kanban-task:active { cursor: grabbing; transform: scale(0.98); }
-    .kanban-task.is-dragging { opacity: 0.4; border: 2px dashed var(--color-primary) !important; }
-    
-    /* PC Task States */
-    .kanban-task.in-progress { border-left: 3px solid var(--color-primary) !important; }
-    .kanban-task.done { opacity: 0.6; }
-    .kanban-task.done .todo-text { text-decoration: line-through; color: var(--color-text-muted); }
-    
-    /* PC Text layout */
+    .kanban-task.in-progress { border-left: 3px solid color-mix(in srgb, var(--color-primary) 70%, var(--color-text)) !important; }
     .kanban-task .todo-text { flex: 1; font-size: 0.95rem; line-height: 1.3; word-break: break-word; }
+
+    /* HTML5 Drag States */
+    .kanban-task.is-dragging { opacity: 0.2 !important; border: 2px dashed var(--color-glass-border) !important; background: transparent !important; box-shadow: none !important; }
+    
+    /* Inter-container Drag Matrix UX */
+    .kanban-column.inter-drag-target { border-color: var(--color-primary) !important; box-shadow: inset 0 0 0 1px var(--color-primary), 0 0 25px color-mix(in srgb, var(--color-primary) 15%, transparent) !important; }
+    .kanban-column.inter-drag-target .kanban-dropzone > *:not(.is-dragging) { filter: blur(4px); opacity: 0.4; transition: filter 0.2s ease, opacity 0.2s ease; pointer-events: none; }
+    .kanban-column.inter-drag-target .is-dragging { opacity: 0 !important; height: 0 !important; padding: 0 !important; margin: 0 !important; border: none !important; overflow: hidden !important; }
+    .kanban-dropzone > * { transition: filter 0.2s ease, opacity 0.2s ease; }
 }
 
 /* =================================================================
-   PC KANBAN: INTER-CONTAINER DRAG UX
+   TODO SHIFT TOMORROW (Floating Edit Pop-up)
 ================================================================= */
-/* 1. Highlight the entire target column */
-.kanban-column.inter-drag-target {
-    border-color: var(--color-primary) !important;
-    box-shadow: inset 0 0 0 1px var(--color-primary), 0 0 25px color-mix(in srgb, var(--color-primary) 15%, transparent) !important;
+.shift-tomorrow-popup {
+    position: absolute !important;
+    top: -45px; /* Floats perfectly above the task container */
+    right: 0;
+    z-index: 99999;
+    padding: 6px 14px !important;
+    font-size: 0.75rem !important;
+    white-space: nowrap;
+    box-shadow: var(--shadow-lg) !important;
+    
+    /* Pop-in animation when entering edit mode */
+    animation: popupSpring 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
 }
 
-/* 2. Blur out all existing tasks and headers in that column */
-.kanban-column.inter-drag-target .kanban-dropzone > *:not(.is-dragging) {
-    filter: blur(4px);
-    opacity: 0.4;
-    transition: filter 0.2s ease, opacity 0.2s ease;
-    pointer-events: none; /* Prevents erratic hover glitches */
+@keyframes popupSpring {
+    0% { opacity: 0; transform: translateY(10px) scale(0.8); }
+    100% { opacity: 1; transform: translateY(0) scale(1); }
 }
 
-/* 3. Completely hide the dashed insertion gap so it looks like a column drop, not an item drop */
-.kanban-column.inter-drag-target .is-dragging {
-    opacity: 0 !important;
-    height: 0 !important;
-    padding: 0 !important;
-    margin: 0 !important;
-    border: none !important;
-    overflow: hidden !important;
+/* =================================================================
+   TODO SHIFT TOMORROW (Z-Index, Anchors & Animations)
+================================================================= */
+/* 1. Elevates the task so the popup overlaps siblings below it */
+.todo-item.is-editing, .kanban-task.is-editing {
+    z-index: 100 !important;
+    position: relative !important;
 }
 
-/* Ensure the blur transitions smoothly when returning to normal */
-.kanban-dropzone > * {
-    transition: filter 0.2s ease, opacity 0.2s ease;
+/* 2. Anchors the popup to the task, and slides it out from behind */
+.shift-tomorrow-popup {
+    position: absolute !important;
+    top: calc(100% + 2px) !important; /* Drops cleanly below the container */
+    left: 50% !important;
+    z-index: -1 !important; /* Forces it to tuck BEHIND the blurred task card */
+    
+    background: var(--color-glass-bg) !important;
+    backdrop-filter: var(--blur-glass) !important;
+    -webkit-backdrop-filter: var(--blur-glass) !important;
+    border: 1px solid var(--color-primary) !important;
+    color: var(--color-primary) !important;
+    border-radius: var(--rad-pill) !important;
+    
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 6px 16px !important;
+    font-size: 0.75rem !important;
+    font-weight: 700 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 1px !important;
+    white-space: nowrap;
+    
+    box-shadow: var(--shadow-md) !important;
+    animation: popupSpringDown 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards !important;
+}
+
+/* 3. The Slide-Up Exit Animation */
+.shift-tomorrow-popup.closing {
+    animation: popupSpringUp 0.25s cubic-bezier(0.175, 0.885, 0.32, 1) forwards !important;
+}
+
+@keyframes popupSpringDown {
+    0% { opacity: 0; transform: translate(-50%, -20px) scale(0.8); }
+    100% { opacity: 1; transform: translate(-50%, 0) scale(1); }
+}
+
+@keyframes popupSpringUp {
+    0% { opacity: 1; transform: translate(-50%, 0) scale(1); }
+    100% { opacity: 0; transform: translate(-50%, -20px) scale(0.8); }
 }

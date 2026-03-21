@@ -128,7 +128,6 @@ function initTodoTab() {
         if (tray && tray.classList.contains('active')) tray.classList.remove('active');
     });
 
-    // Escape Hatch for Mobile Stuck Clones
     document.addEventListener('touchstart', (e) => {
         if (!e.target.closest('#mobileTodoView') && !e.target.closest('.todo-input-group')) {
             const stuckClones = document.querySelectorAll('.flying-glass-task');
@@ -141,7 +140,7 @@ function initTodoTab() {
     }, { passive: true });
 
     // =========================================================
-    // 4. MATRIX UPDATERS (Data Scrapers)
+    // 4. MATRIX UPDATERS
     // =========================================================
     const updateMobileOrder = () => {
         if(!listEl) return;
@@ -183,7 +182,6 @@ function initTodoTab() {
                         const oldStatus = original.status;
                         const newStatus = col.status;
 
-                        // Strict Rules: Inter-column (lock subject), Intra-column (update subject)
                         if (oldStatus !== newStatus) {
                             t.status = newStatus;
                             t.subjectId = original.subjectId; 
@@ -197,9 +195,7 @@ function initTodoTab() {
             });
         });
         
-        // Failsafe: Re-add any tasks that might have vanished during a rapid drag glitch
         tasks.forEach(t => { if (!newTasks.find(nt => nt.id === t.id)) newTasks.push(t); });
-        
         tasks = newTasks; saveTasks(); renderTasks();
     };
 
@@ -251,60 +247,107 @@ function initTodoTab() {
                         <button class="todo-delete">×</button>
                     `;
 
+                    // --- MOBILE DELETE HIJACK ---
                     li.querySelector('.todo-delete').addEventListener('click', (e) => {
                         e.stopPropagation();
+                        if (li.classList.contains('is-editing')) {
+                            const editInput = li.querySelector('.todo-edit-input');
+                            if (editInput) editInput.blur(); 
+                            return;
+                        }
                         tasks = tasks.filter(t => t.id !== task.id); saveTasks(); renderTasks();
                     });
 
+                    // ------------------------------------------
+                    // MOBILE EDIT ENGINE
+                    // ------------------------------------------
                     const textSpan = li.querySelector('.todo-text');
                     const openEditMode = () => {
-                        if (li.querySelector('.todo-edit-input')) return; 
+                        const taskNode = li;
+                        if (taskNode.querySelector('.todo-edit-wrapper')) return; 
+                        
+                        taskNode.classList.add('is-editing'); 
+
+                        const wrapper = document.createElement('div');
+                        wrapper.className = 'todo-edit-wrapper';
+                        wrapper.style.flex = '1';
+                        wrapper.style.minWidth = '0';
+                        wrapper.style.display = 'flex';
+                        
                         const editInput = document.createElement('input');
-                        editInput.type = 'text'; editInput.value = task.text; editInput.className = 'todo-edit-input';
-                        textSpan.replaceWith(editInput); 
+                        editInput.type = 'text'; 
+                        editInput.value = task.text; 
+                        editInput.className = 'todo-edit-input';
+                        editInput.style.width = '100%';
+                        
+                        wrapper.appendChild(editInput);
+                        textSpan.replaceWith(wrapper); 
                         editInput.focus();
+
+                        let tomoBtn = null;
+                        if (task.status !== 'done') {
+                            tomoBtn = document.createElement('button');
+                            tomoBtn.className = 'shift-tomorrow-popup'; 
+                            tomoBtn.innerHTML = 'knew it gumimornin;)';
+                            
+                            const shiftAction = (e) => {
+                                e.preventDefault(); 
+                                tasks = tasks.filter(t => t.id !== task.id);
+                                saveTasks();
+                                
+                                const tomorrow = new Date(currentDate);
+                                tomorrow.setDate(tomorrow.getDate() + 1);
+                                const targetKey = getDateKey(tomorrow);
+                                
+                                const targetTasks = JSON.parse(localStorage.getItem(targetKey)) || [];
+                                task.status = 'todo'; 
+                                targetTasks.unshift(task); 
+                                localStorage.setItem(targetKey, JSON.stringify(targetTasks));
+                                
+                                taskNode.classList.remove('is-editing');
+                                renderTasks(); 
+                            };
+                            tomoBtn.addEventListener('mousedown', shiftAction);
+                            tomoBtn.addEventListener('touchstart', shiftAction, { passive: false });
+                            
+                            taskNode.appendChild(tomoBtn); 
+                        }
                         
                         const saveEdit = () => {
-                            const newText = editInput.value.trim();
-                            if (newText) { task.text = newText; saveTasks(); }
-                            renderTasks();
+                            const executeClose = () => {
+                                taskNode.classList.remove('is-editing');
+                                if (tomoBtn && tomoBtn.parentNode) tomoBtn.remove();
+                                const newText = editInput.value.trim();
+                                if (newText) { task.text = newText; saveTasks(); }
+                                renderTasks();
+                            };
+
+                            if (tomoBtn && tomoBtn.parentNode) {
+                                tomoBtn.classList.add('closing');
+                                setTimeout(executeClose, 250);
+                            } else {
+                                executeClose();
+                            }
                         };
+                        
                         editInput.addEventListener('blur', saveEdit);
                         editInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') editInput.blur(); });
                     };
 
-                    let clickTimer = null;
-                    let wasDragged = false; 
-
-                    li.addEventListener('click', (e) => {
-                        if (e.target.closest('.todo-delete') || e.target.closest('.todo-edit-input') || wasDragged) return;
-
-                        if (e.target.closest('.todo-checkbox')) {
-                            clearTimeout(clickTimer);
-                            if (task.status === 'todo') task.status = 'in-progress';
-                            else if (task.status === 'in-progress') task.status = 'done';
-                            else task.status = 'todo';
-                            saveTasks(); renderTasks();
-                            return;
-                        }
-
-                        if (e.detail === 1) { 
-                            clickTimer = setTimeout(() => {
-                                if (task.status === 'todo') task.status = 'in-progress';
-                                else if (task.status === 'in-progress') task.status = 'done';
-                                else task.status = 'todo';
-                                saveTasks(); renderTasks();
-                            }, 250); 
-                        } else if (e.detail === 2) { 
-                            clearTimeout(clickTimer); 
-                            openEditMode(); 
-                        }
-                    });
-
-                    let holdTimer; let isDragging = false; let currentClone = null; let startTouchX = 0, startTouchY = 0; let startRect = null;
+                    // ------------------------------------------
+                    // RESTORED: FLAWLESS MOBILE TOUCH ROUTER
+                    // ------------------------------------------
+                    let holdTimer = null; 
+                    let singleTapTimer = null;
+                    let tapCount = 0;
+                    let isDragging = false; 
+                    let currentClone = null; 
+                    let startTouchX = 0, startTouchY = 0; 
+                    let touchStartTime = 0;
+                    let currentTouchY = 0;     
+                    
                     const scrollContainer = document.getElementById('todoSwipeContainer'); 
                     let scrollInterval = null; 
-                    let currentTouchY = 0;     
 
                     const checkAutoScroll = () => {
                         if (!isDragging || !scrollContainer) return;
@@ -323,18 +366,21 @@ function initTodoTab() {
                         clearTimeout(holdTimer); 
                         if (li.querySelector('.todo-edit-input')) return;
                         
-                        wasDragged = false;
                         startTouchX = e.touches[0].clientX; 
                         startTouchY = e.touches[0].clientY;
                         currentTouchY = startTouchY;
+                        touchStartTime = Date.now();
 
                         cancelAnimationFrame(scrollInterval);
                         
+                        // Ignore drag/tap math if touching a specific button directly
                         if (e.target.closest('.todo-delete') || e.target.closest('.todo-checkbox')) return;
                         
                         holdTimer = setTimeout(() => {
                             isDragging = true;
-                            wasDragged = true; 
+                            tapCount = 0; 
+                            clearTimeout(singleTapTimer);
+                            
                             if (navigator.vibrate) navigator.vibrate(50); 
                             startRect = li.getBoundingClientRect(); 
                             currentClone = li.cloneNode(true); currentClone.classList.add('flying-glass-task');
@@ -373,19 +419,64 @@ function initTodoTab() {
                         }
                     }, { passive: false });
 
-                    const endDrag = () => {
+                    li.addEventListener('touchend', (e) => {
+                        if (li.querySelector('.todo-edit-input')) return;
                         clearTimeout(holdTimer); 
+
+                        // Scenario A: End of a drag
                         if (isDragging) {
                             cancelAnimationFrame(scrollInterval);
                             isDragging = false; 
                             li.classList.remove('dragging-placeholder');
                             if (currentClone) { currentClone.remove(); currentClone = null; }
                             updateMobileOrder(); 
-                            setTimeout(() => wasDragged = false, 100);
+                            return; 
                         }
-                    };
-                    li.addEventListener('touchend', endDrag); 
-                    li.addEventListener('touchcancel', endDrag);
+
+                        // Scenario B: Standard tap
+                        const touchDuration = Date.now() - touchStartTime;
+                        const endTouch = e.changedTouches[0];
+                        const deltaX = Math.abs(endTouch.clientX - startTouchX);
+                        const deltaY = Math.abs(endTouch.clientY - startTouchY);
+
+                        if (touchDuration < 400 && deltaX < 15 && deltaY < 15) {
+                            // If hitting Delete, let the native click listener handle it
+                            if (e.target.closest('.todo-delete')) return; 
+
+                            // 1. Instant Checkbox Tap
+                            if (e.target.closest('.todo-checkbox')) {
+                                e.preventDefault(); // Stop ghost click
+                                task.status = task.status === 'todo' ? 'in-progress' : (task.status === 'in-progress' ? 'done' : 'todo');
+                                saveTasks(); renderTasks();
+                                return;
+                            }
+
+                            // 2. Body Tap (Single vs Double)
+                            e.preventDefault(); // Stop ghost click
+                            tapCount++;
+                            if (tapCount === 1) {
+                                singleTapTimer = setTimeout(() => {
+                                    tapCount = 0;
+                                    task.status = task.status === 'todo' ? 'in-progress' : (task.status === 'in-progress' ? 'done' : 'todo');
+                                    saveTasks(); renderTasks();
+                                }, 250); 
+                            } else if (tapCount === 2) {
+                                clearTimeout(singleTapTimer);
+                                tapCount = 0;
+                                openEditMode(); 
+                            }
+                        }
+                    });
+
+                    li.addEventListener('touchcancel', () => {
+                        clearTimeout(holdTimer);
+                        cancelAnimationFrame(scrollInterval);
+                        if (isDragging) {
+                            isDragging = false; li.classList.remove('dragging-placeholder');
+                            if (currentClone) { currentClone.remove(); currentClone = null; }
+                        }
+                    });
+
                     listEl.appendChild(li);
                 });
             });
@@ -402,7 +493,6 @@ function initTodoTab() {
             subjectsList.forEach(sub => {
                 const subTasks = tasks.filter(t => (t.subjectId || null) === sub.id && t.status === col.status);
                 
-                // Do not generate a header if there are no tasks for it in this column!
                 if (subTasks.length === 0) return; 
 
                 const hdr = document.createElement('div');
@@ -417,9 +507,8 @@ function initTodoTab() {
                     pcCard.className = `kanban-task ${task.status === 'done' ? 'done' : ''}`;
                     pcCard.draggable = true;
                     pcCard.dataset.id = task.id;
-                    pcCard.dataset.sourceStatus = task.status; // NEW: Memorize origin column for D&D math
+                    pcCard.dataset.sourceStatus = task.status; 
 
-                    // Reusing the exact same HTML structure as Mobile
                     pcCard.innerHTML = `
                         <div class="todo-checkbox ${task.status}">
                             <svg viewBox="0 0 24 24" class="checkbox-svg">
@@ -431,25 +520,88 @@ function initTodoTab() {
                         <button class="todo-delete">×</button>
                     `;
 
+                    // --- PC DELETE HIJACK ---
                     pcCard.querySelector('.todo-delete').addEventListener('click', (e) => {
                         e.stopPropagation();
+                        if (pcCard.classList.contains('is-editing')) {
+                            const editInput = pcCard.querySelector('.todo-edit-input');
+                            if (editInput) editInput.blur(); 
+                            return;
+                        }
                         tasks = tasks.filter(t => t.id !== task.id); saveTasks(); renderTasks();
                     });
 
+                    // ------------------------------------------
+                    // PC EDIT ENGINE
+                    // ------------------------------------------
                     const textSpan = pcCard.querySelector('.todo-text');
                     textSpan.addEventListener('dblclick', () => {
-                        if (pcCard.querySelector('.todo-edit-input')) return; 
-                        pcCard.draggable = false; 
+                        const taskNode = pcCard;
+                        if (taskNode.querySelector('.todo-edit-wrapper')) return; 
+                        taskNode.draggable = false; 
+                        
+                        taskNode.classList.add('is-editing'); 
+
+                        const wrapper = document.createElement('div');
+                        wrapper.className = 'todo-edit-wrapper';
+                        wrapper.style.flex = '1';
+                        wrapper.style.minWidth = '0';
+                        wrapper.style.display = 'flex';
                         
                         const editInput = document.createElement('input');
-                        editInput.type = 'text'; editInput.value = task.text; editInput.className = 'todo-edit-input';
-                        textSpan.replaceWith(editInput); 
+                        editInput.type = 'text'; 
+                        editInput.value = task.text; 
+                        editInput.className = 'todo-edit-input';
+                        editInput.style.width = '100%';
+                        
+                        wrapper.appendChild(editInput);
+                        textSpan.replaceWith(wrapper); 
                         editInput.focus();
+
+                        let tomoBtn = null;
+                        if (task.status !== 'done') {
+                            tomoBtn = document.createElement('button');
+                            tomoBtn.className = 'shift-tomorrow-popup'; 
+                            tomoBtn.innerHTML = 'knew it gumimornin;)';
+                            
+                            const shiftAction = (e) => {
+                                e.preventDefault(); 
+                                tasks = tasks.filter(t => t.id !== task.id);
+                                saveTasks();
+                                
+                                const tomorrow = new Date(currentDate);
+                                tomorrow.setDate(tomorrow.getDate() + 1);
+                                const targetKey = getDateKey(tomorrow);
+                                
+                                const targetTasks = JSON.parse(localStorage.getItem(targetKey)) || [];
+                                task.status = 'todo'; 
+                                targetTasks.unshift(task); 
+                                localStorage.setItem(targetKey, JSON.stringify(targetTasks));
+                                
+                                taskNode.classList.remove('is-editing');
+                                renderTasks(); 
+                            };
+                            tomoBtn.addEventListener('mousedown', shiftAction);
+                            tomoBtn.addEventListener('touchstart', shiftAction, { passive: false });
+                            
+                            taskNode.appendChild(tomoBtn); 
+                        }
                         
                         const saveEdit = () => {
-                            const newText = editInput.value.trim();
-                            if (newText) { task.text = newText; saveTasks(); }
-                            renderTasks();
+                            const executeClose = () => {
+                                taskNode.classList.remove('is-editing');
+                                if (tomoBtn && tomoBtn.parentNode) tomoBtn.remove();
+                                const newText = editInput.value.trim();
+                                if (newText) { task.text = newText; saveTasks(); }
+                                renderTasks();
+                            };
+
+                            if (tomoBtn && tomoBtn.parentNode) {
+                                tomoBtn.classList.add('closing');
+                                setTimeout(executeClose, 250);
+                            } else {
+                                executeClose();
+                            }
                         };
                         
                         editInput.addEventListener('blur', saveEdit);
@@ -466,13 +618,12 @@ function initTodoTab() {
 
                     pcCard.addEventListener('dragstart', (e) => { 
                         if (pcCard.querySelector('.todo-edit-input')) { e.preventDefault(); return; }
-                        pcCard.classList.add('is-dragging'); 
+                        setTimeout(() => pcCard.classList.add('is-dragging'), 1); 
                         e.dataTransfer.effectAllowed = 'move';
                     });
                     
                     pcCard.addEventListener('dragend', () => { 
                         pcCard.classList.remove('is-dragging'); 
-                        // NEW: Failsafe cleanup to remove any lingering blurs
                         document.querySelectorAll('.kanban-column').forEach(c => c.classList.remove('inter-drag-target'));
                         updatePCOrder(); 
                     });
@@ -485,9 +636,6 @@ function initTodoTab() {
 
     // =========================================================
     // 6. KANBAN NATIVE DRAG CONTROLLER
-    // =========================================================
-    // =========================================================
-    // 6. KANBAN NATIVE DRAG CONTROLLER (Inter vs Intra Router)
     // =========================================================
     const setupKanbanDropzones = () => {
         const columns = [pcTodo, pcInProgress, pcDone];
@@ -504,28 +652,23 @@ function initTodoTab() {
                 const sourceStatus = draggingCard.dataset.sourceStatus;
                 const targetStatus = columnWrapper.dataset.status;
 
-                // RULE A: INTER-COLUMN DRAG (Different Container)
                 if (sourceStatus !== targetStatus) {
-                    columnWrapper.classList.add('inter-drag-target'); // Triggers Blur & Border
-                    dropzone.appendChild(draggingCard); // Hides specific placement gap
-                } 
-                // RULE B: INTRA-COLUMN DRAG (Same Container)
-                else {
-                    columnWrapper.classList.remove('inter-drag-target'); // Restores normal UI
+                    columnWrapper.classList.add('inter-drag-target'); 
+                    dropzone.appendChild(draggingCard); 
+                } else {
+                    columnWrapper.classList.remove('inter-drag-target'); 
                     const afterElement = getDragAfterElement(dropzone, e.clientY);
                     if (afterElement == null) dropzone.appendChild(draggingCard);
                     else dropzone.insertBefore(draggingCard, afterElement);
                 }
             });
 
-            // Cleanup if the mouse leaves the column
             dropzone.addEventListener('dragleave', (e) => {
                 if (!columnWrapper.contains(e.relatedTarget)) {
                     columnWrapper.classList.remove('inter-drag-target');
                 }
             });
 
-            // Cleanup on drop
             dropzone.addEventListener('drop', () => {
                 columnWrapper.classList.remove('inter-drag-target');
             });
