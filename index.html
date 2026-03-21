@@ -152,9 +152,28 @@
                         <button id="todoNextDay" class="icon-btn">›</button>
                     </div>
                 </div>
-                <div class="swipe-container" id="todoSwipeContainer">
-                    <ul id="todoList" class="todo-list"></ul>
+
+                <div id="mobileTodoView">
+                    <div class="swipe-container" id="todoSwipeContainer">
+                        <ul id="todoList" class="todo-list"></ul>
+                    </div>
                 </div>
+
+                <div id="desktopTodoView">
+                    <div class="kanban-column" data-status="todo">
+                        <div class="kanban-header">To Do</div>
+                        <div class="kanban-dropzone" id="kanban-todo"></div>
+                    </div>
+                    <div class="kanban-column" data-status="in-progress">
+                        <div class="kanban-header" style="color: var(--color-primary);">In Progress</div>
+                        <div class="kanban-dropzone" id="kanban-in-progress"></div>
+                    </div>
+                    <div class="kanban-column" data-status="done">
+                        <div class="kanban-header" style="color: var(--color-success);">Done</div>
+                        <div class="kanban-dropzone" id="kanban-done"></div>
+                    </div>
+                </div>
+
             </div>
         </section>
 
