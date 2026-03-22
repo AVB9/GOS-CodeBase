@@ -636,6 +636,10 @@ input[type="search"]::-webkit-search-results-decoration { display: none !importa
     z-index: 999999;
     transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     pointer-events: none;
+    text-align: center;
+    line-height: 1.4;
+    width: 90%;
+    max-width: 400px;
 }
 
 #global-toast.show {

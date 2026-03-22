@@ -41,7 +41,6 @@ function initPlannerTab() {
 
     if (!gridEl || !sliderEl || !desktopGrid) return;
 
-    // THE MASTER CLOCK
     let currentViewDate = new Date();
     currentViewDate.setDate(1); 
 
@@ -50,9 +49,6 @@ function initPlannerTab() {
     let todayObserver = null;
     let isFirstTimeOpeningPlanner = true; 
 
-    // ==========================================
-    // DATA LAYER UTILITIES
-    // ==========================================
     const defaultSubjects = [{ id: 'off', name: 'Day Off', color: '#555555' }];
     const getSubjects = () => JSON.parse(localStorage.getItem('plannerSubjects')) || defaultSubjects;
     
@@ -87,9 +83,28 @@ function initPlannerTab() {
         return `${y}-${m}-${d}`;
     };
 
-    // ==========================================
-    // THE CORE ENGINE
-    // ==========================================
+    // --- ONE-TIME POPUP LOGIC ---
+    const checkUltimateCompletion = (dateKey) => {
+        const todayTodoKey = `todo_${dateKey}`;
+        const todayTodos = JSON.parse(localStorage.getItem(todayTodoKey)) || [];
+        const allTodosDone = todayTodos.length > 0 && todayTodos.every(t => t.status === 'done');
+        const completedTargets = getCompleted();
+        const plannerDone = completedTargets.includes(dateKey);
+        
+        const celebKey = 'celebrated_' + dateKey;
+
+        if (allTodosDone && plannerDone) {
+            // Only pop if we haven't celebrated today yet
+            if (!localStorage.getItem(celebKey)) {
+                setTimeout(() => window.showAppToast("MUUWWAHAAAA!!!"), 300);
+                localStorage.setItem(celebKey, 'true');
+            }
+        } else {
+            // If they uncheck something, clear the flag so they can win again later
+            localStorage.removeItem(celebKey);
+        }
+    };
+
     const generateMonthData = () => {
         const year = currentViewDate.getFullYear();
         const month = currentViewDate.getMonth();
@@ -137,9 +152,6 @@ function initPlannerTab() {
         updateHomeWidget(); 
     };
 
-    // ==========================================
-    // UI RENDERERS (Driven by the Core Engine)
-    // ==========================================
     const renderMobile = (data) => {
         gridEl.innerHTML = '';
         sliderEl.innerHTML = '';
@@ -340,43 +352,29 @@ function initPlannerTab() {
         desktopProgressBar.style.width = `${totalTasks === 0 ? 0 : (completedTasks / totalTasks) * 100}%`;
     };
 
-    // ==========================================
-    // ACTIONS & MODALS
-    // ==========================================
     const toggleCompletion = (dateKey, dateObj, todayObjReal) => {
         const targets = getTargets();
         if (!targets[dateKey]) return; 
         
-        // --- CUSTOM TOAST: NO CHEATING ALLOWED ---
         if (dateObj > todayObjReal) { 
             window.showAppToast("gmasti tho dekho koi inki!!"); 
             return; 
         }
 
         let compArr = getCompleted();
-        let wasJustCompleted = false;
 
         if (compArr.includes(dateKey)) {
             compArr = compArr.filter(id => id !== dateKey);
         } else { 
             compArr.push(dateKey); 
-            wasJustCompleted = true;
             if (navigator.vibrate) navigator.vibrate(50); 
         }
         
         saveCompleted(compArr);
         forcePlannerRefresh();
-
-        // --- CUSTOM TOAST: ULTIMATE COMPLETION CHECK ---
-        if (wasJustCompleted && dateKey === getDateKey(todayObjReal)) {
-            const todayTodoKey = `todo_${dateKey}`;
-            const todayTodos = JSON.parse(localStorage.getItem(todayTodoKey)) || [];
-            const allTodosDone = todayTodos.length > 0 && todayTodos.every(t => t.status === 'done');
-            
-            if (allTodosDone) {
-                setTimeout(() => window.showAppToast("MUUWWAHAAAA!!!"), 300);
-            }
-        }
+        
+        // Let the checker handle the cross-talk math
+        checkUltimateCompletion(dateKey);
     };
 
     const handleClearTask = () => {
@@ -469,9 +467,6 @@ function initPlannerTab() {
 
     document.getElementById('desktopClearTaskBtn').addEventListener('click', () => { handleClearTask(); desktopEditModal.style.display = 'none'; });
 
-    // ==========================================
-    // UI EVENT CONTROLS & GESTURES
-    // ==========================================
     let startY = 0, currentY = 0;
     dragZone.addEventListener('touchstart', (e) => startY = e.touches[0].clientY, { passive: true });
     dragZone.addEventListener('touchmove', (e) => {
@@ -497,7 +492,6 @@ function initPlannerTab() {
         forcePlannerRefresh();
     });
 
-    // MINI CALENDAR SWIPE
     let mcStartX = 0, mcStartY = 0;
     calWrapper.addEventListener('touchstart', (e) => {
         mcStartX = e.touches[0].clientX;
@@ -515,7 +509,6 @@ function initPlannerTab() {
         }
     }, { passive: true });
 
-    // --- FEATURE: MONTH PILL SWIPING ---
     const monthNavWrapper = monthDisplay.closest('.date-navigator');
     let isMonthSwiping = false;
     let mdStartX = 0;
@@ -539,7 +532,6 @@ function initPlannerTab() {
                 else if (diffX < -40) currentViewDate.setMonth(currentViewDate.getMonth() - 1);
                 forcePlannerRefresh();
                 
-                // Slight delay before unlocking the click so the modal doesn't flash open
                 setTimeout(() => isMonthSwiping = false, 50);
             }
         });
