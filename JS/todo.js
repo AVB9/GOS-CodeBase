@@ -219,7 +219,12 @@ function initTodoTab() {
         });
         
         tasks.forEach(t => { if (!newTasks.find(nt => nt.id === t.id)) newTasks.push(t); });
-        tasks = newTasks; saveTasks(); renderTasks();
+        tasks = newTasks; 
+        saveTasks(); 
+        renderTasks();
+        
+        // FIX: Run the ultimate completion check after dropping a card!
+        checkUltimateCompletion();
     };
 
     // =========================================================
