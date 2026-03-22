@@ -1,4 +1,4 @@
-// Global Toast Helper (Safe to load in either file first)
+// Global Toast Helper
 window.showAppToast = window.showAppToast || function(msg) {
     let toast = document.getElementById('global-toast');
     if (!toast) {
@@ -81,28 +81,6 @@ function initPlannerTab() {
         const m = String(date.getMonth() + 1).padStart(2, '0');
         const d = String(date.getDate()).padStart(2, '0');
         return `${y}-${m}-${d}`;
-    };
-
-    // --- ONE-TIME POPUP LOGIC ---
-    const checkUltimateCompletion = (dateKey) => {
-        const todayTodoKey = `todo_${dateKey}`;
-        const todayTodos = JSON.parse(localStorage.getItem(todayTodoKey)) || [];
-        const allTodosDone = todayTodos.length > 0 && todayTodos.every(t => t.status === 'done');
-        const completedTargets = getCompleted();
-        const plannerDone = completedTargets.includes(dateKey);
-        
-        const celebKey = 'celebrated_' + dateKey;
-
-        if (allTodosDone && plannerDone) {
-            // Only pop if we haven't celebrated today yet
-            if (!localStorage.getItem(celebKey)) {
-                setTimeout(() => window.showAppToast("MUUWWAHAAAA!!!"), 300);
-                localStorage.setItem(celebKey, 'true');
-            }
-        } else {
-            // If they uncheck something, clear the flag so they can win again later
-            localStorage.removeItem(celebKey);
-        }
     };
 
     const generateMonthData = () => {
@@ -367,14 +345,13 @@ function initPlannerTab() {
             compArr = compArr.filter(id => id !== dateKey);
         } else { 
             compArr.push(dateKey); 
-            if (navigator.vibrate) navigator.vibrate(50); 
+            if (navigator.vibrate) navigator.vibrate(50);
+            // DIRECT CELEBRATION
+            setTimeout(() => window.showAppToast("MUUWWAHAAAA!!!"), 100);
         }
         
         saveCompleted(compArr);
         forcePlannerRefresh();
-        
-        // Let the checker handle the cross-talk math
-        checkUltimateCompletion(dateKey);
     };
 
     const handleClearTask = () => {

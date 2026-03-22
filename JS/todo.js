@@ -1,4 +1,4 @@
-// Global Toast Helper (Safe to load in either file first)
+// Global Toast Helper
 window.showAppToast = window.showAppToast || function(msg) {
     let toast = document.getElementById('global-toast');
     if (!toast) {
@@ -16,9 +16,6 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function initTodoTab() {
-    // =========================================================
-    // 1. DOM ELEMENTS & INITIALIZATION
-    // =========================================================
     const input = document.getElementById('newTaskInput') || document.getElementById('todoInput');
     const addBtn = document.getElementById('addTaskBtn');
     const listEl = document.getElementById('todoList') || document.getElementById('mobileTodoList');
@@ -37,9 +34,6 @@ function initTodoTab() {
     let tasks = [];
     let selectedSubjectId = null;
 
-    // =========================================================
-    // 2. HELPERS & UTILITIES
-    // =========================================================
     const getDateKey = (date) => {
         if (!(date instanceof Date) || isNaN(date)) date = new Date();
         const y = date.getFullYear();
@@ -85,28 +79,6 @@ function initTodoTab() {
         } catch (e) { console.error('Storage error', e); }
     };
 
-    // --- CUSTOM TOAST: ULTIMATE COMPLETION CHECK ---
-    const checkUltimateCompletion = () => {
-        const today = new Date();
-        const viewingToday = currentDate.getDate() === today.getDate() && 
-                             currentDate.getMonth() === today.getMonth() && 
-                             currentDate.getFullYear() === today.getFullYear();
-                             
-        if (!viewingToday) return;
-
-        const allDone = tasks.length > 0 && tasks.every(t => t.status === 'done');
-        if (allDone) {
-            const plannerKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-            const completedTargets = JSON.parse(localStorage.getItem('plannerCompleted')) || [];
-            if (completedTargets.includes(plannerKey)) {
-                setTimeout(() => window.showAppToast("MUUWWAHAAAA!!!"), 300);
-            }
-        }
-    };
-
-    // =========================================================
-    // 3. SUBJECT TRAY LOGIC
-    // =========================================================
     const renderSubjectTray = () => {
         if (!tray) return;
         tray.innerHTML = '';
@@ -162,9 +134,6 @@ function initTodoTab() {
         }
     }, { passive: true });
 
-    // =========================================================
-    // 4. MATRIX UPDATERS
-    // =========================================================
     const updateMobileOrder = () => {
         if(!listEl) return;
         const newTasks = [];
@@ -182,7 +151,9 @@ function initTodoTab() {
                 }
             }
         });
-        tasks = newTasks; saveTasks(); renderTasks(); 
+        tasks = newTasks; 
+        saveTasks(); 
+        renderTasks(); 
     };
 
     const updatePCOrder = () => {
@@ -208,6 +179,10 @@ function initTodoTab() {
                         if (oldStatus !== newStatus) {
                             t.status = newStatus;
                             t.subjectId = original.subjectId; 
+                            // DIRECT CELEBRATION FOR DRAG AND DROP
+                            if (newStatus === 'done') {
+                                setTimeout(() => window.showAppToast("MUUWWAHAAAA!!!"), 100);
+                            }
                         } else {
                             t.status = newStatus;
                             t.subjectId = currentSubj;
@@ -222,14 +197,8 @@ function initTodoTab() {
         tasks = newTasks; 
         saveTasks(); 
         renderTasks();
-        
-        // FIX: Run the ultimate completion check after dropping a card!
-        checkUltimateCompletion();
     };
 
-    // =========================================================
-    // 5. THE RENDER ENGINE
-    // =========================================================
     const renderTasks = () => {
         if (listEl) listEl.innerHTML = '';
         if (pcTodo) pcTodo.innerHTML = '';
@@ -281,7 +250,18 @@ function initTodoTab() {
                             if (editInput) editInput.blur(); 
                             return;
                         }
-                        tasks = tasks.filter(t => t.id !== task.id); saveTasks(); renderTasks();
+                        tasks = tasks.filter(t => t.id !== task.id); 
+                        saveTasks(); 
+                        renderTasks();
+                    });
+
+                    // NATIVE CHECKBOX CLICK
+                    li.querySelector('.todo-checkbox').addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        task.status = task.status === 'todo' ? 'in-progress' : (task.status === 'in-progress' ? 'done' : 'todo');
+                        saveTasks(); 
+                        renderTasks();
+                        if (task.status === 'done') setTimeout(() => window.showAppToast("MUUWWAHAAAA!!!"), 100);
                     });
 
                     const textSpan = li.querySelector('.todo-text');
@@ -456,16 +436,8 @@ function initTodoTab() {
                         const deltaX = Math.abs(endTouch.clientX - startTouchX);
                         const deltaY = Math.abs(endTouch.clientY - startTouchY);
 
-                        if (touchDuration < 400 && deltaX < 15 && deltaY < 15) {
-                            if (e.target.closest('.todo-delete')) return; 
-
-                            if (e.target.closest('.todo-checkbox')) {
-                                e.preventDefault(); 
-                                task.status = task.status === 'todo' ? 'in-progress' : (task.status === 'in-progress' ? 'done' : 'todo');
-                                saveTasks(); renderTasks();
-                                if (task.status === 'done') checkUltimateCompletion();
-                                return;
-                            }
+                        if (touchDuration < 500 && deltaX < 15 && deltaY < 15) {
+                            if (e.target.closest('.todo-delete') || e.target.closest('.todo-checkbox')) return; 
 
                             e.preventDefault(); 
                             tapCount++;
@@ -474,7 +446,8 @@ function initTodoTab() {
                                     tapCount = 0;
                                     task.status = task.status === 'todo' ? 'in-progress' : (task.status === 'in-progress' ? 'done' : 'todo');
                                     saveTasks(); renderTasks();
-                                    if (task.status === 'done') checkUltimateCompletion();
+                                    // DIRECT CELEBRATION FOR BODY TAP
+                                    if (task.status === 'done') setTimeout(() => window.showAppToast("MUUWWAHAAAA!!!"), 100);
                                 }, 250); 
                             } else if (tapCount === 2) {
                                 clearTimeout(singleTapTimer);
@@ -490,6 +463,23 @@ function initTodoTab() {
                         if (isDragging) {
                             isDragging = false; li.classList.remove('dragging-placeholder');
                             if (currentClone) { currentClone.remove(); currentClone = null; }
+                        }
+                    });
+
+                    let pcClickTimer = null;
+                    li.addEventListener('click', (e) => {
+                        if (e.target.closest('.todo-delete') || e.target.closest('.todo-checkbox') || e.target.closest('.todo-edit-input')) return;
+                        
+                        if (e.detail === 1) { 
+                            pcClickTimer = setTimeout(() => {
+                                task.status = task.status === 'todo' ? 'in-progress' : (task.status === 'in-progress' ? 'done' : 'todo');
+                                saveTasks(); renderTasks();
+                                // DIRECT CELEBRATION FOR PC CLICK
+                                if (task.status === 'done') setTimeout(() => window.showAppToast("MUUWWAHAAAA!!!"), 100);
+                            }, 250); 
+                        } else if (e.detail === 2) { 
+                            clearTimeout(pcClickTimer); 
+                            openEditMode(); 
                         }
                     });
 
@@ -543,7 +533,9 @@ function initTodoTab() {
                             if (editInput) editInput.blur(); 
                             return;
                         }
-                        tasks = tasks.filter(t => t.id !== task.id); saveTasks(); renderTasks();
+                        tasks = tasks.filter(t => t.id !== task.id); 
+                        saveTasks(); 
+                        renderTasks();
                     });
 
                     const textSpan = pcCard.querySelector('.todo-text');
@@ -625,8 +617,9 @@ function initTodoTab() {
                         if (task.status === 'todo') task.status = 'in-progress';
                         else if (task.status === 'in-progress') task.status = 'done';
                         else task.status = 'todo';
-                        saveTasks(); renderTasks(); 
-                        if (task.status === 'done') checkUltimateCompletion();
+                        saveTasks(); 
+                        renderTasks(); 
+                        if (task.status === 'done') setTimeout(() => window.showAppToast("MUUWWAHAAAA!!!"), 100);
                     });
 
                     pcCard.addEventListener('dragstart', (e) => { 
@@ -647,9 +640,6 @@ function initTodoTab() {
         });
     };
 
-    // =========================================================
-    // 6. KANBAN NATIVE DRAG CONTROLLER
-    // =========================================================
     const setupKanbanDropzones = () => {
         const columns = [pcTodo, pcInProgress, pcDone];
         
@@ -698,9 +688,6 @@ function initTodoTab() {
         }, { offset: Number.NEGATIVE_INFINITY }).element;
     };
 
-    // =========================================================
-    // 8. POWER USER EXPORT (Hidden Header Click with Toast)
-    // =========================================================
     const todoTitle = document.querySelector('#tab-todo .tab-title');
     if (todoTitle) {
         todoTitle.style.cursor = 'pointer';
@@ -773,15 +760,14 @@ function initTodoTab() {
         });
     }
 
-    // =========================================================
-    // 7. BOOTUP & APP EVENTS
-    // =========================================================
     const addTask = () => {
         const text = input.value.trim();
         if (text) {
             const newTask = { id: Date.now(), text: text, status: 'todo', subjectId: selectedSubjectId };
             tasks.push(newTask);
-            input.value = ''; saveTasks(); renderTasks();
+            input.value = ''; 
+            saveTasks(); 
+            renderTasks();
             
             if (listEl) {
                 setTimeout(() => {
