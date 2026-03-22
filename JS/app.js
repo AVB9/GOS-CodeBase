@@ -18,7 +18,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initNavigation();
     initSmartUI();
     initDateGesturesAndModals();
-    initGlobalModals(); // ARCHITECTURE FIX: Consolidated boot sequence
+    initGlobalModals(); 
 });
 
 // =================================================================
@@ -41,7 +41,6 @@ function initPreloader() {
     let greetingText = hour < 12 ? 'Good Morning' : (hour < 18 ? 'Good Afternoon' : 'Good Evening');
     const svgIcon = hour < 18 ? PRELOADER_ASSETS.daySvg : PRELOADER_ASSETS.nightSvg;
 
-    // DEFENSIVE CODING: Prevent fatal crash in strict private browsing
     let userName = 'jiruuuu... :)';
     try {
         userName = localStorage.getItem('userDisplayName') || userName;
@@ -64,14 +63,18 @@ function initPreloader() {
 }
 
 // =================================================================
-// 3. NAVIGATION LOGIC
+// 3. NAVIGATION LOGIC (With Swipe Gestures)
 // =================================================================
 function initNavigation() {
+    const bottomNav = document.getElementById('bottomNav');
     const navButtons = document.querySelectorAll('.bottom-pill-btn');
     const tabs = document.querySelectorAll('.app-tab');
     const floatingTodoInput = document.getElementById('floatingTodoInput');
 
     if (!navButtons.length || !tabs.length) return;
+
+    // Ordered array of tabs for left/right swipe math
+    const tabOrder = ['tab-journal', 'tab-planner', 'tab-home', 'tab-todo', 'tab-settings'];
 
     navButtons.forEach(button => {
         button.addEventListener('click', (event) => {
@@ -92,6 +95,42 @@ function initNavigation() {
             AppEvents.emit('TAB_CHANGED', { tab: targetId });
         });
     });
+
+    // --- FEATURE 5: NAV PILL SWIPING ---
+    if (bottomNav) {
+        let navStartX = 0;
+        bottomNav.addEventListener('touchstart', (e) => { 
+            navStartX = e.touches[0].clientX; 
+        }, { passive: true });
+
+        bottomNav.addEventListener('touchend', (e) => {
+            const navEndX = e.changedTouches[0].clientX;
+            const diffX = navStartX - navEndX;
+            
+            // If horizontal swipe distance is greater than 40px
+            if (Math.abs(diffX) > 40) {
+                const activeBtn = document.querySelector('.bottom-pill-btn.active');
+                if (!activeBtn) return;
+                
+                const currentTarget = activeBtn.getAttribute('data-target');
+                let currentIndex = tabOrder.indexOf(currentTarget);
+                
+                if (diffX > 0) {
+                    // Swiped Left -> Go to Next Tab
+                    currentIndex = (currentIndex + 1) % tabOrder.length;
+                } else {
+                    // Swiped Right -> Go to Previous Tab
+                    currentIndex = (currentIndex - 1 + tabOrder.length) % tabOrder.length;
+                }
+                
+                const nextBtn = document.querySelector(`.bottom-pill-btn[data-target="${tabOrder[currentIndex]}"]`);
+                if (nextBtn) {
+                    if (navigator.vibrate) navigator.vibrate(40); // Subtle haptic bump
+                    nextBtn.click();
+                }
+            }
+        }, { passive: true });
+    }
 }
 
 // =================================================================
@@ -185,7 +224,6 @@ function initDateGesturesAndModals() {
     const globalSwipeToggle = document.getElementById('globalSwipeToggle');
     let isGlobalSwipeEnabled = true; 
     
-    // DEFENSIVE CODING: Fallback if localStorage is locked down
     try {
         const stored = localStorage.getItem('globalSwipeEnabled');
         if (stored !== null) isGlobalSwipeEnabled = JSON.parse(stored);
@@ -259,7 +297,6 @@ function initGlobalModals() {
     document.querySelectorAll('.modal-overlay').forEach(overlay => {
         overlay.addEventListener('click', (e) => {
             if (e.target === overlay) {
-                // Extended query selector to catch any variation of a close button
                 const closeBtn = overlay.querySelector('.btn-secondary, .btn-ghost, .close-x');
                 if (closeBtn) closeBtn.click();
                 else overlay.style.display = 'none';
@@ -270,10 +307,8 @@ function initGlobalModals() {
 
 // =================================================================
 // PWA HARDWARE BACK-BUTTON INTERCEPTOR
-// Prevents Android/iOS back swipe from killing the app when a modal is open
 // =================================================================
 window.addEventListener('load', () => {
-    // 1. Push a "dummy" state into the browser history immediately
     history.pushState({ page: 'pwa-root' }, '');
 });
 
@@ -282,7 +317,6 @@ window.addEventListener('popstate', (e) => {
     const sheet = document.getElementById('agendaBottomSheet');
     let closedSomething = false;
 
-    // 2. Check if any standard modals are open, and force them closed
     overlays.forEach(o => {
         if (window.getComputedStyle(o).display !== 'none') {
             o.style.display = 'none';
@@ -290,23 +324,17 @@ window.addEventListener('popstate', (e) => {
         }
     });
 
-    // 3. Check if the bottom sheet is open, and force it closed
     if (sheet && sheet.classList.contains('active')) {
         sheet.classList.remove('active');
-        sheet.style.transform = ''; // Reset drag physics
+        sheet.style.transform = ''; 
         document.getElementById('dailySlider')?.classList.remove('hidden');
         if (window.AppEvents) AppEvents.emit('TAB_CHANGED', { tab: 'show-nav' });
         closedSomething = true;
     }
 
-    // 4. The Magic Logic
     if (closedSomething) {
-        // If we intercepted the back button to close a modal, the dummy state was just consumed.
-        // We MUST push a new dummy state immediately so the NEXT back press doesn't kill the app!
         history.pushState({ page: 'pwa-root' }, '');
     } else {
-        // If NO modals were open, the user genuinely wants to leave the app.
-        // We just popped the dummy state, so firing history.back() will cleanly exit the app.
         history.back();
     }
 });

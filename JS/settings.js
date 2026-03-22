@@ -179,13 +179,56 @@ function setupSubjectManager() {
         getSubjects().forEach(sub => {
             const div = document.createElement('div');
             div.className = 'subject-manager-item';
+            // Make the cursor a pointer so the user knows they can interact with it
+            div.style.cursor = 'pointer'; 
             div.innerHTML = `
-                <div style="display:flex; align-items:center; gap:10px;">
+                <div style="display:flex; align-items:center; gap:10px; flex: 1;">
                     <div style="width:15px; height:15px; border-radius:50%; background:${sub.color};"></div>
-                    <span>${sub.name}</span>
+                    <span style="user-select: none;">${sub.name}</span>
                 </div>
                 ${sub.id === 'off' ? '' : `<button class="subject-delete-btn" data-id="${sub.id}">×</button>`}
             `;
+            
+            // --- FEATURE 6: DOUBLE-TAP TO EDIT SUBJECTS ---
+            if (sub.id !== 'off') {
+                let tapCount = 0;
+                let tapTimer;
+                
+                const handleEdit = () => {
+                    // Populate inputs with current data
+                    nameInput.value = sub.name;
+                    colorInput.value = sub.color;
+                    if (colorWrapper) colorWrapper.style.backgroundColor = sub.color;
+                    
+                    // Remove the old subject so it can be saved as new
+                    const newSubs = getSubjects().filter(s => s.id !== sub.id);
+                    saveSubjects(newSubs);
+                    renderSubjects();
+                    
+                    nameInput.focus();
+                    addBtn.textContent = 'Save'; // Change text to Save for UX clarity
+                };
+
+                // Desktop double click
+                div.addEventListener('dblclick', (e) => {
+                    if (e.target.classList.contains('subject-delete-btn')) return;
+                    handleEdit();
+                });
+
+                // Mobile double tap
+                div.addEventListener('touchend', (e) => {
+                    if (e.target.classList.contains('subject-delete-btn')) return;
+                    tapCount++;
+                    if (tapCount === 1) {
+                        tapTimer = setTimeout(() => tapCount = 0, 300);
+                    } else if (tapCount === 2) {
+                        clearTimeout(tapTimer);
+                        tapCount = 0;
+                        handleEdit();
+                    }
+                });
+            }
+
             subList.appendChild(div);
         });
     };
@@ -225,6 +268,7 @@ function setupSubjectManager() {
             nameInput.value = '';
             colorInput.value = '#ff3b3b'; 
             if (colorWrapper) colorWrapper.style.backgroundColor = '#ff3b3b'; 
+            addBtn.textContent = 'Add'; // Reset button text
             
             renderSubjects();
             subList.scrollTop = subList.scrollHeight;
@@ -319,7 +363,7 @@ function setupAesthetics() {
 }
 
 // =================================================================
-// UPGRADED AUTH UI (CUSTOM INLINE ALERTS & GOOGLE AUTH)
+// UPGRADED AUTH UI
 // =================================================================
 function initAuthUI() {
     const loggedOutSettingsView = document.getElementById('loggedOutSettingsView');
@@ -405,15 +449,11 @@ function initAuthUI() {
 
     if (toggleAuthModeBtn) toggleAuthModeBtn.addEventListener('click', toggleModalMode);
 
-    // ==========================================
-    // MAIN AUTH MODAL LOGIC
-    // ==========================================
     openAuthModalBtn.addEventListener('click', () => {
         isLoginMode = true; 
         toggleModalMode(); toggleModalMode(); 
         clearFeedback(authFeedback);
         
-        // BUILD THE INPUTS
         const container = document.getElementById('mainAuthInputContainer');
         if (container) {
             container.innerHTML = `
@@ -450,7 +490,6 @@ function initAuthUI() {
     });
     
     closeAuthModalBtn.addEventListener('click', () => {
-        // DESTROY THE INPUTS
         const container = document.getElementById('mainAuthInputContainer');
         if (container) container.innerHTML = '';
         authModalOverlay.style.display = 'none';
@@ -524,14 +563,10 @@ function initAuthUI() {
         });
     }
 
-    // ==========================================
-    // UPDATE PASSWORD MODAL LOGIC
-    // ==========================================
     if (openUpdatePasswordBtn) {
         openUpdatePasswordBtn.addEventListener('click', () => {
             clearFeedback(updateAuthFeedback);
             
-            // BUILD THE NEW PASSWORD INPUT
             const container = document.getElementById('updatePasswordContainer');
             if (container) {
                 container.innerHTML = `
@@ -568,7 +603,6 @@ function initAuthUI() {
     
     if (closeUpdatePasswordBtn) {
         closeUpdatePasswordBtn.addEventListener('click', () => {
-            // DESTROY THE INPUT
             const container = document.getElementById('updatePasswordContainer');
             if (container) container.innerHTML = '';
             updatePasswordModalOverlay.style.display = 'none';

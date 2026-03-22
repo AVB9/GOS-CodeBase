@@ -1,3 +1,16 @@
+// Global Toast Helper (Safe to load in either file first)
+window.showAppToast = window.showAppToast || function(msg) {
+    let toast = document.getElementById('global-toast');
+    if (!toast) {
+        toast = document.createElement('div');
+        toast.id = 'global-toast';
+        document.body.appendChild(toast);
+    }
+    toast.textContent = msg;
+    toast.classList.add('show');
+    setTimeout(() => toast.classList.remove('show'), 2500);
+};
+
 document.addEventListener('DOMContentLoaded', () => {
     initPlannerTab();
 });
@@ -17,7 +30,7 @@ function initPlannerTab() {
     const pillsContainer = document.getElementById('subjectPillsContainer');
     const topicInput = document.getElementById('targetTopicInput');
 
-    // Desktop (NEET OS) DOM
+    // Desktop DOM
     const desktopGrid = document.getElementById('desktopCalendarGrid');
     const desktopEditModal = document.getElementById('desktopEditModalOverlay');
     const desktopModalDateTitle = document.getElementById('desktopModalDateTitle');
@@ -75,7 +88,7 @@ function initPlannerTab() {
     };
 
     // ==========================================
-    // THE CORE ENGINE (Single Source of Truth)
+    // THE CORE ENGINE
     // ==========================================
     const generateMonthData = () => {
         const year = currentViewDate.getFullYear();
@@ -94,7 +107,6 @@ function initPlannerTab() {
 
         const monthData = { year, month, startDay, daysInMonth, todayStr, todayObjReal, days: [] };
 
-        // One loop to rule them all. No ghosting, no timezone shifts.
         for (let d = 1; d <= daysInMonth; d++) {
             const dateObj = new Date(year, month, d);
             const dateKey = getDateKey(dateObj);
@@ -133,7 +145,6 @@ function initPlannerTab() {
         sliderEl.innerHTML = '';
         monthDisplay.textContent = currentViewDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
         
-        // Blank leading days
         for(let i = 1; i < data.startDay; i++) {
             const empty = document.createElement('div');
             empty.className = 'cal-day empty';
@@ -141,7 +152,6 @@ function initPlannerTab() {
         }
 
         data.days.forEach(day => {
-            // Mini Grid Cell (Now includes the overdue class for the tint)
             const cell = document.createElement('div');
             cell.className = `cal-day ${day.isToday ? 'today' : ''} ${day.dateKey === activeSelectedDateStr ? 'selected' : ''} ${day.isCompleted ? 'completed' : ''} ${day.isOverdue ? 'overdue' : ''}`;
             if (day.hasTask) cell.classList.add(day.isFuture ? 'future-task' : 'has-task');
@@ -155,7 +165,6 @@ function initPlannerTab() {
             });
             gridEl.appendChild(cell);
 
-            // Slider Card (Now includes the today class for the glow)
             const card = document.createElement('div');
             card.className = `daily-card ${day.isCompleted ? 'completed' : ''} ${day.isOverdue ? 'overdue' : ''} ${day.isToday ? 'today' : ''}`;
             card.id = `card-${day.dateKey}`;
@@ -178,11 +187,86 @@ function initPlannerTab() {
                 <div class="daily-card-content">${cardContentHTML}</div>
             `;
 
-            card.addEventListener('click', () => toggleCompletion(day.dateKey, day.dateObj, data.todayObjReal));
+            let startX = 0, startY = 0, startTime = 0;
+            let holdTimer = null;
+            let isLongPress = false;
+
+            card.addEventListener('touchstart', (e) => {
+                startX = e.touches[0].clientX;
+                startY = e.touches[0].clientY;
+                startTime = Date.now();
+                isLongPress = false;
+
+                clearTimeout(holdTimer);
+
+                if (day.hasTask) {
+                    holdTimer = setTimeout(() => {
+                        isLongPress = true;
+                        if (navigator.vibrate) navigator.vibrate(50); 
+                        
+                        document.querySelectorAll('#miniCalGrid .cal-day').forEach(el => el.classList.remove('selected'));
+                        const targetCell = Array.from(document.querySelectorAll('#miniCalGrid .cal-day')).find(el => el.textContent == day.dayNum && !el.classList.contains('empty'));
+                        if(targetCell) targetCell.classList.add('selected');
+
+                        openBottomSheet(day.dateKey, day.dateObj);
+                    }, 400);
+                }
+            }, { passive: true });
+
+            card.addEventListener('touchmove', (e) => {
+                const currentX = e.touches[0].clientX;
+                const currentY = e.touches[0].clientY;
+                if (Math.abs(currentX - startX) > 10 || Math.abs(currentY - startY) > 10) {
+                    clearTimeout(holdTimer);
+                }
+            }, { passive: true });
+
+            card.addEventListener('touchend', (e) => {
+                clearTimeout(holdTimer);
+                if (isLongPress) return; 
+
+                const endX = e.changedTouches[0].clientX;
+                const endY = e.changedTouches[0].clientY;
+                const diffX = endX - startX;
+                const diffY = endY - startY; 
+                const duration = Date.now() - startTime;
+
+                const updateFocusRing = () => {
+                    document.querySelectorAll('#miniCalGrid .cal-day').forEach(el => el.classList.remove('selected'));
+                    const targetCell = Array.from(document.querySelectorAll('#miniCalGrid .cal-day')).find(el => el.textContent == day.dayNum && !el.classList.contains('empty'));
+                    if(targetCell) targetCell.classList.add('selected');
+                };
+
+                if (duration < 400 && diffY < -40 && Math.abs(diffY) > Math.abs(diffX)) {
+                    updateFocusRing();
+                    openBottomSheet(day.dateKey, day.dateObj);
+                    return;
+                }
+
+                if (duration < 400 && Math.abs(diffX) < 15 && Math.abs(diffY) < 15) {
+                    updateFocusRing();
+                    if (day.hasTask) {
+                        toggleCompletion(day.dateKey, day.dateObj, data.todayObjReal);
+                    } else {
+                        openBottomSheet(day.dateKey, day.dateObj);
+                    }
+                }
+            });
+
+            card.addEventListener('click', (e) => {
+                if (e.pointerType === "mouse") {
+                    document.querySelectorAll('#miniCalGrid .cal-day').forEach(el => el.classList.remove('selected'));
+                    const targetCell = Array.from(document.querySelectorAll('#miniCalGrid .cal-day')).find(el => el.textContent == day.dayNum && !el.classList.contains('empty'));
+                    if(targetCell) targetCell.classList.add('selected');
+
+                     if (day.hasTask) toggleCompletion(day.dateKey, day.dateObj, data.todayObjReal);
+                     else openBottomSheet(day.dateKey, day.dateObj);
+                }
+            });
+
             sliderEl.appendChild(card);
         });
 
-        // Fixed Today Button Logic
         if (todayObserver) todayObserver.disconnect();
         const isCurrentMonth = (data.year === data.todayObjReal.getFullYear() && data.month === data.todayObjReal.getMonth());
 
@@ -252,7 +336,6 @@ function initPlannerTab() {
             desktopGrid.appendChild(cell);
         });
 
-        // Update Stats
         desktopProgressText.textContent = `${completedTasks} / ${totalTasks} Tasks`;
         desktopProgressBar.style.width = `${totalTasks === 0 ? 0 : (completedTasks / totalTasks) * 100}%`;
     };
@@ -263,14 +346,37 @@ function initPlannerTab() {
     const toggleCompletion = (dateKey, dateObj, todayObjReal) => {
         const targets = getTargets();
         if (!targets[dateKey]) return; 
-        if (dateObj > todayObjReal) { alert("Cannot mark future days as complete."); return; }
+        
+        // --- CUSTOM TOAST: NO CHEATING ALLOWED ---
+        if (dateObj > todayObjReal) { 
+            window.showAppToast("gmasti tho dekho koi inki!!"); 
+            return; 
+        }
 
         let compArr = getCompleted();
-        if (compArr.includes(dateKey)) compArr = compArr.filter(id => id !== dateKey);
-        else { compArr.push(dateKey); if (navigator.vibrate) navigator.vibrate(50); }
+        let wasJustCompleted = false;
+
+        if (compArr.includes(dateKey)) {
+            compArr = compArr.filter(id => id !== dateKey);
+        } else { 
+            compArr.push(dateKey); 
+            wasJustCompleted = true;
+            if (navigator.vibrate) navigator.vibrate(50); 
+        }
         
         saveCompleted(compArr);
         forcePlannerRefresh();
+
+        // --- CUSTOM TOAST: ULTIMATE COMPLETION CHECK ---
+        if (wasJustCompleted && dateKey === getDateKey(todayObjReal)) {
+            const todayTodoKey = `todo_${dateKey}`;
+            const todayTodos = JSON.parse(localStorage.getItem(todayTodoKey)) || [];
+            const allTodosDone = todayTodos.length > 0 && todayTodos.every(t => t.status === 'done');
+            
+            if (allTodosDone) {
+                setTimeout(() => window.showAppToast("MUUWWAHAAAA!!!"), 300);
+            }
+        }
     };
 
     const handleClearTask = () => {
@@ -325,7 +431,6 @@ function initPlannerTab() {
     const closeBottomSheet = () => {
         sheet.classList.remove('active');
         sheet.style.transform = ''; 
-        document.querySelectorAll('#miniCalGrid .cal-day').forEach(el => el.classList.remove('selected'));
         AppEvents.emit('TAB_CHANGED', { tab: 'show-nav' }); 
         sliderEl.classList.remove('hidden');
     };
@@ -340,7 +445,6 @@ function initPlannerTab() {
         desktopEditModal.style.display = 'flex';
     };
 
-    // Save/Clear Listeners
     document.getElementById('saveTargetBtn').addEventListener('click', () => {
         const textInput = topicInput.value.trim();
         if (!textInput) { alert("Please enter a target to save."); return; }
@@ -366,7 +470,7 @@ function initPlannerTab() {
     document.getElementById('desktopClearTaskBtn').addEventListener('click', () => { handleClearTask(); desktopEditModal.style.display = 'none'; });
 
     // ==========================================
-    // UI EVENT CONTROLS
+    // UI EVENT CONTROLS & GESTURES
     // ==========================================
     let startY = 0, currentY = 0;
     dragZone.addEventListener('touchstart', (e) => startY = e.touches[0].clientY, { passive: true });
@@ -393,14 +497,98 @@ function initPlannerTab() {
         forcePlannerRefresh();
     });
 
+    // MINI CALENDAR SWIPE
+    let mcStartX = 0, mcStartY = 0;
+    calWrapper.addEventListener('touchstart', (e) => {
+        mcStartX = e.touches[0].clientX;
+        mcStartY = e.touches[0].clientY;
+    }, { passive: true });
+
+    calWrapper.addEventListener('touchend', (e) => {
+        const diffX = mcStartX - e.changedTouches[0].clientX;
+        const diffY = Math.abs(mcStartY - e.changedTouches[0].clientY);
+
+        if (Math.abs(diffX) > 40 && Math.abs(diffX) > diffY) {
+            if (diffX > 0) currentViewDate.setMonth(currentViewDate.getMonth() + 1); 
+            else currentViewDate.setMonth(currentViewDate.getMonth() - 1); 
+            forcePlannerRefresh();
+        }
+    }, { passive: true });
+
+    // --- FEATURE: MONTH PILL SWIPING ---
+    const monthNavWrapper = monthDisplay.closest('.date-navigator');
+    let isMonthSwiping = false;
+    let mdStartX = 0;
+
+    if (monthNavWrapper) {
+        monthNavWrapper.addEventListener('touchstart', (e) => {
+            mdStartX = e.touches[0].clientX;
+            isMonthSwiping = false;
+        }, { passive: true });
+
+        monthNavWrapper.addEventListener('touchmove', (e) => {
+            if (Math.abs(e.touches[0].clientX - mdStartX) > 10) {
+                isMonthSwiping = true;
+            }
+        }, { passive: true });
+
+        monthNavWrapper.addEventListener('touchend', (e) => {
+            if (isMonthSwiping) {
+                const diffX = mdStartX - e.changedTouches[0].clientX;
+                if (diffX > 40) currentViewDate.setMonth(currentViewDate.getMonth() + 1);
+                else if (diffX < -40) currentViewDate.setMonth(currentViewDate.getMonth() - 1);
+                forcePlannerRefresh();
+                
+                // Slight delay before unlocking the click so the modal doesn't flash open
+                setTimeout(() => isMonthSwiping = false, 50);
+            }
+        });
+    }
+
+    monthDisplay.style.cursor = 'pointer';
+    monthDisplay.addEventListener('click', (e) => {
+        if (isMonthSwiping) {
+            e.preventDefault();
+            return;
+        }
+
+        const monthModal = document.getElementById('monthPickerModalOverlay');
+        const grid = document.getElementById('monthGrid');
+        if (!monthModal || !grid) return;
+
+        grid.innerHTML = '';
+        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        const currentM = currentViewDate.getMonth();
+        const realCurrentMonth = new Date().getMonth();
+
+        months.forEach((m, i) => {
+            const btn = document.createElement('button');
+            btn.className = `month-grid-btn ${i === currentM ? 'active' : ''} ${i === realCurrentMonth ? 'current-month' : ''}`;
+            btn.textContent = m;
+            btn.addEventListener('click', () => {
+                currentViewDate.setMonth(i);
+                forcePlannerRefresh();
+                monthModal.style.display = 'none';
+            });
+            grid.appendChild(btn);
+        });
+
+        monthModal.style.display = 'flex';
+    });
+
     returnTodayBtn.addEventListener('click', () => {
-        currentViewDate = new Date(); // Resets the master clock to right now
+        currentViewDate = new Date(); 
         currentViewDate.setDate(1);
         forcePlannerRefresh();
         
-        // Let the DOM render, then smoothly scroll
+        const todayStr = getDateKey(new Date());
+        
+        activeSelectedDateStr = todayStr; 
+        document.querySelectorAll('#miniCalGrid .cal-day').forEach(el => el.classList.remove('selected'));
+        const todayCell = Array.from(document.querySelectorAll('#miniCalGrid .cal-day')).find(el => el.textContent == new Date().getDate() && el.classList.contains('today'));
+        if (todayCell) todayCell.classList.add('selected');
+
         setTimeout(() => {
-            const todayStr = getDateKey(new Date());
             document.getElementById(`card-${todayStr}`)?.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
         }, 50);
         
@@ -436,15 +624,24 @@ function initPlannerTab() {
 
     if (window.AppEvents) {
         AppEvents.on('TAB_CHANGED', ({ tab }) => {
-            if (tab === 'tab-planner' && isFirstTimeOpeningPlanner) {
-                isFirstTimeOpeningPlanner = false;
-                setTimeout(() => document.getElementById(`card-${getDateKey(new Date())}`)?.scrollIntoView({ behavior: 'auto', block: 'nearest', inline: 'center' }), 10);
+            if (tab === 'tab-planner') {
+                if (returnTodayBtn) {
+                    returnTodayBtn.style.cssText = 'opacity: 0 !important; visibility: hidden !important; transition: none !important;';
+                }
+                
+                if (isFirstTimeOpeningPlanner) {
+                    isFirstTimeOpeningPlanner = false;
+                    setTimeout(() => document.getElementById(`card-${getDateKey(new Date())}`)?.scrollIntoView({ behavior: 'auto', block: 'nearest', inline: 'center' }), 10);
+                }
+
+                setTimeout(() => {
+                    if (returnTodayBtn) returnTodayBtn.style.cssText = '';
+                }, 300);
             }
         });
         AppEvents.on('PLANNER_UPDATED', () => updateHomeWidget());
     }
 
-    // Initialize the Engine
     const initialData = generateMonthData();
     renderMobile(initialData);
     renderDesktop(initialData);

@@ -1,3 +1,16 @@
+// Global Toast Helper (Safe to load in either file first)
+window.showAppToast = window.showAppToast || function(msg) {
+    let toast = document.getElementById('global-toast');
+    if (!toast) {
+        toast = document.createElement('div');
+        toast.id = 'global-toast';
+        document.body.appendChild(toast);
+    }
+    toast.textContent = msg;
+    toast.classList.add('show');
+    setTimeout(() => toast.classList.remove('show'), 2500);
+};
+
 document.addEventListener('DOMContentLoaded', () => {
     initTodoTab();
 });
@@ -45,15 +58,6 @@ function initTodoTab() {
         return `rgba(${r}, ${g}, ${b}, ${alpha})`;
     };
 
-    const getContrastColor = (hex) => {
-        if (!hex) return '#ffffff';
-        hex = hex.replace('#', '');
-        if (hex.length === 3) hex = hex.split('').map(x => x + x).join('');
-        const r = parseInt(hex.substring(0,2), 16), g = parseInt(hex.substring(2,4), 16), b = parseInt(hex.substring(4,6), 16);
-        const yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
-        return (yiq >= 128) ? '#000000' : '#ffffff';
-    };
-
     const updateDateDisplay = () => {
         const today = new Date(); today.setHours(0, 0, 0, 0);
         const compareDate = new Date(currentDate); compareDate.setHours(0, 0, 0, 0);
@@ -79,6 +83,25 @@ function initTodoTab() {
             localStorage.setItem(getDateKey(currentDate), JSON.stringify(tasks));
             if (window.AppEvents) window.AppEvents.emit('TODO_UPDATED');
         } catch (e) { console.error('Storage error', e); }
+    };
+
+    // --- CUSTOM TOAST: ULTIMATE COMPLETION CHECK ---
+    const checkUltimateCompletion = () => {
+        const today = new Date();
+        const viewingToday = currentDate.getDate() === today.getDate() && 
+                             currentDate.getMonth() === today.getMonth() && 
+                             currentDate.getFullYear() === today.getFullYear();
+                             
+        if (!viewingToday) return;
+
+        const allDone = tasks.length > 0 && tasks.every(t => t.status === 'done');
+        if (allDone) {
+            const plannerKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+            const completedTargets = JSON.parse(localStorage.getItem('plannerCompleted')) || [];
+            if (completedTargets.includes(plannerKey)) {
+                setTimeout(() => window.showAppToast("MUUWWAHAAAA!!!"), 300);
+            }
+        }
     };
 
     // =========================================================
@@ -214,7 +237,6 @@ function initTodoTab() {
         }
 
         const subjectsList = [{ id: null, name: 'General', color: '#888888' }, ...getSubjects().filter(s => s.id !== 'off')];
-        const activeSubIds = new Set(tasks.map(t => t.subjectId || null));
 
         // ---------------------------------------------------------
         // A. MOBILE LIST RENDERING
@@ -247,7 +269,6 @@ function initTodoTab() {
                         <button class="todo-delete">×</button>
                     `;
 
-                    // --- MOBILE DELETE HIJACK ---
                     li.querySelector('.todo-delete').addEventListener('click', (e) => {
                         e.stopPropagation();
                         if (li.classList.contains('is-editing')) {
@@ -258,9 +279,6 @@ function initTodoTab() {
                         tasks = tasks.filter(t => t.id !== task.id); saveTasks(); renderTasks();
                     });
 
-                    // ------------------------------------------
-                    // MOBILE EDIT ENGINE
-                    // ------------------------------------------
                     const textSpan = li.querySelector('.todo-text');
                     const openEditMode = () => {
                         const taskNode = li;
@@ -334,9 +352,6 @@ function initTodoTab() {
                         editInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') editInput.blur(); });
                     };
 
-                    // ------------------------------------------
-                    // RESTORED: FLAWLESS MOBILE TOUCH ROUTER
-                    // ------------------------------------------
                     let holdTimer = null; 
                     let singleTapTimer = null;
                     let tapCount = 0;
@@ -373,7 +388,6 @@ function initTodoTab() {
 
                         cancelAnimationFrame(scrollInterval);
                         
-                        // Ignore drag/tap math if touching a specific button directly
                         if (e.target.closest('.todo-delete') || e.target.closest('.todo-checkbox')) return;
                         
                         holdTimer = setTimeout(() => {
@@ -382,7 +396,7 @@ function initTodoTab() {
                             clearTimeout(singleTapTimer);
                             
                             if (navigator.vibrate) navigator.vibrate(50); 
-                            startRect = li.getBoundingClientRect(); 
+                            const startRect = li.getBoundingClientRect(); 
                             currentClone = li.cloneNode(true); currentClone.classList.add('flying-glass-task');
                             currentClone.style.width = `${startRect.width}px`; currentClone.style.height = `${startRect.height}px`;
                             currentClone.style.left = `${startRect.left}px`; currentClone.style.top = `${startRect.top}px`;
@@ -423,7 +437,6 @@ function initTodoTab() {
                         if (li.querySelector('.todo-edit-input')) return;
                         clearTimeout(holdTimer); 
 
-                        // Scenario A: End of a drag
                         if (isDragging) {
                             cancelAnimationFrame(scrollInterval);
                             isDragging = false; 
@@ -433,32 +446,30 @@ function initTodoTab() {
                             return; 
                         }
 
-                        // Scenario B: Standard tap
                         const touchDuration = Date.now() - touchStartTime;
                         const endTouch = e.changedTouches[0];
                         const deltaX = Math.abs(endTouch.clientX - startTouchX);
                         const deltaY = Math.abs(endTouch.clientY - startTouchY);
 
                         if (touchDuration < 400 && deltaX < 15 && deltaY < 15) {
-                            // If hitting Delete, let the native click listener handle it
                             if (e.target.closest('.todo-delete')) return; 
 
-                            // 1. Instant Checkbox Tap
                             if (e.target.closest('.todo-checkbox')) {
-                                e.preventDefault(); // Stop ghost click
+                                e.preventDefault(); 
                                 task.status = task.status === 'todo' ? 'in-progress' : (task.status === 'in-progress' ? 'done' : 'todo');
                                 saveTasks(); renderTasks();
+                                if (task.status === 'done') checkUltimateCompletion();
                                 return;
                             }
 
-                            // 2. Body Tap (Single vs Double)
-                            e.preventDefault(); // Stop ghost click
+                            e.preventDefault(); 
                             tapCount++;
                             if (tapCount === 1) {
                                 singleTapTimer = setTimeout(() => {
                                     tapCount = 0;
                                     task.status = task.status === 'todo' ? 'in-progress' : (task.status === 'in-progress' ? 'done' : 'todo');
                                     saveTasks(); renderTasks();
+                                    if (task.status === 'done') checkUltimateCompletion();
                                 }, 250); 
                             } else if (tapCount === 2) {
                                 clearTimeout(singleTapTimer);
@@ -520,7 +531,6 @@ function initTodoTab() {
                         <button class="todo-delete">×</button>
                     `;
 
-                    // --- PC DELETE HIJACK ---
                     pcCard.querySelector('.todo-delete').addEventListener('click', (e) => {
                         e.stopPropagation();
                         if (pcCard.classList.contains('is-editing')) {
@@ -531,9 +541,6 @@ function initTodoTab() {
                         tasks = tasks.filter(t => t.id !== task.id); saveTasks(); renderTasks();
                     });
 
-                    // ------------------------------------------
-                    // PC EDIT ENGINE
-                    // ------------------------------------------
                     const textSpan = pcCard.querySelector('.todo-text');
                     textSpan.addEventListener('dblclick', () => {
                         const taskNode = pcCard;
@@ -614,6 +621,7 @@ function initTodoTab() {
                         else if (task.status === 'in-progress') task.status = 'done';
                         else task.status = 'todo';
                         saveTasks(); renderTasks(); 
+                        if (task.status === 'done') checkUltimateCompletion();
                     });
 
                     pcCard.addEventListener('dragstart', (e) => { 
@@ -690,13 +698,6 @@ function initTodoTab() {
     // =========================================================
     const todoTitle = document.querySelector('#tab-todo .tab-title');
     if (todoTitle) {
-        let toast = document.getElementById('global-toast');
-        if (!toast) {
-            toast = document.createElement('div');
-            toast.id = 'global-toast';
-            document.body.appendChild(toast);
-        }
-
         todoTitle.style.cursor = 'pointer';
         todoTitle.style.transition = 'transform 0.1s ease';
         todoTitle.addEventListener('mousedown', () => todoTitle.style.transform = 'scale(0.92)');
@@ -763,13 +764,7 @@ function initTodoTab() {
             };
 
             await copyToClipboard(exportText.trim());
-
-            toast.textContent = 'Tasks Copied!!';
-            toast.classList.add('show');
-            
-            setTimeout(() => {
-                toast.classList.remove('show');
-            }, 2500);
+            window.showAppToast('Tasks Copied!!');
         });
     }
 
