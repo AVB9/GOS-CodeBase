@@ -288,7 +288,7 @@ function initTodoTab() {
                         if (task.status !== 'done') {
                             tomoBtn = document.createElement('button');
                             tomoBtn.className = 'shift-tomorrow-popup'; 
-                            tomoBtn.innerHTML = 'knew it gumimornin;)';
+                            tomoBtn.innerHTML = 'Tomorrow ➔';
                             
                             const shiftAction = (e) => {
                                 e.preventDefault(); 
@@ -562,7 +562,7 @@ function initTodoTab() {
                         if (task.status !== 'done') {
                             tomoBtn = document.createElement('button');
                             tomoBtn.className = 'shift-tomorrow-popup'; 
-                            tomoBtn.innerHTML = 'knew it gumimornin;)';
+                            tomoBtn.innerHTML = 'Tomorrow ➔';
                             
                             const shiftAction = (e) => {
                                 e.preventDefault(); 
@@ -684,6 +684,94 @@ function initTodoTab() {
             else return closest;
         }, { offset: Number.NEGATIVE_INFINITY }).element;
     };
+
+    // =========================================================
+    // 8. POWER USER EXPORT (Hidden Header Click with Toast)
+    // =========================================================
+    const todoTitle = document.querySelector('#tab-todo .tab-title');
+    if (todoTitle) {
+        let toast = document.getElementById('global-toast');
+        if (!toast) {
+            toast = document.createElement('div');
+            toast.id = 'global-toast';
+            document.body.appendChild(toast);
+        }
+
+        todoTitle.style.cursor = 'pointer';
+        todoTitle.style.transition = 'transform 0.1s ease';
+        todoTitle.addEventListener('mousedown', () => todoTitle.style.transform = 'scale(0.92)');
+        todoTitle.addEventListener('mouseup', () => todoTitle.style.transform = 'scale(1)');
+        todoTitle.addEventListener('mouseleave', () => todoTitle.style.transform = 'scale(1)');
+        todoTitle.addEventListener('touchstart', () => todoTitle.style.transform = 'scale(0.92)', {passive: true});
+        todoTitle.addEventListener('touchend', () => todoTitle.style.transform = 'scale(1)');
+
+        todoTitle.addEventListener('click', async () => {
+            if (tasks.length === 0) return;
+
+            const dateStr = currentDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+            let exportText = `Date : ${dateStr}\n\n`;
+
+            const statuses = ['todo', 'in-progress', 'done'];
+            const statusLabels = { 'todo': 'TODO', 'in-progress': 'IN-PROGRESS', 'done': 'DONE' };
+            const subjects = [{ id: null, name: 'General' }, ...getSubjects().filter(s => s.id !== 'off')];
+
+            statuses.forEach(status => {
+                const tasksInStatus = tasks.filter(t => t.status === status);
+                if (tasksInStatus.length === 0) return;
+
+                exportText += `State : ${statusLabels[status]}\n\n`;
+
+                subjects.forEach(sub => {
+                    const subTasks = tasksInStatus.filter(t => (t.subjectId || null) === sub.id);
+                    if (subTasks.length === 0) return;
+
+                    if (sub.id !== null) {
+                        exportText += `Subject : ${sub.name}\n\n`;
+                    }
+
+                    exportText += `Task :- `;
+
+                    subTasks.forEach((t, index) => {
+                        if (index === 0) {
+                            exportText += `1. ${t.text}\n`;
+                        } else {
+                            exportText += `        ${index + 1}. ${t.text}\n`;
+                        }
+                    });
+                    exportText += `\n`;
+                });
+            });
+
+            const copyToClipboard = async (text) => {
+                try {
+                    if (navigator.clipboard && window.isSecureContext) {
+                        await navigator.clipboard.writeText(text);
+                    } else {
+                        const textArea = document.createElement("textarea");
+                        textArea.value = text;
+                        textArea.style.position = "fixed";
+                        textArea.style.left = "-999999px";
+                        document.body.appendChild(textArea);
+                        textArea.focus();
+                        textArea.select();
+                        document.execCommand('copy');
+                        textArea.remove();
+                    }
+                } catch (err) {
+                    console.error('Copy failed', err);
+                }
+            };
+
+            await copyToClipboard(exportText.trim());
+
+            toast.textContent = 'Tasks Copied!!';
+            toast.classList.add('show');
+            
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 2500);
+        });
+    }
 
     // =========================================================
     // 7. BOOTUP & APP EVENTS
