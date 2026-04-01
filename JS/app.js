@@ -134,7 +134,7 @@ function initNavigation() {
 // =================================================================
 // 4. SMART UI (SCROLL HIDING)
 // =================================================================
-window.isAutoScrolling = false; // NEW: Global programmatic scroll lock
+window.isAutoScrolling = false; 
 
 function initSmartUI() {
     const bottomNav = document.getElementById('bottomNav');
@@ -147,22 +147,23 @@ function initSmartUI() {
     let lastScrollY = 0;
     
     window.addEventListener('scroll', () => {
-        // FIX: Ignore programmatic auto-scrolling to prevent Nav Pill glitches
         if (window.isAutoScrolling) {
-            lastScrollY = window.scrollY; // Keep synced so it doesn't jump later
+            lastScrollY = window.scrollY;
             return;
         }
 
         if (!isScrolling) {
             window.requestAnimationFrame(() => {
                 const currentScrollY = window.scrollY;
+                
+                // FIX: The scroll listener NO LONGER touches floatingTodoInput. 
+                // It only hides/shows the bottomNav. 
                 if (currentScrollY > lastScrollY && currentScrollY > 40) {
                     bottomNav.classList.add('nav-hidden');
-                    if (floatingTodoInput?.classList.contains('active')) floatingTodoInput.classList.add('keyboard-active');
                 } else if (currentScrollY < lastScrollY) {
                     bottomNav.classList.remove('nav-hidden');
-                    if (floatingTodoInput) floatingTodoInput.classList.remove('keyboard-active');
                 }
+                
                 lastScrollY = currentScrollY;
                 isScrolling = false;
             });
@@ -194,6 +195,7 @@ function initSmartUI() {
 
     const baseWindowHeight = window.innerHeight;
     
+    // The Input Float is now ONLY controlled by actual Focus/Blur events
     document.addEventListener('focusin', (e) => {
         if ((e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') && e.target.id !== 'journalEditor') {
             bottomNav.classList.add('nav-hidden');

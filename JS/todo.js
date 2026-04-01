@@ -155,8 +155,13 @@ function initTodoTab() {
             }
             
             if (targetNode) {
-                // Native smooth scroll into the center of the available viewport
-                targetNode.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                if (isDesktop) {
+                    targetNode.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                } else {
+                    // FIX: Using 'end' aligns the bottom of the task with the padding-bottom of the container, 
+                    // dropping it perfectly 15px above the subject tray.
+                    targetNode.scrollIntoView({ behavior: 'smooth', block: 'end' });
+                }
             }
             
             setTimeout(() => window.isAutoScrolling = false, 800); 
