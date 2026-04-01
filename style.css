@@ -63,6 +63,7 @@ body {
     user-select: none;
     -webkit-touch-callout: none;
 }
+body.modal-open { overflow: hidden !important; touch-action: none !important; }
 input, textarea {
     -webkit-user-select: auto !important;
     user-select: auto !important;
@@ -128,7 +129,7 @@ input, textarea { appearance: none; -webkit-appearance: none; }
 .btn-ghost { flex: 1; border: 1px solid var(--color-glass-border); background: rgba(255,255,255,0.05); border-radius: var(--rad-md); color: var(--color-text-muted); font-weight: 600; cursor: pointer; transition: transform 0.2s ease, background 0.2s ease; }
 .btn-ghost:active { transform: scale(0.95); }
 .swipe-container { width: 100%; min-height: 60vh; touch-action: pan-y; }
-.subject-tag { font-size: 0.7rem; font-weight: 700; padding: 3px var(--pad-sm); border-radius: var(--rad-pill); width: fit-content; text-transform: uppercase; letter-spacing: 0.5px; box-shadow: var(--shadow-sm); display: inline-block; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; vertical-align: top; }
+.subject-tag { font-size: 0.7rem; font-weight: 800; padding: 3px var(--pad-sm); border-radius: var(--rad-pill); width: fit-content; text-transform: uppercase; letter-spacing: 0.5px; box-shadow: var(--shadow-sm); display: inline-block; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; vertical-align: top; border: 1px solid currentColor; }
 
 /* =================================================================
    5. UI COMPONENTS (Bento Cards, Navigators)
@@ -474,15 +475,15 @@ input[type="search"]::-webkit-search-results-decoration { display: none !importa
 
 .todo-subject-tray { position: absolute; bottom: 100%; left: 0; width: 100%; padding-bottom: var(--pad-md); display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; opacity: 0; visibility: hidden; transform: translateY(15px); transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease, visibility 0s linear 0.3s !important; pointer-events: none; }
 .todo-subject-tray.active { opacity: 1; visibility: visible; transform: translateY(0); pointer-events: auto; transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease, visibility 0s linear 0s !important; }
-.todo-tint-pill { padding: 6px 14px; border-radius: var(--rad-lg); font-size: 0.8rem; font-weight: 600; cursor: pointer; color: var(--color-text-muted); border: 1px solid var(--color-glass-border); background: var(--color-glass-white); backdrop-filter: var(--blur-glass); -webkit-backdrop-filter: var(--blur-glass); transform: translate3d(0, 0, 0); transition: transform 0.2s ease, box-shadow 0.2s ease; }
-.todo-tint-pill:active { transform: scale(0.92) translate3d(0, 0, 0); }
-.todo-tint-pill.selected { transform: translateY(-2px); box-shadow: var(--shadow-md); background-color: color-mix(in srgb, var(--color-primary) 20%, transparent); border-color: var(--color-primary); color: var(--color-primary); }
+.todo-tint-pill { padding: 6px 14px; border-radius: var(--rad-lg); font-size: 0.8rem; font-weight: 600; cursor: pointer; color: var(--color-text-muted); border: 1px solid var(--color-glass-border); background: var(--color-glass-white); backdrop-filter: var(--blur-glass); -webkit-backdrop-filter: var(--blur-glass); transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease; will-change: transform; transform: translateZ(0); -webkit-transform: translateZ(0); }
+.todo-tint-pill:active { transform: scale(0.92) translateZ(0); -webkit-transform: scale(0.92) translateZ(0); }
+.todo-tint-pill.selected { transform: translateY(-2px) translateZ(0); -webkit-transform: translateY(-2px) translateZ(0); box-shadow: var(--shadow-md); font-weight: 800; }
 
 /* --- C. SHARED TASK ELEMENTS (Checkbox, Text, Buttons) --- */
 .todo-subject-header { margin-top: var(--pad-md); margin-bottom: 5px; font-size: 0.85rem; font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px; padding-left: 5px; list-style: none; }
-.todo-text { flex: 1; font-size: 1rem; transition: color 0.3s ease, text-decoration 0.3s ease; line-height: 1.4; word-break: break-word; white-space: normal; }
+.todo-text { flex: 1; font-size: 1rem; transition: color 0.3s ease, text-decoration 0.3s ease; line-height: 1.4; word-break: break-word; white-space: pre-wrap; }
 .todo-delete { background: none; border: none; color: var(--color-text-muted); font-size: 1.5rem; cursor: pointer; padding: 0 5px; flex-shrink: 0; margin-top: -2px; }
-.todo-edit-input { flex: 1; min-width: 0; background: transparent; border: none; border-bottom: 2px solid var(--color-primary); border-radius: 0; color: var(--color-text); font-size: 1rem; padding: 0 0 2px 0; margin: 0; outline: none; box-shadow: none; caret-color: var(--color-primary); }
+.todo-edit-input { flex: 1; min-width: 0; background: transparent; border: none; border-bottom: 2px solid var(--color-primary); border-radius: 0; color: var(--color-text); font-size: 1rem; padding: 0 0 2px 0; margin: 0; outline: none; box-shadow: none; caret-color: var(--color-primary); resize: none; overflow: hidden; line-height: 1.4; }
 
 /* SVG 3-State Checkbox */
 .todo-checkbox { width: 24px; height: 24px; border-radius: var(--rad-circle); border: 2px solid color-mix(in srgb, var(--color-primary) 30%, var(--color-text-muted)); background: transparent; position: relative; cursor: pointer; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 2px; }
@@ -568,6 +569,7 @@ input[type="search"]::-webkit-search-results-decoration { display: none !importa
 .todo-item.is-editing, .kanban-task.is-editing {
     z-index: 100 !important;
     position: relative !important;
+    margin-bottom: 20px !important; 
 }
 
 /* 2. Anchors the popup to the task, and slides it out from behind */

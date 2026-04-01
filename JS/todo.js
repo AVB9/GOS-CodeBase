@@ -11,6 +11,32 @@ window.showAppToast = window.showAppToast || function(msg) {
     setTimeout(() => toast.classList.remove('show'), 2500);
 };
 
+// Global Ultimate Completion Checker
+window.checkUltimateCompletion = window.checkUltimateCompletion || function(dateStr) {
+    const today = new Date();
+    const todayKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+
+    if (dateStr !== todayKey) return; 
+
+    const todoKey = `todo_${todayKey}`;
+    const todos = JSON.parse(localStorage.getItem(todoKey)) || [];
+    const allTodosDone = todos.length > 0 && todos.every(t => t.status === 'done');
+
+    const plannerCompleted = JSON.parse(localStorage.getItem('plannerCompleted')) || [];
+    const plannerDone = plannerCompleted.includes(todayKey);
+
+    const celebKey = 'celebrated_' + todayKey;
+
+    if (allTodosDone && plannerDone) {
+        if (!localStorage.getItem(celebKey)) {
+            setTimeout(() => window.showAppToast("MUUWWAHAAAA!!!"), 300);
+            localStorage.setItem(celebKey, 'true');
+        }
+    } else {
+        localStorage.removeItem(celebKey);
+    }
+};
+
 document.addEventListener('DOMContentLoaded', () => {
     initTodoTab();
 });
@@ -40,6 +66,24 @@ function initTodoTab() {
         const m = String(date.getMonth() + 1).padStart(2, '0');
         const d = String(date.getDate()).padStart(2, '0');
         return `todo_${y}-${m}-${d}`;
+    };
+
+    const isFutureDate = () => {
+        const today = new Date();
+        today.setHours(0,0,0,0);
+        const viewDate = new Date(currentDate);
+        viewDate.setHours(0,0,0,0);
+        return viewDate > today;
+    };
+
+    const handleStatusCycle = (task) => {
+        const nextStatus = task.status === 'todo' ? 'in-progress' : (task.status === 'in-progress' ? 'done' : 'todo');
+        if (nextStatus === 'done' && isFutureDate()) {
+            window.showAppToast("gmasti tho dekho koi inki!!");
+            return false;
+        }
+        task.status = nextStatus;
+        return true;
     };
 
     const getSubjects = () => JSON.parse(localStorage.getItem('plannerSubjects')) || [{ id: 'off', name: 'Day Off', color: '#555555' }];
@@ -79,6 +123,69 @@ function initTodoTab() {
         } catch (e) { console.error('Storage error', e); }
     };
 
+    // --- UPGRADED: THE TODO SCROLL ENGINE (TSE) ---
+    const triggerTSE = () => {
+        setTimeout(() => {
+            if (!listEl && !pcTodo) return;
+            
+            window.isAutoScrolling = true; // Lock Nav Pill
+            
+            const isDesktop = window.innerWidth >= 768;
+            const targetContainer = isDesktop ? pcTodo : listEl;
+            if (!targetContainer) {
+                window.isAutoScrolling = false;
+                return;
+            }
+
+            let targetNode = null;
+            const taskNodes = Array.from(targetContainer.querySelectorAll(isDesktop ? '.kanban-task' : '.todo-item'));
+            
+            if (selectedSubjectId) {
+                const subjectTasks = taskNodes.filter(el => {
+                    const taskId = parseInt(el.dataset.taskId || el.dataset.id, 10);
+                    const taskData = tasks.find(t => t.id === taskId);
+                    return taskData && taskData.subjectId === selectedSubjectId;
+                });
+                if (subjectTasks.length > 0) targetNode = subjectTasks[subjectTasks.length - 1];
+            } else {
+                const generalTasks = taskNodes.filter(el => {
+                    const taskId = parseInt(el.dataset.taskId || el.dataset.id, 10);
+                    const taskData = tasks.find(t => t.id === taskId);
+                    return taskData && (!taskData.subjectId || taskData.subjectId === 'null');
+                });
+                if (generalTasks.length > 0) targetNode = generalTasks[generalTasks.length - 1];
+            }
+            
+            if (!targetNode) {
+                const header = Array.from(targetContainer.querySelectorAll(isDesktop ? '.kanban-subject-header' : '.todo-subject-header'))
+                                    .find(el => el.dataset.subjectId === (selectedSubjectId ? selectedSubjectId : 'null'));
+                if (header) targetNode = header;
+            }
+            
+            if (targetNode) {
+                if (isDesktop) {
+                    targetNode.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                } else {
+                    const scrollContainer = document.getElementById('todoSwipeContainer');
+                    if (scrollContainer) {
+                        const containerRect = scrollContainer.getBoundingClientRect();
+                        const nodeRect = targetNode.getBoundingClientRect();
+                        const offset = (nodeRect.top - containerRect.top) - 100; 
+                        
+                        scrollContainer.scrollTo({
+                            top: scrollContainer.scrollTop + offset,
+                            behavior: 'smooth'
+                        });
+                    } else {
+                        targetNode.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
+                }
+            }
+            
+            setTimeout(() => window.isAutoScrolling = false, 800); 
+        }, 300); 
+    };
+
     const renderSubjectTray = () => {
         if (!tray) return;
         tray.innerHTML = '';
@@ -101,7 +208,7 @@ function initTodoTab() {
             pill.className = `todo-tint-pill ${selectedSubjectId === sub.id ? 'selected' : ''}`;
             pill.textContent = sub.name;
             if (selectedSubjectId === sub.id) {
-                pill.style.backgroundColor = hexToRgba(sub.color, 0.2);
+                pill.style.backgroundColor = `color-mix(in srgb, ${sub.color} 15%, transparent)`;
                 pill.style.borderColor = sub.color;
                 pill.style.color = sub.color;
             }
@@ -109,12 +216,17 @@ function initTodoTab() {
                 e.preventDefault(); e.stopPropagation();
                 selectedSubjectId = selectedSubjectId === sub.id ? null : sub.id;
                 renderSubjectTray(); 
+                triggerTSE();
             });
             tray.appendChild(pill);
         });
     };
 
-    input.addEventListener('focus', () => { if (tray) tray.classList.add('active'); });
+    input.addEventListener('focus', () => { 
+        if (tray) tray.classList.add('active'); 
+        triggerTSE();
+    });
+
     input.addEventListener('click', () => { if (tray) tray.classList.add('active'); });
 
     document.addEventListener('mousedown', (e) => {
@@ -154,6 +266,7 @@ function initTodoTab() {
         tasks = newTasks; 
         saveTasks(); 
         renderTasks(); 
+        window.checkUltimateCompletion(getDateKey(currentDate).replace('todo_', ''));
     };
 
     const updatePCOrder = () => {
@@ -177,11 +290,16 @@ function initTodoTab() {
                         const newStatus = col.status;
 
                         if (oldStatus !== newStatus) {
-                            t.status = newStatus;
-                            t.subjectId = original.subjectId; 
-                            // DIRECT CELEBRATION FOR DRAG AND DROP
-                            if (newStatus === 'done') {
-                                setTimeout(() => window.showAppToast("MUUWWAHAAAA!!!"), 100);
+                            if (newStatus === 'done' && isFutureDate()) {
+                                window.showAppToast("gmasti tho dekho koi inki!!");
+                                t.status = oldStatus; 
+                                t.subjectId = original.subjectId;
+                            } else {
+                                t.status = newStatus;
+                                t.subjectId = original.subjectId;
+                                if (newStatus === 'done') {
+                                    setTimeout(() => window.showAppToast("MUUWWAHAAAA!!!"), 100);
+                                }
                             }
                         } else {
                             t.status = newStatus;
@@ -197,6 +315,7 @@ function initTodoTab() {
         tasks = newTasks; 
         saveTasks(); 
         renderTasks();
+        window.checkUltimateCompletion(getDateKey(currentDate).replace('todo_', ''));
     };
 
     const renderTasks = () => {
@@ -253,23 +372,31 @@ function initTodoTab() {
                         tasks = tasks.filter(t => t.id !== task.id); 
                         saveTasks(); 
                         renderTasks();
+                        window.checkUltimateCompletion(getDateKey(currentDate).replace('todo_', '')); 
                     });
 
-                    // NATIVE CHECKBOX CLICK
                     li.querySelector('.todo-checkbox').addEventListener('click', (e) => {
                         e.stopPropagation();
-                        task.status = task.status === 'todo' ? 'in-progress' : (task.status === 'in-progress' ? 'done' : 'todo');
-                        saveTasks(); 
-                        renderTasks();
-                        if (task.status === 'done') setTimeout(() => window.showAppToast("MUUWWAHAAAA!!!"), 100);
+                        if (handleStatusCycle(task)) {
+                            saveTasks(); 
+                            renderTasks();
+                            if (task.status === 'done') setTimeout(() => window.showAppToast("MUUWWAHAAAA!!!"), 100);
+                        }
                     });
 
                     const textSpan = li.querySelector('.todo-text');
+                    
+                    // --- MOBILE OPEN EDIT MODE ---
                     const openEditMode = () => {
                         const taskNode = li;
                         if (taskNode.querySelector('.todo-edit-wrapper')) return; 
                         
                         taskNode.classList.add('is-editing'); 
+                        window.isEditingTask = true; 
+
+                        window.isAutoScrolling = true;
+                        taskNode.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        setTimeout(() => window.isAutoScrolling = false, 800);
 
                         const wrapper = document.createElement('div');
                         wrapper.className = 'todo-edit-wrapper';
@@ -277,15 +404,28 @@ function initTodoTab() {
                         wrapper.style.minWidth = '0';
                         wrapper.style.display = 'flex';
                         
-                        const editInput = document.createElement('input');
-                        editInput.type = 'text'; 
+                        const editInput = document.createElement('textarea');
                         editInput.value = task.text; 
                         editInput.className = 'todo-edit-input';
                         editInput.style.width = '100%';
+                        editInput.setAttribute('autocomplete', 'off');
+                        editInput.setAttribute('spellcheck', 'false');
                         
                         wrapper.appendChild(editInput);
                         textSpan.replaceWith(wrapper); 
+                        
+                        requestAnimationFrame(() => {
+                            editInput.style.height = 'auto';
+                            editInput.style.height = (editInput.scrollHeight) + 'px';
+                        });
+
+                        editInput.addEventListener('input', function() {
+                            this.style.height = 'auto';
+                            this.style.height = (this.scrollHeight) + 'px';
+                        });
+
                         editInput.focus();
+                        editInput.setSelectionRange(editInput.value.length, editInput.value.length);
 
                         let tomoBtn = null;
                         if (task.status !== 'done') {
@@ -295,6 +435,7 @@ function initTodoTab() {
                             
                             const shiftAction = (e) => {
                                 e.preventDefault(); 
+                                window.isEditingTask = false;
                                 tasks = tasks.filter(t => t.id !== task.id);
                                 saveTasks();
                                 
@@ -309,6 +450,7 @@ function initTodoTab() {
                                 
                                 taskNode.classList.remove('is-editing');
                                 renderTasks(); 
+                                window.checkUltimateCompletion(getDateKey(currentDate).replace('todo_', ''));
                             };
                             tomoBtn.addEventListener('mousedown', shiftAction);
                             tomoBtn.addEventListener('touchstart', shiftAction, { passive: false });
@@ -318,6 +460,7 @@ function initTodoTab() {
                         
                         const saveEdit = () => {
                             const executeClose = () => {
+                                window.isEditingTask = false; 
                                 taskNode.classList.remove('is-editing');
                                 if (tomoBtn && tomoBtn.parentNode) tomoBtn.remove();
                                 const newText = editInput.value.trim();
@@ -334,7 +477,12 @@ function initTodoTab() {
                         };
                         
                         editInput.addEventListener('blur', saveEdit);
-                        editInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') editInput.blur(); });
+                        editInput.addEventListener('keypress', (e) => { 
+                            if (e.key === 'Enter' && !e.shiftKey) {
+                                e.preventDefault();
+                                editInput.blur(); 
+                            }
+                        });
                     };
 
                     let holdTimer = null; 
@@ -444,10 +592,11 @@ function initTodoTab() {
                             if (tapCount === 1) {
                                 singleTapTimer = setTimeout(() => {
                                     tapCount = 0;
-                                    task.status = task.status === 'todo' ? 'in-progress' : (task.status === 'in-progress' ? 'done' : 'todo');
-                                    saveTasks(); renderTasks();
-                                    // DIRECT CELEBRATION FOR BODY TAP
-                                    if (task.status === 'done') setTimeout(() => window.showAppToast("MUUWWAHAAAA!!!"), 100);
+                                    if (handleStatusCycle(task)) {
+                                        saveTasks(); 
+                                        renderTasks();
+                                        if (task.status === 'done') setTimeout(() => window.showAppToast("MUUWWAHAAAA!!!"), 100);
+                                    }
                                 }, 250); 
                             } else if (tapCount === 2) {
                                 clearTimeout(singleTapTimer);
@@ -472,10 +621,11 @@ function initTodoTab() {
                         
                         if (e.detail === 1) { 
                             pcClickTimer = setTimeout(() => {
-                                task.status = task.status === 'todo' ? 'in-progress' : (task.status === 'in-progress' ? 'done' : 'todo');
-                                saveTasks(); renderTasks();
-                                // DIRECT CELEBRATION FOR PC CLICK
-                                if (task.status === 'done') setTimeout(() => window.showAppToast("MUUWWAHAAAA!!!"), 100);
+                                if (handleStatusCycle(task)) {
+                                    saveTasks(); 
+                                    renderTasks();
+                                    if (task.status === 'done') setTimeout(() => window.showAppToast("MUUWWAHAAAA!!!"), 100);
+                                }
                             }, 250); 
                         } else if (e.detail === 2) { 
                             clearTimeout(pcClickTimer); 
@@ -536,15 +686,23 @@ function initTodoTab() {
                         tasks = tasks.filter(t => t.id !== task.id); 
                         saveTasks(); 
                         renderTasks();
+                        window.checkUltimateCompletion(getDateKey(currentDate).replace('todo_', ''));
                     });
 
                     const textSpan = pcCard.querySelector('.todo-text');
+                    
+                    // --- DESKTOP OPEN EDIT MODE ---
                     textSpan.addEventListener('dblclick', () => {
                         const taskNode = pcCard;
                         if (taskNode.querySelector('.todo-edit-wrapper')) return; 
                         taskNode.draggable = false; 
                         
                         taskNode.classList.add('is-editing'); 
+                        window.isEditingTask = true; 
+
+                        window.isAutoScrolling = true;
+                        taskNode.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        setTimeout(() => window.isAutoScrolling = false, 800);
 
                         const wrapper = document.createElement('div');
                         wrapper.className = 'todo-edit-wrapper';
@@ -552,15 +710,28 @@ function initTodoTab() {
                         wrapper.style.minWidth = '0';
                         wrapper.style.display = 'flex';
                         
-                        const editInput = document.createElement('input');
-                        editInput.type = 'text'; 
+                        const editInput = document.createElement('textarea');
                         editInput.value = task.text; 
                         editInput.className = 'todo-edit-input';
                         editInput.style.width = '100%';
+                        editInput.setAttribute('autocomplete', 'off');
+                        editInput.setAttribute('spellcheck', 'false');
                         
                         wrapper.appendChild(editInput);
                         textSpan.replaceWith(wrapper); 
+                        
+                        requestAnimationFrame(() => {
+                            editInput.style.height = 'auto';
+                            editInput.style.height = (editInput.scrollHeight) + 'px';
+                        });
+
+                        editInput.addEventListener('input', function() {
+                            this.style.height = 'auto';
+                            this.style.height = (this.scrollHeight) + 'px';
+                        });
+
                         editInput.focus();
+                        editInput.setSelectionRange(editInput.value.length, editInput.value.length);
 
                         let tomoBtn = null;
                         if (task.status !== 'done') {
@@ -570,6 +741,7 @@ function initTodoTab() {
                             
                             const shiftAction = (e) => {
                                 e.preventDefault(); 
+                                window.isEditingTask = false;
                                 tasks = tasks.filter(t => t.id !== task.id);
                                 saveTasks();
                                 
@@ -584,6 +756,7 @@ function initTodoTab() {
                                 
                                 taskNode.classList.remove('is-editing');
                                 renderTasks(); 
+                                window.checkUltimateCompletion(getDateKey(currentDate).replace('todo_', ''));
                             };
                             tomoBtn.addEventListener('mousedown', shiftAction);
                             tomoBtn.addEventListener('touchstart', shiftAction, { passive: false });
@@ -593,6 +766,7 @@ function initTodoTab() {
                         
                         const saveEdit = () => {
                             const executeClose = () => {
+                                window.isEditingTask = false;
                                 taskNode.classList.remove('is-editing');
                                 if (tomoBtn && tomoBtn.parentNode) tomoBtn.remove();
                                 const newText = editInput.value.trim();
@@ -609,17 +783,21 @@ function initTodoTab() {
                         };
                         
                         editInput.addEventListener('blur', saveEdit);
-                        editInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') editInput.blur(); });
+                        editInput.addEventListener('keypress', (e) => { 
+                            if (e.key === 'Enter' && !e.shiftKey) {
+                                e.preventDefault();
+                                editInput.blur(); 
+                            }
+                        });
                     });
 
                     pcCard.querySelector('.todo-checkbox').addEventListener('click', (e) => {
                         e.stopPropagation();
-                        if (task.status === 'todo') task.status = 'in-progress';
-                        else if (task.status === 'in-progress') task.status = 'done';
-                        else task.status = 'todo';
-                        saveTasks(); 
-                        renderTasks(); 
-                        if (task.status === 'done') setTimeout(() => window.showAppToast("MUUWWAHAAAA!!!"), 100);
+                        if (handleStatusCycle(task)) {
+                            saveTasks(); 
+                            renderTasks();
+                            if (task.status === 'done') setTimeout(() => window.showAppToast("MUUWWAHAAAA!!!"), 100);
+                        }
                     });
 
                     pcCard.addEventListener('dragstart', (e) => { 
@@ -769,12 +947,9 @@ function initTodoTab() {
             saveTasks(); 
             renderTasks();
             
-            if (listEl) {
-                setTimeout(() => {
-                    const addedNode = listEl.querySelector(`.todo-item[data-task-id="${newTask.id}"]`);
-                    if (addedNode) addedNode.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                }, 50);
-            }
+            localStorage.removeItem('celebrated_' + getDateKey(currentDate).replace('todo_', ''));
+            
+            triggerTSE();
         }
     };
 

@@ -7,6 +7,9 @@ window.AppEvents = {
     off: (name, callback) => window.removeEventListener(name, callback) 
 };
 
+// Global Switch for Fix 3 (Gesture Lock)
+window.isEditingTask = false;
+
 if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('./sw.js')
         .then(() => console.log('Service Worker Registered!'))
@@ -73,7 +76,6 @@ function initNavigation() {
 
     if (!navButtons.length || !tabs.length) return;
 
-    // Ordered array of tabs for left/right swipe math
     const tabOrder = ['tab-journal', 'tab-planner', 'tab-home', 'tab-todo', 'tab-settings'];
 
     navButtons.forEach(button => {
@@ -96,7 +98,6 @@ function initNavigation() {
         });
     });
 
-    // --- FEATURE 5: NAV PILL SWIPING ---
     if (bottomNav) {
         let navStartX = 0;
         bottomNav.addEventListener('touchstart', (e) => { 
@@ -107,7 +108,6 @@ function initNavigation() {
             const navEndX = e.changedTouches[0].clientX;
             const diffX = navStartX - navEndX;
             
-            // If horizontal swipe distance is greater than 40px
             if (Math.abs(diffX) > 40) {
                 const activeBtn = document.querySelector('.bottom-pill-btn.active');
                 if (!activeBtn) return;
@@ -116,16 +116,14 @@ function initNavigation() {
                 let currentIndex = tabOrder.indexOf(currentTarget);
                 
                 if (diffX > 0) {
-                    // Swiped Left -> Go to Next Tab
                     currentIndex = (currentIndex + 1) % tabOrder.length;
                 } else {
-                    // Swiped Right -> Go to Previous Tab
                     currentIndex = (currentIndex - 1 + tabOrder.length) % tabOrder.length;
                 }
                 
                 const nextBtn = document.querySelector(`.bottom-pill-btn[data-target="${tabOrder[currentIndex]}"]`);
                 if (nextBtn) {
-                    if (navigator.vibrate) navigator.vibrate(40); // Subtle haptic bump
+                    if (navigator.vibrate) navigator.vibrate(40); 
                     nextBtn.click();
                 }
             }
@@ -136,6 +134,8 @@ function initNavigation() {
 // =================================================================
 // 4. SMART UI (SCROLL HIDING)
 // =================================================================
+window.isAutoScrolling = false; // NEW: Global programmatic scroll lock
+
 function initSmartUI() {
     const bottomNav = document.getElementById('bottomNav');
     const floatingTodoInput = document.getElementById('floatingTodoInput');
@@ -147,6 +147,12 @@ function initSmartUI() {
     let lastScrollY = 0;
     
     window.addEventListener('scroll', () => {
+        // FIX: Ignore programmatic auto-scrolling to prevent Nav Pill glitches
+        if (window.isAutoScrolling) {
+            lastScrollY = window.scrollY; // Keep synced so it doesn't jump later
+            return;
+        }
+
         if (!isScrolling) {
             window.requestAnimationFrame(() => {
                 const currentScrollY = window.scrollY;
@@ -168,6 +174,8 @@ function initSmartUI() {
         let isJournalScrolling = false;
         let lastJournalScrollY = 0;
         journalEditor.addEventListener('scroll', () => {
+            if (window.isAutoScrolling) return;
+
              if (!isJournalScrolling) {
                 window.requestAnimationFrame(() => {
                     const currentScrollY = journalEditor.scrollTop;
@@ -216,7 +224,6 @@ function initSmartUI() {
         window.addEventListener('resize', () => handleKeyboardClose(window.innerHeight));
     }
 }
-
 // =================================================================
 // 5. EVENT-DRIVEN GESTURES & MODALS
 // =================================================================
@@ -244,11 +251,15 @@ function initDateGesturesAndModals() {
         let startX = 0, startY = 0;
 
         element.addEventListener('touchstart', (e) => {
+            // FIX 3: GESTURE LOCK
+            if (window.isEditingTask) return;
             startX = e.changedTouches[0].screenX;
             startY = e.changedTouches[0].screenY;
         }, { passive: true });
 
         element.addEventListener('touchend', (e) => {
+            // FIX 3: GESTURE LOCK
+            if (window.isEditingTask) return;
             if (checkAllowed && !checkAllowed()) return;
             const diffX = e.changedTouches[0].screenX - startX;
             const diffY = e.changedTouches[0].screenY - startY;
@@ -275,9 +286,13 @@ function initDateGesturesAndModals() {
         activeTabForPicker = tab;
         dateInput.value = dateStr; 
         dateModal.style.display = 'flex';
+        document.body.classList.add('modal-open'); // BUG 1 LOCK
     });
 
-    const closeDateModal = () => { dateModal.style.display = 'none'; };
+    const closeDateModal = () => { 
+        dateModal.style.display = 'none'; 
+        document.body.classList.remove('modal-open'); // BUG 1 UNLOCK
+    };
     closeBtn.addEventListener('click', closeDateModal);
     
     confirmBtn.addEventListener('click', () => {
@@ -295,11 +310,30 @@ function initDateGesturesAndModals() {
 // =================================================================
 function initGlobalModals() {
     document.querySelectorAll('.modal-overlay').forEach(overlay => {
+        // BUG 1 LOCK INTERCEPTOR
+        const observer = new MutationObserver((mutations) => {
+            mutations.forEach((mutation) => {
+                if (mutation.attributeName === 'style') {
+                    if (overlay.style.display === 'flex' || overlay.style.display === 'block') {
+                        document.body.classList.add('modal-open');
+                    } else {
+                        // Only remove if NO modals are open
+                        const anyOpen = Array.from(document.querySelectorAll('.modal-overlay')).some(o => o.style.display === 'flex' || o.style.display === 'block');
+                        if (!anyOpen) document.body.classList.remove('modal-open');
+                    }
+                }
+            });
+        });
+        observer.observe(overlay, { attributes: true });
+
         overlay.addEventListener('click', (e) => {
             if (e.target === overlay) {
                 const closeBtn = overlay.querySelector('.btn-secondary, .btn-ghost, .close-x');
                 if (closeBtn) closeBtn.click();
-                else overlay.style.display = 'none';
+                else {
+                    overlay.style.display = 'none';
+                    document.body.classList.remove('modal-open');
+                }
             }
         });
     });
@@ -333,6 +367,7 @@ window.addEventListener('popstate', (e) => {
     }
 
     if (closedSomething) {
+        document.body.classList.remove('modal-open'); // BUG 1 UNLOCK
         history.pushState({ page: 'pwa-root' }, '');
     } else {
         history.back();
