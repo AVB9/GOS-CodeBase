@@ -279,6 +279,13 @@ function initTodoTab() {
 
     input.addEventListener('click', () => { if (tray) tray.classList.add('active'); });
 
+    window.addEventListener('scroll', () => {
+        if (!window.isAutoScrolling && document.activeElement === input) {
+            input.blur();
+            if (tray) tray.classList.remove('active');
+        }
+    }, true)
+
     document.addEventListener('mousedown', (e) => {
         if (e.target === input || input.contains(e.target)) return; 
         if (tray && (e.target === tray || tray.contains(e.target))) return; 
