@@ -123,8 +123,8 @@ function initTodoTab() {
         } catch (e) { console.error('Storage error', e); }
     };
 
-// --- UPGRADED: DYNAMIC TARGET-LOCK TODO SCROLL ENGINE (TSE) ---
-    let tseTimer = null;
+    // --- UPGRADED: PURE MATH TODO SCROLL ENGINE (TSE) ---
+    let tseTimer = null; 
     const triggerTSE = (delay = 300) => {
         clearTimeout(tseTimer);
         tseTimer = setTimeout(() => {
@@ -142,7 +142,6 @@ function initTodoTab() {
             let targetNode = null;
             const taskNodes = Array.from(targetContainer.querySelectorAll(isDesktop ? '.kanban-task' : '.todo-item'));
             
-            // 1. Find target task
             if (selectedSubjectId) {
                 const subjectTasks = taskNodes.filter(el => {
                     const taskId = parseInt(el.dataset.taskId || el.dataset.id, 10);
@@ -165,34 +164,26 @@ function initTodoTab() {
                 if (header) targetNode = header;
             }
             
-            // 2. Execute Dynamic Target Lock
             if (targetNode) {
                 if (isDesktop) {
                     targetNode.scrollIntoView({ behavior: 'smooth', block: 'center' });
                 } else {
-                    const scrollContainer = document.getElementById('todoSwipeContainer');
                     const floatUI = document.getElementById('floatingTodoInput');
                     const trayUI = document.getElementById('todoSubjectTray');
 
-                    if (scrollContainer && floatUI) {
-                        // Measure exact position of the task
+                    if (floatUI) {
                         const nodeRect = targetNode.getBoundingClientRect();
                         
-                        // Find the absolute top edge of our UI (either the tray or the input box itself)
                         let uiTopEdge = floatUI.getBoundingClientRect().top;
                         if (trayUI && trayUI.classList.contains('active')) {
                             uiTopEdge = trayUI.getBoundingClientRect().top;
                         }
 
-                        // We want the bottom of the task to be exactly 15px above that top edge
-                        const targetY = uiTopEdge - 15;
-                        
-                        // Calculate exact pixel difference
-                        const offset = nodeRect.bottom - targetY;
+                        // EXACT MATH: Target Bottom - UI Top + 15px Padding
+                        const offset = nodeRect.bottom - uiTopEdge + 15;
 
-                        // Scroll the INTERNAL container by that exact amount
                         if (Math.abs(offset) > 5) {
-                            scrollContainer.scrollBy({ top: offset, behavior: 'smooth' });
+                            window.scrollBy({ top: offset, behavior: 'smooth' });
                         }
                     }
                 }
@@ -202,7 +193,6 @@ function initTodoTab() {
         }, delay); 
     };
 
-    // KEYBOARD LISTENER: Fast trigger for when the keyboard slides up
     if (window.visualViewport) {
         window.visualViewport.addEventListener('resize', () => {
             if (document.activeElement === input) {
@@ -220,10 +210,13 @@ function initTodoTab() {
             const emptyPill = document.createElement('div');
             emptyPill.className = `todo-tint-pill`;
             emptyPill.textContent = "Add Subjects in Settings →";
-            emptyPill.addEventListener('mousedown', (e) => {
+            
+            const handleEmptyClick = (e) => {
                 e.preventDefault(); e.stopPropagation();
                 document.querySelector('.bottom-pill-btn[data-target="tab-settings"]')?.click();
-            });
+            };
+            emptyPill.addEventListener('mousedown', handleEmptyClick);
+            emptyPill.addEventListener('touchstart', handleEmptyClick, { passive: false });
             tray.appendChild(emptyPill);
             return;
         }
@@ -232,11 +225,13 @@ function initTodoTab() {
             const pill = document.createElement('div');
             pill.className = `todo-tint-pill ${selectedSubjectId === sub.id ? 'selected' : ''}`;
             pill.textContent = sub.name;
+            
             if (selectedSubjectId === sub.id) {
                 pill.style.backgroundColor = `color-mix(in srgb, ${sub.color} 20%, var(--color-surface))`;
                 pill.style.borderColor = sub.color;
                 pill.style.color = sub.color;
             }
+            
             const handlePillInteraction = (e) => {
                 e.preventDefault(); e.stopPropagation();
                 selectedSubjectId = selectedSubjectId === sub.id ? null : sub.id;
