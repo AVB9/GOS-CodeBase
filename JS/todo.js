@@ -123,7 +123,7 @@ function initTodoTab() {
         } catch (e) { console.error('Storage error', e); }
     };
 
-    // --- UPGRADED: PURE MATH TODO SCROLL ENGINE (TSE) ---
+    // --- UPGRADED: STRICT CONTAINER TODO SCROLL ENGINE (TSE) ---
     let tseTimer = null; 
     const triggerTSE = (delay = 300) => {
         clearTimeout(tseTimer);
@@ -168,22 +168,29 @@ function initTodoTab() {
                 if (isDesktop) {
                     targetNode.scrollIntoView({ behavior: 'smooth', block: 'center' });
                 } else {
+                    const scrollContainer = document.getElementById('todoSwipeContainer');
                     const floatUI = document.getElementById('floatingTodoInput');
                     const trayUI = document.getElementById('todoSubjectTray');
 
-                    if (floatUI) {
+                    if (scrollContainer && floatUI) {
                         const nodeRect = targetNode.getBoundingClientRect();
                         
-                        let uiTopEdge = floatUI.getBoundingClientRect().top;
+                        let uiTopEdge = window.innerHeight;
+                        uiTopEdge = floatUI.getBoundingClientRect().top;
                         if (trayUI && trayUI.classList.contains('active')) {
                             uiTopEdge = trayUI.getBoundingClientRect().top;
                         }
 
-                        // EXACT MATH: Target Bottom - UI Top + 15px Padding
-                        const offset = nodeRect.bottom - uiTopEdge + 15;
+                        // STRICT MATH: Calculate the exact difference between the bottom of the target task 
+                        // and the top of our UI Float, minus 15px of comfortable padding.
+                        const offset = nodeRect.bottom - (uiTopEdge - 15);
 
+                        // ONLY scroll the internal container. Never touch the Window!
                         if (Math.abs(offset) > 5) {
-                            window.scrollBy({ top: offset, behavior: 'smooth' });
+                            scrollContainer.scrollBy({
+                                top: offset,
+                                behavior: 'smooth'
+                            });
                         }
                     }
                 }
@@ -196,7 +203,7 @@ function initTodoTab() {
     if (window.visualViewport) {
         window.visualViewport.addEventListener('resize', () => {
             if (document.activeElement === input) {
-                triggerTSE(50); 
+                triggerTSE(100); // 100ms debounce ensures keyboard completely settles before math calculates
             }
         });
     }
@@ -415,10 +422,6 @@ function initTodoTab() {
                         
                         taskNode.classList.add('is-editing'); 
                         window.isEditingTask = true; 
-
-                        window.isAutoScrolling = true;
-                        taskNode.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                        setTimeout(() => window.isAutoScrolling = false, 800);
 
                         const wrapper = document.createElement('div');
                         wrapper.className = 'todo-edit-wrapper';
@@ -722,10 +725,6 @@ function initTodoTab() {
                         
                         taskNode.classList.add('is-editing'); 
                         window.isEditingTask = true; 
-
-                        window.isAutoScrolling = true;
-                        taskNode.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                        setTimeout(() => window.isAutoScrolling = false, 800);
 
                         const wrapper = document.createElement('div');
                         wrapper.className = 'todo-edit-wrapper';
