@@ -88,6 +88,14 @@ function initTodoTab() {
 
     const getSubjects = () => JSON.parse(localStorage.getItem('plannerSubjects')) || [{ id: 'off', name: 'Day Off', color: '#555555' }];
 
+    const hexToRgba = (hex, alpha) => {
+        if (!hex) return `rgba(255,255,255,${alpha})`;
+        hex = hex.replace('#', '');
+        if (hex.length === 3) hex = hex.split('').map(x => x + x).join('');
+        const r = parseInt(hex.substring(0,2), 16), g = parseInt(hex.substring(2,4), 16), b = parseInt(hex.substring(4,6), 16);
+        return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+    };
+
     const updateDateDisplay = () => {
         const today = new Date(); today.setHours(0, 0, 0, 0);
         const compareDate = new Date(currentDate); compareDate.setHours(0, 0, 0, 0);
@@ -160,14 +168,9 @@ function initTodoTab() {
                 } else {
                     const scrollContainer = document.getElementById('todoSwipeContainer');
                     if (scrollContainer) {
-                        // STRICT CONTAINER SCROLLING: This calculates the offset and ONLY scrolls 
-                        // the internal list. It prevents the main window from shifting, 
-                        // guaranteeing the Float stays anchored to the bottom.
                         const containerRect = scrollContainer.getBoundingClientRect();
                         const nodeRect = targetNode.getBoundingClientRect();
                         
-                        // We calculate the difference and add a 120px buffer 
-                        // to perfectly clear the height of the tray + input box.
                         const offset = (nodeRect.bottom - containerRect.bottom) + 120; 
                         
                         scrollContainer.scrollTo({
@@ -182,11 +185,10 @@ function initTodoTab() {
         }, delay); 
     };
 
-    // KEYBOARD LISTENER: Fires TSE exactly when the mobile keyboard changes the viewport size
     if (window.visualViewport) {
         window.visualViewport.addEventListener('resize', () => {
             if (document.activeElement === input) {
-                triggerTSE(50); // Fast trigger because the keyboard is already moving
+                triggerTSE(50); 
             }
         });
     }
@@ -200,10 +202,13 @@ function initTodoTab() {
             const emptyPill = document.createElement('div');
             emptyPill.className = `todo-tint-pill`;
             emptyPill.textContent = "Add Subjects in Settings →";
-            emptyPill.addEventListener('mousedown', (e) => {
+            
+            const handleEmptyClick = (e) => {
                 e.preventDefault(); e.stopPropagation();
                 document.querySelector('.bottom-pill-btn[data-target="tab-settings"]')?.click();
-            });
+            };
+            emptyPill.addEventListener('mousedown', handleEmptyClick);
+            emptyPill.addEventListener('touchstart', handleEmptyClick, { passive: false });
             tray.appendChild(emptyPill);
             return;
         }
@@ -213,19 +218,22 @@ function initTodoTab() {
             pill.className = `todo-tint-pill ${selectedSubjectId === sub.id ? 'selected' : ''}`;
             pill.textContent = sub.name;
             
-            // PILL FIX: Solid Color Mix (No Blur)
             if (selectedSubjectId === sub.id) {
                 pill.style.backgroundColor = `color-mix(in srgb, ${sub.color} 20%, var(--color-surface))`;
                 pill.style.borderColor = sub.color;
                 pill.style.color = sub.color;
             }
             
-            pill.addEventListener('mousedown', (e) => {
+            // FIX: Added touchstart lock so the pill doesn't steal focus from the input box on mobile!
+            const handlePillInteraction = (e) => {
                 e.preventDefault(); e.stopPropagation();
                 selectedSubjectId = selectedSubjectId === sub.id ? null : sub.id;
                 renderSubjectTray(); 
-                triggerTSE(100); // Trigger scroll instantly when selecting a subject
-            });
+                triggerTSE(100); 
+            };
+
+            pill.addEventListener('mousedown', handlePillInteraction);
+            pill.addEventListener('touchstart', handlePillInteraction, { passive: false });
             tray.appendChild(pill);
         });
     };

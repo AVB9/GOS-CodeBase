@@ -147,7 +147,6 @@ function initSmartUI() {
     let lastScrollY = 0;
     
     window.addEventListener('scroll', () => {
-        // Prevent Nav Pill glitches during automatic scrolling
         if (window.isAutoScrolling) {
             lastScrollY = window.scrollY;
             return;
@@ -156,14 +155,18 @@ function initSmartUI() {
         if (!isScrolling) {
             window.requestAnimationFrame(() => {
                 const currentScrollY = window.scrollY;
+                // Check if the user is actively typing in a text box
+                const isFocused = document.activeElement && (document.activeElement.id === 'newTaskInput' || document.activeElement.classList.contains('todo-edit-input'));
                 
-                // RESTORED: The original logic that manages both the Nav Pill and the Float
                 if (currentScrollY > lastScrollY && currentScrollY > 40) {
                     bottomNav.classList.add('nav-hidden');
                     if (floatingTodoInput?.classList.contains('active')) floatingTodoInput.classList.add('keyboard-active');
                 } else if (currentScrollY < lastScrollY) {
                     bottomNav.classList.remove('nav-hidden');
-                    if (floatingTodoInput) floatingTodoInput.classList.remove('keyboard-active');
+                    // FIX: ONLY remove the active class if the keyboard is safely closed!
+                    if (floatingTodoInput && !isFocused) {
+                        floatingTodoInput.classList.remove('keyboard-active');
+                    }
                 }
                 
                 lastScrollY = currentScrollY;
@@ -254,14 +257,12 @@ function initDateGesturesAndModals() {
         let startX = 0, startY = 0;
 
         element.addEventListener('touchstart', (e) => {
-            // FIX 3: GESTURE LOCK
             if (window.isEditingTask) return;
             startX = e.changedTouches[0].screenX;
             startY = e.changedTouches[0].screenY;
         }, { passive: true });
 
         element.addEventListener('touchend', (e) => {
-            // FIX 3: GESTURE LOCK
             if (window.isEditingTask) return;
             if (checkAllowed && !checkAllowed()) return;
             const diffX = e.changedTouches[0].screenX - startX;
@@ -289,12 +290,12 @@ function initDateGesturesAndModals() {
         activeTabForPicker = tab;
         dateInput.value = dateStr; 
         dateModal.style.display = 'flex';
-        document.body.classList.add('modal-open'); // BUG 1 LOCK
+        document.body.classList.add('modal-open'); 
     });
 
     const closeDateModal = () => { 
         dateModal.style.display = 'none'; 
-        document.body.classList.remove('modal-open'); // BUG 1 UNLOCK
+        document.body.classList.remove('modal-open'); 
     };
     closeBtn.addEventListener('click', closeDateModal);
     
@@ -313,14 +314,12 @@ function initDateGesturesAndModals() {
 // =================================================================
 function initGlobalModals() {
     document.querySelectorAll('.modal-overlay').forEach(overlay => {
-        // BUG 1 LOCK INTERCEPTOR
         const observer = new MutationObserver((mutations) => {
             mutations.forEach((mutation) => {
                 if (mutation.attributeName === 'style') {
                     if (overlay.style.display === 'flex' || overlay.style.display === 'block') {
                         document.body.classList.add('modal-open');
                     } else {
-                        // Only remove if NO modals are open
                         const anyOpen = Array.from(document.querySelectorAll('.modal-overlay')).some(o => o.style.display === 'flex' || o.style.display === 'block');
                         if (!anyOpen) document.body.classList.remove('modal-open');
                     }
@@ -370,7 +369,7 @@ window.addEventListener('popstate', (e) => {
     }
 
     if (closedSomething) {
-        document.body.classList.remove('modal-open'); // BUG 1 UNLOCK
+        document.body.classList.remove('modal-open');
         history.pushState({ page: 'pwa-root' }, '');
     } else {
         history.back();
