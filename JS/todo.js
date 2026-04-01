@@ -194,27 +194,32 @@ function initTodoTab() {
         }, delay); 
     };
 
+    // --- UPGRADED: THE VISUAL VIEWPORT ANCHOR ---
     if (window.visualViewport) {
         const floatUI = document.getElementById('floatingTodoInput');
         
         const anchorToKeyboard = () => {
-            // Only anchor if we are on mobile and the input is actively focused
-            if (document.activeElement === input && floatUI) {
-                // Calculate the exact pixel difference between the main window layout and the shrunken visual viewport
+            if (!floatUI) return;
+            
+            const isKeyboardOpen = (window.innerHeight - window.visualViewport.height) > 100;
+            
+            if (document.activeElement === input && isKeyboardOpen) {
+                // Keyboard is open AND we are typing: Anchor to the top of the keyboard
                 const offsetBottom = window.innerHeight - (window.visualViewport.height + window.visualViewport.offsetTop);
-                
-                // Force the float to ride the keyboard (15px above the offset)
                 floatUI.style.bottom = `${Math.max(15, offsetBottom + 15)}px`;
-            } else if (floatUI) {
-                // Reset to CSS defaults when keyboard closes
+                floatUI.classList.add('keyboard-active');
+            } else {
+                // Keyboard is closed: Strip the anchors
                 floatUI.style.bottom = ''; 
+                floatUI.classList.remove('keyboard-active');
             }
         };
 
         // Fire when keyboard pops up or changes size
         window.visualViewport.addEventListener('resize', () => {
             anchorToKeyboard();
-            if (document.activeElement === input) {
+            const isKeyboardOpen = (window.innerHeight - window.visualViewport.height) > 100;
+            if (document.activeElement === input && isKeyboardOpen) {
                 triggerTSE(50); 
             }
         });
@@ -222,7 +227,7 @@ function initTodoTab() {
         // Fire consistently during the smooth scroll to prevent detachment!
         window.visualViewport.addEventListener('scroll', anchorToKeyboard);
     }
-
+    
     const renderSubjectTray = () => {
         if (!tray) return;
         tray.innerHTML = '';

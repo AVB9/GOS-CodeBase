@@ -135,16 +135,18 @@ function initNavigation() {
 // 4. SMART UI (SCROLL HIDING)
 // =================================================================
 window.isAutoScrolling = false; 
+window.isKeyboardOpen = false; 
 
 function initSmartUI() {
     const bottomNav = document.getElementById('bottomNav');
     const floatingTodoInput = document.getElementById('floatingTodoInput');
     const journalEditor = document.getElementById('journalEditor');
+    const baseWindowHeight = window.innerHeight;
     
     if (!bottomNav) return;
 
     let isScrolling = false;
-    let lastScrollY = 0;
+    let lastScrollY = window.scrollY;
     
     window.addEventListener('scroll', () => {
         if (window.isAutoScrolling) {
@@ -155,17 +157,13 @@ function initSmartUI() {
         if (!isScrolling) {
             window.requestAnimationFrame(() => {
                 const currentScrollY = window.scrollY;
-                // Check if the user is actively typing in a text box
-                const isFocused = document.activeElement && (document.activeElement.id === 'newTaskInput' || document.activeElement.classList.contains('todo-edit-input'));
                 
                 if (currentScrollY > lastScrollY && currentScrollY > 40) {
                     bottomNav.classList.add('nav-hidden');
-                    if (floatingTodoInput?.classList.contains('active')) floatingTodoInput.classList.add('keyboard-active');
                 } else if (currentScrollY < lastScrollY) {
-                    bottomNav.classList.remove('nav-hidden');
-                    // FIX: ONLY remove the active class if the keyboard is safely closed!
-                    if (floatingTodoInput && !isFocused) {
-                        floatingTodoInput.classList.remove('keyboard-active');
+                    // THE FIX: If the keyboard is up, FORBID the Nav Pill from showing!
+                    if (!window.isKeyboardOpen) {
+                        bottomNav.classList.remove('nav-hidden');
                     }
                 }
                 
@@ -198,10 +196,25 @@ function initSmartUI() {
         }, { passive: true });
     }
 
-    const baseWindowHeight = window.innerHeight;
-    
+    // NATIVE VIEWPORT KEYBOARD DETECTION
+    if (window.visualViewport) {
+        window.visualViewport.addEventListener('resize', () => {
+            // Strict Math: Did the screen shrink by more than 100px?
+            window.isKeyboardOpen = (baseWindowHeight - window.visualViewport.height) > 100;
+            
+            if (window.isKeyboardOpen) {
+                bottomNav.classList.add('nav-hidden'); // Force hide Nav Pill
+            } else {
+                bottomNav.classList.remove('nav-hidden'); // Restore when keyboard drops
+                if (floatingTodoInput) floatingTodoInput.classList.remove('keyboard-active');
+            }
+        });
+    }
+
+    // Fallbacks for older browsers
     document.addEventListener('focusin', (e) => {
         if ((e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') && e.target.id !== 'journalEditor') {
+            window.isKeyboardOpen = true;
             bottomNav.classList.add('nav-hidden');
             if (floatingTodoInput && e.target.id === 'newTaskInput') floatingTodoInput.classList.add('keyboard-active');
         }
@@ -211,24 +224,12 @@ function initSmartUI() {
         setTimeout(() => {
             const activeTag = document.activeElement ? document.activeElement.tagName : '';
             if (activeTag !== 'INPUT' && activeTag !== 'TEXTAREA') {
+                window.isKeyboardOpen = false;
                 bottomNav.classList.remove('nav-hidden');
                 if (floatingTodoInput) floatingTodoInput.classList.remove('keyboard-active');
             }
         }, 10);
     });
-
-    const handleKeyboardClose = (currentHeight) => {
-        if (currentHeight >= baseWindowHeight - 150) {
-            bottomNav.classList.remove('nav-hidden');
-            if (floatingTodoInput) floatingTodoInput.classList.remove('keyboard-active');
-        }
-    };
-
-    if (window.visualViewport) {
-        window.visualViewport.addEventListener('resize', () => handleKeyboardClose(window.visualViewport.height));
-    } else {
-        window.addEventListener('resize', () => handleKeyboardClose(window.innerHeight));
-    }
 }
 // =================================================================
 // 5. EVENT-DRIVEN GESTURES & MODALS
