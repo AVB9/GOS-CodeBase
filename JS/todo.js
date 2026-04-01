@@ -123,7 +123,7 @@ function initTodoTab() {
         } catch (e) { console.error('Storage error', e); }
     };
 
-    // --- TODO SCROLL ENGINE (TSE) ---
+    // --- RESTORED & POLISHED: PURE MATH TODO SCROLL ENGINE (TSE) ---
     let tseTimer = null; 
     const triggerTSE = (delay = 300) => {
         clearTimeout(tseTimer);
@@ -183,10 +183,8 @@ function initTodoTab() {
                         const offset = nodeRect.bottom - uiTopEdge + 15;
 
                         if (Math.abs(offset) > 5) {
-                            // THE POLISH: If scrolling UP (negative offset), snap instantly to prevent Float detachment.
-                            // If scrolling DOWN (positive offset), keep the smooth animation.
-                            const scrollBehavior = offset < 0 ? 'auto' : 'smooth';
-                            window.scrollBy({ top: offset, behavior: scrollBehavior });
+                            // RESTORED: Keeping it beautifully smooth, exactly as you wanted.
+                            window.scrollBy({ top: offset, behavior: 'smooth' });
                         }
                     }
                 }
@@ -197,11 +195,32 @@ function initTodoTab() {
     };
 
     if (window.visualViewport) {
+        const floatUI = document.getElementById('floatingTodoInput');
+        
+        const anchorToKeyboard = () => {
+            // Only anchor if we are on mobile and the input is actively focused
+            if (document.activeElement === input && floatUI) {
+                // Calculate the exact pixel difference between the main window layout and the shrunken visual viewport
+                const offsetBottom = window.innerHeight - (window.visualViewport.height + window.visualViewport.offsetTop);
+                
+                // Force the float to ride the keyboard (15px above the offset)
+                floatUI.style.bottom = `${Math.max(15, offsetBottom + 15)}px`;
+            } else if (floatUI) {
+                // Reset to CSS defaults when keyboard closes
+                floatUI.style.bottom = ''; 
+            }
+        };
+
+        // Fire when keyboard pops up or changes size
         window.visualViewport.addEventListener('resize', () => {
+            anchorToKeyboard();
             if (document.activeElement === input) {
-                triggerTSE(100); // 100ms debounce ensures keyboard completely settles before math calculates
+                triggerTSE(50); 
             }
         });
+        
+        // Fire consistently during the smooth scroll to prevent detachment!
+        window.visualViewport.addEventListener('scroll', anchorToKeyboard);
     }
 
     const renderSubjectTray = () => {
