@@ -147,6 +147,7 @@ function initSmartUI() {
     let lastScrollY = 0;
     
     window.addEventListener('scroll', () => {
+        // Prevent Nav Pill glitches during automatic scrolling
         if (window.isAutoScrolling) {
             lastScrollY = window.scrollY;
             return;
@@ -156,12 +157,13 @@ function initSmartUI() {
             window.requestAnimationFrame(() => {
                 const currentScrollY = window.scrollY;
                 
-                // FIX: The scroll listener NO LONGER touches floatingTodoInput. 
-                // It only hides/shows the bottomNav. 
+                // RESTORED: The original logic that manages both the Nav Pill and the Float
                 if (currentScrollY > lastScrollY && currentScrollY > 40) {
                     bottomNav.classList.add('nav-hidden');
+                    if (floatingTodoInput?.classList.contains('active')) floatingTodoInput.classList.add('keyboard-active');
                 } else if (currentScrollY < lastScrollY) {
                     bottomNav.classList.remove('nav-hidden');
+                    if (floatingTodoInput) floatingTodoInput.classList.remove('keyboard-active');
                 }
                 
                 lastScrollY = currentScrollY;
@@ -195,7 +197,6 @@ function initSmartUI() {
 
     const baseWindowHeight = window.innerHeight;
     
-    // The Input Float is now ONLY controlled by actual Focus/Blur events
     document.addEventListener('focusin', (e) => {
         if ((e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') && e.target.id !== 'journalEditor') {
             bottomNav.classList.add('nav-hidden');

@@ -158,9 +158,23 @@ function initTodoTab() {
                 if (isDesktop) {
                     targetNode.scrollIntoView({ behavior: 'smooth', block: 'center' });
                 } else {
-                    // FIX: Using 'end' aligns the bottom of the task with the padding-bottom of the container, 
-                    // dropping it perfectly 15px above the subject tray.
-                    targetNode.scrollIntoView({ behavior: 'smooth', block: 'end' });
+                    const scrollContainer = document.getElementById('todoSwipeContainer');
+                    if (scrollContainer) {
+                        // STRICT CONTAINER SCROLLING: This calculates the offset and ONLY scrolls 
+                        // the internal list. It prevents the main window from shifting, 
+                        // guaranteeing the Float stays anchored to the bottom.
+                        const containerRect = scrollContainer.getBoundingClientRect();
+                        const nodeRect = targetNode.getBoundingClientRect();
+                        
+                        // We calculate the difference and add a 120px buffer 
+                        // to perfectly clear the height of the tray + input box.
+                        const offset = (nodeRect.bottom - containerRect.bottom) + 120; 
+                        
+                        scrollContainer.scrollTo({
+                            top: scrollContainer.scrollTop + offset,
+                            behavior: 'smooth'
+                        });
+                    }
                 }
             }
             
