@@ -475,9 +475,9 @@ input[type="search"]::-webkit-search-results-decoration { display: none !importa
 
 .todo-subject-tray { position: absolute; bottom: 100%; left: 0; width: 100%; padding-bottom: var(--pad-md); display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; opacity: 0; visibility: hidden; transform: translateY(15px); transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease, visibility 0s linear 0.3s !important; pointer-events: none; }
 .todo-subject-tray.active { opacity: 1; visibility: visible; transform: translateY(0); pointer-events: auto; transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease, visibility 0s linear 0s !important; }
-.todo-tint-pill { padding: 6px 14px; border-radius: var(--rad-lg); font-size: 0.8rem; font-weight: 600; cursor: pointer; color: var(--color-text-muted); border: 1px solid var(--color-glass-border); background: var(--color-glass-white); backdrop-filter: var(--blur-glass); -webkit-backdrop-filter: var(--blur-glass); transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease; will-change: transform; transform: translateZ(0); -webkit-transform: translateZ(0); }
-.todo-tint-pill:active { transform: scale(0.92) translateZ(0); -webkit-transform: scale(0.92) translateZ(0); }
-.todo-tint-pill.selected { transform: translateY(-2px) translateZ(0); -webkit-transform: translateY(-2px) translateZ(0); box-shadow: var(--shadow-md); font-weight: 800; }
+.todo-tint-pill { padding: 6px 14px; border-radius: var(--rad-lg); font-size: 0.8rem; font-weight: 600; cursor: pointer; color: var(--color-text-muted); border: 1px solid var(--color-glass-border); background: var(--color-surface); transform: translateZ(0); transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease; will-change: transform; }
+.todo-tint-pill:active { transform: scale(0.92) translateZ(0); }
+.todo-tint-pill.selected { transform: translateY(-2px) translateZ(0); box-shadow: var(--shadow-md); font-weight: 800; }
 
 /* --- C. SHARED TASK ELEMENTS (Checkbox, Text, Buttons) --- */
 .todo-subject-header { margin-top: var(--pad-md); margin-bottom: 5px; font-size: 0.85rem; font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px; padding-left: 5px; list-style: none; }

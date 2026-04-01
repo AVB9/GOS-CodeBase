@@ -88,14 +88,6 @@ function initTodoTab() {
 
     const getSubjects = () => JSON.parse(localStorage.getItem('plannerSubjects')) || [{ id: 'off', name: 'Day Off', color: '#555555' }];
 
-    const hexToRgba = (hex, alpha) => {
-        if (!hex) return `rgba(255,255,255,${alpha})`;
-        hex = hex.replace('#', '');
-        if (hex.length === 3) hex = hex.split('').map(x => x + x).join('');
-        const r = parseInt(hex.substring(0,2), 16), g = parseInt(hex.substring(2,4), 16), b = parseInt(hex.substring(4,6), 16);
-        return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-    };
-
     const updateDateDisplay = () => {
         const today = new Date(); today.setHours(0, 0, 0, 0);
         const compareDate = new Date(currentDate); compareDate.setHours(0, 0, 0, 0);
@@ -123,12 +115,12 @@ function initTodoTab() {
         } catch (e) { console.error('Storage error', e); }
     };
 
-    // --- UPGRADED: THE TODO SCROLL ENGINE (TSE) ---
-    const triggerTSE = () => {
+    // --- UPGRADED: VIEWPORT-AWARE TODO SCROLL ENGINE (TSE) ---
+    const triggerTSE = (delay = 300) => {
         setTimeout(() => {
             if (!listEl && !pcTodo) return;
             
-            window.isAutoScrolling = true; // Lock Nav Pill
+            window.isAutoScrolling = true; 
             
             const isDesktop = window.innerWidth >= 768;
             const targetContainer = isDesktop ? pcTodo : listEl;
@@ -163,28 +155,22 @@ function initTodoTab() {
             }
             
             if (targetNode) {
-                if (isDesktop) {
-                    targetNode.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                } else {
-                    const scrollContainer = document.getElementById('todoSwipeContainer');
-                    if (scrollContainer) {
-                        const containerRect = scrollContainer.getBoundingClientRect();
-                        const nodeRect = targetNode.getBoundingClientRect();
-                        const offset = (nodeRect.top - containerRect.top) - 100; 
-                        
-                        scrollContainer.scrollTo({
-                            top: scrollContainer.scrollTop + offset,
-                            behavior: 'smooth'
-                        });
-                    } else {
-                        targetNode.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    }
-                }
+                // Native smooth scroll into the center of the available viewport
+                targetNode.scrollIntoView({ behavior: 'smooth', block: 'center' });
             }
             
             setTimeout(() => window.isAutoScrolling = false, 800); 
-        }, 300); 
+        }, delay); 
     };
+
+    // KEYBOARD LISTENER: Fires TSE exactly when the mobile keyboard changes the viewport size
+    if (window.visualViewport) {
+        window.visualViewport.addEventListener('resize', () => {
+            if (document.activeElement === input) {
+                triggerTSE(50); // Fast trigger because the keyboard is already moving
+            }
+        });
+    }
 
     const renderSubjectTray = () => {
         if (!tray) return;
@@ -207,16 +193,19 @@ function initTodoTab() {
             const pill = document.createElement('div');
             pill.className = `todo-tint-pill ${selectedSubjectId === sub.id ? 'selected' : ''}`;
             pill.textContent = sub.name;
+            
+            // PILL FIX: Solid Color Mix (No Blur)
             if (selectedSubjectId === sub.id) {
-                pill.style.backgroundColor = `color-mix(in srgb, ${sub.color} 15%, transparent)`;
+                pill.style.backgroundColor = `color-mix(in srgb, ${sub.color} 20%, var(--color-surface))`;
                 pill.style.borderColor = sub.color;
                 pill.style.color = sub.color;
             }
+            
             pill.addEventListener('mousedown', (e) => {
                 e.preventDefault(); e.stopPropagation();
                 selectedSubjectId = selectedSubjectId === sub.id ? null : sub.id;
                 renderSubjectTray(); 
-                triggerTSE();
+                triggerTSE(100); // Trigger scroll instantly when selecting a subject
             });
             tray.appendChild(pill);
         });
@@ -381,12 +370,11 @@ function initTodoTab() {
                             saveTasks(); 
                             renderTasks();
                             if (task.status === 'done') setTimeout(() => window.showAppToast("MUUWWAHAAAA!!!"), 100);
+                            window.checkUltimateCompletion(getDateKey(currentDate).replace('todo_', '')); 
                         }
                     });
 
                     const textSpan = li.querySelector('.todo-text');
-                    
-                    // --- MOBILE OPEN EDIT MODE ---
                     const openEditMode = () => {
                         const taskNode = li;
                         if (taskNode.querySelector('.todo-edit-wrapper')) return; 
@@ -596,6 +584,7 @@ function initTodoTab() {
                                         saveTasks(); 
                                         renderTasks();
                                         if (task.status === 'done') setTimeout(() => window.showAppToast("MUUWWAHAAAA!!!"), 100);
+                                        window.checkUltimateCompletion(getDateKey(currentDate).replace('todo_', ''));
                                     }
                                 }, 250); 
                             } else if (tapCount === 2) {
@@ -625,6 +614,7 @@ function initTodoTab() {
                                     saveTasks(); 
                                     renderTasks();
                                     if (task.status === 'done') setTimeout(() => window.showAppToast("MUUWWAHAAAA!!!"), 100);
+                                    window.checkUltimateCompletion(getDateKey(currentDate).replace('todo_', ''));
                                 }
                             }, 250); 
                         } else if (e.detail === 2) { 
@@ -691,7 +681,6 @@ function initTodoTab() {
 
                     const textSpan = pcCard.querySelector('.todo-text');
                     
-                    // --- DESKTOP OPEN EDIT MODE ---
                     textSpan.addEventListener('dblclick', () => {
                         const taskNode = pcCard;
                         if (taskNode.querySelector('.todo-edit-wrapper')) return; 
@@ -797,6 +786,7 @@ function initTodoTab() {
                             saveTasks(); 
                             renderTasks();
                             if (task.status === 'done') setTimeout(() => window.showAppToast("MUUWWAHAAAA!!!"), 100);
+                            window.checkUltimateCompletion(getDateKey(currentDate).replace('todo_', ''));
                         }
                     });
 
@@ -948,8 +938,7 @@ function initTodoTab() {
             renderTasks();
             
             localStorage.removeItem('celebrated_' + getDateKey(currentDate).replace('todo_', ''));
-            
-            triggerTSE();
+            triggerTSE(100); 
         }
     };
 
