@@ -194,7 +194,7 @@ function initTodoTab() {
         }, delay); 
     };
 
-    // --- UPGRADED: THE VISUAL VIEWPORT ANCHOR ---
+   // --- UPGRADED: THE VISUAL VIEWPORT ANCHOR ---
     if (window.visualViewport) {
         const floatUI = document.getElementById('floatingTodoInput');
         
@@ -204,19 +204,19 @@ function initTodoTab() {
             const isKeyboardOpen = (window.innerHeight - window.visualViewport.height) > 100;
             
             if (document.activeElement === input && isKeyboardOpen) {
-                // Keyboard is open AND we are typing: Anchor to the top of the keyboard
+                // Keyboard is open: JS Math takes over and overrides CSS
                 const offsetBottom = window.innerHeight - (window.visualViewport.height + window.visualViewport.offsetTop);
                 floatUI.style.bottom = `${Math.max(15, offsetBottom + 15)}px`;
                 floatUI.classList.add('keyboard-active');
-                floatUI.classList.remove('float-lowered'); // Handoff: Let the keyboard take over
+                floatUI.classList.remove('float-lowered'); 
             } else {
-                // Keyboard is closed: Strip the keyboard anchors and let app.js/CSS manage the height
+                // Keyboard is closed: Clear JS Math so CSS takes control again
                 floatUI.style.bottom = ''; 
                 floatUI.classList.remove('keyboard-active');
+                // We do NOT touch 'float-lowered' here. app.js manages that based on scroll direction!
             }
         };
 
-        // Fire when keyboard pops up or changes size
         window.visualViewport.addEventListener('resize', () => {
             anchorToKeyboard();
             const isKeyboardOpen = (window.innerHeight - window.visualViewport.height) > 100;
@@ -225,7 +225,6 @@ function initTodoTab() {
             }
         });
         
-        // Fire consistently during the smooth scroll to prevent detachment!
         window.visualViewport.addEventListener('scroll', anchorToKeyboard);
     }
 
