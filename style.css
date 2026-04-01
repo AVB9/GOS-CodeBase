@@ -468,10 +468,10 @@ input[type="search"]::-webkit-search-results-decoration { display: none !importa
 @media (min-width: 768px) {
     .todo-input-group { max-width: 650px !important; }
 }
-.todo-input-group { position: fixed; bottom: calc(110px + var(--safe-bottom)); left: 50%; width: calc(100% - 30px); max-width: 500px; display: flex; flex-direction: row; align-items: center; padding: 8px 10px 8px var(--pad-lg); gap: 10px; z-index: 990; border-radius: var(--rad-pill) !important; transform: translateX(-50%) translateY(20px); opacity: 0; pointer-events: none; transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease; will-change: transform, opacity; }
+.todo-input-group { position: fixed; bottom: calc(110px + var(--safe-bottom)); left: 50%; width: calc(100% - 30px); max-width: 500px; display: flex; flex-direction: row; align-items: center; padding: 8px 10px 8px var(--pad-lg); gap: 10px; z-index: 990; border-radius: var(--rad-pill) !important; transform: translateX(-50%) translateY(20px); opacity: 0; pointer-events: none; transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease, bottom 0.3s cubic-bezier(0.4, 0, 0.2, 1); will-change: transform, opacity, bottom; }
 .todo-input-group.active { opacity: 1; pointer-events: auto; transform: translateX(-50%) translateY(0); }
-.todo-input-group.keyboard-active { bottom: 15px; }
-.todo-input-group input { flex: 1; background: transparent; border: none; color: var(--color-text); outline: none; }
+.todo-input-group.float-lowered { bottom: calc(40px + var(--safe-bottom)) !important; }
+.todo-input-group.keyboard-active { bottom: 15px !important; }
 
 .todo-subject-tray { position: absolute; bottom: 100%; left: 0; width: 100%; padding-bottom: var(--pad-md); display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; opacity: 0; visibility: hidden; transform: translateY(15px); transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease, visibility 0s linear 0.3s !important; pointer-events: none; }
 .todo-subject-tray.active { opacity: 1; visibility: visible; transform: translateY(0); pointer-events: auto; transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease, visibility 0s linear 0s !important; }

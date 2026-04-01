@@ -159,11 +159,16 @@ function initSmartUI() {
                 const currentScrollY = window.scrollY;
                 
                 if (currentScrollY > lastScrollY && currentScrollY > 40) {
+                    // Scrolling Down: Hide Nav, Lower the Float
                     bottomNav.classList.add('nav-hidden');
+                    if (floatingTodoInput && !window.isKeyboardOpen) {
+                        floatingTodoInput.classList.add('float-lowered');
+                    }
                 } else if (currentScrollY < lastScrollY) {
-                    // THE FIX: If the keyboard is up, FORBID the Nav Pill from showing!
+                    // Scrolling Up: Show Nav, Raise the Float (Only if keyboard is closed!)
                     if (!window.isKeyboardOpen) {
                         bottomNav.classList.remove('nav-hidden');
+                        if (floatingTodoInput) floatingTodoInput.classList.remove('float-lowered');
                     }
                 }
                 
@@ -199,24 +204,29 @@ function initSmartUI() {
     // NATIVE VIEWPORT KEYBOARD DETECTION
     if (window.visualViewport) {
         window.visualViewport.addEventListener('resize', () => {
-            // Strict Math: Did the screen shrink by more than 100px?
             window.isKeyboardOpen = (baseWindowHeight - window.visualViewport.height) > 100;
             
             if (window.isKeyboardOpen) {
-                bottomNav.classList.add('nav-hidden'); // Force hide Nav Pill
+                bottomNav.classList.add('nav-hidden'); 
             } else {
-                bottomNav.classList.remove('nav-hidden'); // Restore when keyboard drops
-                if (floatingTodoInput) floatingTodoInput.classList.remove('keyboard-active');
+                bottomNav.classList.remove('nav-hidden'); 
+                if (floatingTodoInput) {
+                    floatingTodoInput.classList.remove('keyboard-active');
+                    floatingTodoInput.classList.remove('float-lowered'); // Reset Float height
+                }
             }
         });
     }
 
-    // Fallbacks for older browsers
+    // Fallbacks for older browsers/desktop
     document.addEventListener('focusin', (e) => {
         if ((e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') && e.target.id !== 'journalEditor') {
             window.isKeyboardOpen = true;
             bottomNav.classList.add('nav-hidden');
-            if (floatingTodoInput && e.target.id === 'newTaskInput') floatingTodoInput.classList.add('keyboard-active');
+            if (floatingTodoInput && e.target.id === 'newTaskInput') {
+                floatingTodoInput.classList.add('keyboard-active');
+                floatingTodoInput.classList.remove('float-lowered');
+            }
         }
     });
 
@@ -226,11 +236,15 @@ function initSmartUI() {
             if (activeTag !== 'INPUT' && activeTag !== 'TEXTAREA') {
                 window.isKeyboardOpen = false;
                 bottomNav.classList.remove('nav-hidden');
-                if (floatingTodoInput) floatingTodoInput.classList.remove('keyboard-active');
+                if (floatingTodoInput) {
+                    floatingTodoInput.classList.remove('keyboard-active');
+                    floatingTodoInput.classList.remove('float-lowered');
+                }
             }
         }, 10);
     });
 }
+
 // =================================================================
 // 5. EVENT-DRIVEN GESTURES & MODALS
 // =================================================================

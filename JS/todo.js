@@ -208,8 +208,9 @@ function initTodoTab() {
                 const offsetBottom = window.innerHeight - (window.visualViewport.height + window.visualViewport.offsetTop);
                 floatUI.style.bottom = `${Math.max(15, offsetBottom + 15)}px`;
                 floatUI.classList.add('keyboard-active');
+                floatUI.classList.remove('float-lowered'); // Handoff: Let the keyboard take over
             } else {
-                // Keyboard is closed: Strip the anchors
+                // Keyboard is closed: Strip the keyboard anchors and let app.js/CSS manage the height
                 floatUI.style.bottom = ''; 
                 floatUI.classList.remove('keyboard-active');
             }
@@ -227,7 +228,7 @@ function initTodoTab() {
         // Fire consistently during the smooth scroll to prevent detachment!
         window.visualViewport.addEventListener('scroll', anchorToKeyboard);
     }
-    
+
     const renderSubjectTray = () => {
         if (!tray) return;
         tray.innerHTML = '';
