@@ -123,7 +123,7 @@ function initTodoTab() {
         } catch (e) { console.error('Storage error', e); }
     };
 
-    // --- UPGRADED: STRICT CONTAINER TODO SCROLL ENGINE (TSE) ---
+    // --- TODO SCROLL ENGINE (TSE) ---
     let tseTimer = null; 
     const triggerTSE = (delay = 300) => {
         clearTimeout(tseTimer);
@@ -168,29 +168,25 @@ function initTodoTab() {
                 if (isDesktop) {
                     targetNode.scrollIntoView({ behavior: 'smooth', block: 'center' });
                 } else {
-                    const scrollContainer = document.getElementById('todoSwipeContainer');
                     const floatUI = document.getElementById('floatingTodoInput');
                     const trayUI = document.getElementById('todoSubjectTray');
 
-                    if (scrollContainer && floatUI) {
+                    if (floatUI) {
                         const nodeRect = targetNode.getBoundingClientRect();
                         
-                        let uiTopEdge = window.innerHeight;
-                        uiTopEdge = floatUI.getBoundingClientRect().top;
+                        let uiTopEdge = floatUI.getBoundingClientRect().top;
                         if (trayUI && trayUI.classList.contains('active')) {
                             uiTopEdge = trayUI.getBoundingClientRect().top;
                         }
 
-                        // STRICT MATH: Calculate the exact difference between the bottom of the target task 
-                        // and the top of our UI Float, minus 15px of comfortable padding.
-                        const offset = nodeRect.bottom - (uiTopEdge - 15);
+                        // EXACT MATH: Target Bottom - UI Top + 15px Padding
+                        const offset = nodeRect.bottom - uiTopEdge + 15;
 
-                        // ONLY scroll the internal container. Never touch the Window!
                         if (Math.abs(offset) > 5) {
-                            scrollContainer.scrollBy({
-                                top: offset,
-                                behavior: 'smooth'
-                            });
+                            // THE POLISH: If scrolling UP (negative offset), snap instantly to prevent Float detachment.
+                            // If scrolling DOWN (positive offset), keep the smooth animation.
+                            const scrollBehavior = offset < 0 ? 'auto' : 'smooth';
+                            window.scrollBy({ top: offset, behavior: scrollBehavior });
                         }
                     }
                 }
