@@ -123,9 +123,11 @@ function initTodoTab() {
         } catch (e) { console.error('Storage error', e); }
     };
 
-    // --- UPGRADED: VIEWPORT-AWARE TODO SCROLL ENGINE (TSE) ---
+    // --- UPGRADED: PURE MATH TODO SCROLL ENGINE (TSE) ---
+    let tseTimer = null; // Debounce timer to prevent layout thrashing
     const triggerTSE = (delay = 300) => {
-        setTimeout(() => {
+        clearTimeout(tseTimer);
+        tseTimer = setTimeout(() => {
             if (!listEl && !pcTodo) return;
             
             window.isAutoScrolling = true; 
@@ -166,17 +168,15 @@ function initTodoTab() {
                 if (isDesktop) {
                     targetNode.scrollIntoView({ behavior: 'smooth', block: 'center' });
                 } else {
-                    const scrollContainer = document.getElementById('todoSwipeContainer');
-                    if (scrollContainer) {
-                        const containerRect = scrollContainer.getBoundingClientRect();
-                        const nodeRect = targetNode.getBoundingClientRect();
-                        
-                        const offset = (nodeRect.bottom - containerRect.bottom) + 120; 
-                        
-                        scrollContainer.scrollTo({
-                            top: scrollContainer.scrollTop + offset,
-                            behavior: 'smooth'
-                        });
+                    // FIX: Pure window math! Bypasses the scrollIntoView mobile detachment bug.
+                    const rect = targetNode.getBoundingClientRect();
+                    const vh = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+                    
+                    // We calculate the distance needed to place the bottom of the task exactly 140px above the keyboard
+                    const offset = rect.bottom - (vh - 140);
+                    
+                    if (Math.abs(offset) > 10) { // Only scroll if it's actually misaligned
+                        window.scrollBy({ top: offset, behavior: 'smooth' });
                     }
                 }
             }
@@ -185,6 +185,7 @@ function initTodoTab() {
         }, delay); 
     };
 
+    // KEYBOARD LISTENER: Fast trigger for when the keyboard slides up
     if (window.visualViewport) {
         window.visualViewport.addEventListener('resize', () => {
             if (document.activeElement === input) {
@@ -202,13 +203,10 @@ function initTodoTab() {
             const emptyPill = document.createElement('div');
             emptyPill.className = `todo-tint-pill`;
             emptyPill.textContent = "Add Subjects in Settings →";
-            
-            const handleEmptyClick = (e) => {
+            emptyPill.addEventListener('mousedown', (e) => {
                 e.preventDefault(); e.stopPropagation();
                 document.querySelector('.bottom-pill-btn[data-target="tab-settings"]')?.click();
-            };
-            emptyPill.addEventListener('mousedown', handleEmptyClick);
-            emptyPill.addEventListener('touchstart', handleEmptyClick, { passive: false });
+            });
             tray.appendChild(emptyPill);
             return;
         }
@@ -217,14 +215,11 @@ function initTodoTab() {
             const pill = document.createElement('div');
             pill.className = `todo-tint-pill ${selectedSubjectId === sub.id ? 'selected' : ''}`;
             pill.textContent = sub.name;
-            
             if (selectedSubjectId === sub.id) {
                 pill.style.backgroundColor = `color-mix(in srgb, ${sub.color} 20%, var(--color-surface))`;
                 pill.style.borderColor = sub.color;
                 pill.style.color = sub.color;
             }
-            
-            // FIX: Added touchstart lock so the pill doesn't steal focus from the input box on mobile!
             const handlePillInteraction = (e) => {
                 e.preventDefault(); e.stopPropagation();
                 selectedSubjectId = selectedSubjectId === sub.id ? null : sub.id;
