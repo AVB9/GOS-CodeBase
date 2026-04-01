@@ -123,8 +123,8 @@ function initTodoTab() {
         } catch (e) { console.error('Storage error', e); }
     };
 
-    // --- UPGRADED: PURE MATH TODO SCROLL ENGINE (TSE) ---
-    let tseTimer = null; // Debounce timer to prevent layout thrashing
+// --- UPGRADED: DYNAMIC TARGET-LOCK TODO SCROLL ENGINE (TSE) ---
+    let tseTimer = null;
     const triggerTSE = (delay = 300) => {
         clearTimeout(tseTimer);
         tseTimer = setTimeout(() => {
@@ -142,6 +142,7 @@ function initTodoTab() {
             let targetNode = null;
             const taskNodes = Array.from(targetContainer.querySelectorAll(isDesktop ? '.kanban-task' : '.todo-item'));
             
+            // 1. Find target task
             if (selectedSubjectId) {
                 const subjectTasks = taskNodes.filter(el => {
                     const taskId = parseInt(el.dataset.taskId || el.dataset.id, 10);
@@ -164,19 +165,35 @@ function initTodoTab() {
                 if (header) targetNode = header;
             }
             
+            // 2. Execute Dynamic Target Lock
             if (targetNode) {
                 if (isDesktop) {
                     targetNode.scrollIntoView({ behavior: 'smooth', block: 'center' });
                 } else {
-                    // FIX: Pure window math! Bypasses the scrollIntoView mobile detachment bug.
-                    const rect = targetNode.getBoundingClientRect();
-                    const vh = window.visualViewport ? window.visualViewport.height : window.innerHeight;
-                    
-                    // We calculate the distance needed to place the bottom of the task exactly 140px above the keyboard
-                    const offset = rect.bottom - (vh - 140);
-                    
-                    if (Math.abs(offset) > 10) { // Only scroll if it's actually misaligned
-                        window.scrollBy({ top: offset, behavior: 'smooth' });
+                    const scrollContainer = document.getElementById('todoSwipeContainer');
+                    const floatUI = document.getElementById('floatingTodoInput');
+                    const trayUI = document.getElementById('todoSubjectTray');
+
+                    if (scrollContainer && floatUI) {
+                        // Measure exact position of the task
+                        const nodeRect = targetNode.getBoundingClientRect();
+                        
+                        // Find the absolute top edge of our UI (either the tray or the input box itself)
+                        let uiTopEdge = floatUI.getBoundingClientRect().top;
+                        if (trayUI && trayUI.classList.contains('active')) {
+                            uiTopEdge = trayUI.getBoundingClientRect().top;
+                        }
+
+                        // We want the bottom of the task to be exactly 15px above that top edge
+                        const targetY = uiTopEdge - 15;
+                        
+                        // Calculate exact pixel difference
+                        const offset = nodeRect.bottom - targetY;
+
+                        // Scroll the INTERNAL container by that exact amount
+                        if (Math.abs(offset) > 5) {
+                            scrollContainer.scrollBy({ top: offset, behavior: 'smooth' });
+                        }
                     }
                 }
             }
