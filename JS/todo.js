@@ -123,7 +123,7 @@ function initTodoTab() {
         } catch (e) { console.error('Storage error', e); }
     };
 
-// --- UPGRADED: STRICT CONTAINER TODO SCROLL ENGINE (TSE) ---
+    // --- UPGRADED: FLAWLESS WINDOW-MATH SCROLL ENGINE ---
     let tseTimer = null; 
     const triggerTSE = (delay = 300) => {
         window.isAutoScrolling = true; 
@@ -137,6 +137,7 @@ function initTodoTab() {
             
             const isDesktop = window.innerWidth >= 768;
             const targetContainer = isDesktop ? pcTodo : listEl;
+            
             if (!targetContainer) {
                 window.isAutoScrolling = false;
                 return;
@@ -171,11 +172,10 @@ function initTodoTab() {
                 if (isDesktop) {
                     targetNode.scrollIntoView({ behavior: 'smooth', block: 'center' });
                 } else {
-                    const scrollContainer = document.getElementById('todoSwipeContainer');
                     const floatUI = document.getElementById('floatingTodoInput');
                     const trayUI = document.getElementById('todoSubjectTray');
 
-                    if (scrollContainer && floatUI) {
+                    if (floatUI) {
                         const nodeRect = targetNode.getBoundingClientRect();
                         
                         let uiTopEdge = floatUI.getBoundingClientRect().top;
@@ -183,25 +183,22 @@ function initTodoTab() {
                             uiTopEdge = trayUI.getBoundingClientRect().top;
                         }
 
-                        // EXACT MATH: Target Bottom - UI Top + 15px Padding
+                        // EXACT MATH: Distance between bottom of target task and top of Float UI
                         const offset = nodeRect.bottom - uiTopEdge + 15;
 
                         if (Math.abs(offset) > 5) {
-                            scrollContainer.scrollBy({
-                                top: offset,
-                                behavior: 'smooth'
-                            });
+                            // FLAWLESS MOBILE SCROLL: This correctly scrolls the main window!
+                            window.scrollBy({ top: offset, behavior: 'smooth' });
                         }
                     }
                 }
             }
             
-            // Unlock the manual scroll listener after the smooth animation finishes
             setTimeout(() => window.isAutoScrolling = false, 800); 
         }, delay); 
     };
 
-   // --- UPGRADED: THE VISUAL VIEWPORT ANCHOR ---
+    // --- UPGRADED: "TOP-ANCHORED" VISUAL VIEWPORT LOCK ---
     if (window.visualViewport) {
         const floatUI = document.getElementById('floatingTodoInput');
         
@@ -211,16 +208,22 @@ function initTodoTab() {
             const isKeyboardOpen = (window.innerHeight - window.visualViewport.height) > 100;
             
             if (document.activeElement === input && isKeyboardOpen) {
-                // Keyboard is open: JS Math takes over and overrides CSS
-                const offsetBottom = window.innerHeight - (window.visualViewport.height + window.visualViewport.offsetTop);
-                floatUI.style.bottom = `${Math.max(15, offsetBottom + 15)}px`;
+                const vv = window.visualViewport;
+                
+                // TOP-ANCHOR FIX: By anchoring from the top, we completely ignore the 
+                // bottom URL bar collapse bug. The float will never shift up randomly!
+                const targetTop = vv.offsetTop + vv.height - floatUI.offsetHeight - 15;
+                
+                floatUI.style.top = `${targetTop}px`;
+                floatUI.style.bottom = 'auto'; // Disable CSS bottom
+                
                 floatUI.classList.add('keyboard-active');
                 floatUI.classList.remove('float-lowered'); 
             } else {
-                // Keyboard is closed: Clear JS Math so CSS takes control again
+                // Restore CSS control when keyboard closes
+                floatUI.style.top = ''; 
                 floatUI.style.bottom = ''; 
                 floatUI.classList.remove('keyboard-active');
-                // We do NOT touch 'float-lowered' here. app.js manages that based on scroll direction!
             }
         };
 
@@ -235,12 +238,13 @@ function initTodoTab() {
         window.visualViewport.addEventListener('scroll', anchorToKeyboard);
     }
 
-   const renderSubjectTray = () => {
+    const renderSubjectTray = () => {
         if (!tray) return;
-        tray.innerHTML = '';
+        
         const subjects = getSubjects().filter(s => s.id !== 'off');
 
         if (subjects.length === 0) {
+            tray.innerHTML = '';
             const emptyPill = document.createElement('div');
             emptyPill.className = `todo-tint-pill`;
             emptyPill.textContent = "Add Subjects in Settings →";
@@ -255,47 +259,58 @@ function initTodoTab() {
             return;
         }
 
-        subjects.forEach(sub => {
-            const pill = document.createElement('div');
-            pill.className = `todo-tint-pill ${selectedSubjectId === sub.id ? 'selected' : ''}`;
-            pill.textContent = sub.name;
-            
-            if (selectedSubjectId === sub.id) {
-                pill.style.backgroundColor = `color-mix(in srgb, ${sub.color} 20%, var(--color-surface))`;
-                pill.style.borderColor = sub.color;
-                pill.style.color = sub.color;
-            }
-            
-            const handlePillInteraction = (e) => {
-                // Keep the cursor locked in the input!
-                e.preventDefault(); e.stopPropagation();
+        // Only rebuild DOM if the number of subjects changed (prevents initial rendering bugs)
+        if (tray.children.length !== subjects.length || tray.querySelector('.empty-task-text')) {
+            tray.innerHTML = '';
+            subjects.forEach(sub => {
+                const pill = document.createElement('div');
+                pill.className = `todo-tint-pill`;
+                pill.textContent = sub.name;
+                pill.dataset.id = sub.id;
                 
-                // Toggle the selected ID
-                selectedSubjectId = selectedSubjectId === sub.id ? null : sub.id;
-                
-                // THE FIX: Safely strip the colors from ALL pills without destroying the DOM elements
-                Array.from(tray.children).forEach(p => {
-                    p.classList.remove('selected');
-                    p.style.backgroundColor = '';
-                    p.style.borderColor = '';
-                    p.style.color = '';
-                });
-                
-                // Apply the highlight ONLY to the pill you just clicked
-                if (selectedSubjectId === sub.id) {
-                    pill.classList.add('selected');
-                    pill.style.backgroundColor = `color-mix(in srgb, ${sub.color} 20%, var(--color-surface))`;
-                    pill.style.borderColor = sub.color;
-                    pill.style.color = sub.color;
-                }
-                
-                // Scroll the container to the newly selected subject
-                triggerTSE(100); 
-            };
+                const handlePillInteraction = (e) => {
+                    e.preventDefault(); e.stopPropagation();
+                    
+                    selectedSubjectId = selectedSubjectId === sub.id ? null : sub.id;
+                    
+                    // DOM-SAFE HIGHLIGHT: Update colors without destroying the element!
+                    Array.from(tray.children).forEach(p => {
+                        p.classList.remove('selected');
+                        p.style.backgroundColor = '';
+                        p.style.borderColor = '';
+                        p.style.color = '';
+                    });
+                    
+                    if (selectedSubjectId === sub.id) {
+                        pill.classList.add('selected');
+                        pill.style.backgroundColor = `color-mix(in srgb, ${sub.color} 20%, var(--color-surface))`;
+                        pill.style.borderColor = sub.color;
+                        pill.style.color = sub.color;
+                    }
+                    
+                    triggerTSE(100); 
+                };
 
-            pill.addEventListener('mousedown', handlePillInteraction);
-            pill.addEventListener('touchstart', handlePillInteraction, { passive: false });
-            tray.appendChild(pill);
+                pill.addEventListener('mousedown', handlePillInteraction);
+                pill.addEventListener('touchstart', handlePillInteraction, { passive: false });
+                tray.appendChild(pill);
+            });
+        }
+        
+        // Ensure initial selection state is physically applied
+        Array.from(tray.children).forEach(p => {
+            const sub = subjects.find(s => s.id === p.dataset.id);
+            if (sub && selectedSubjectId === sub.id) {
+                p.classList.add('selected');
+                p.style.backgroundColor = `color-mix(in srgb, ${sub.color} 20%, var(--color-surface))`;
+                p.style.borderColor = sub.color;
+                p.style.color = sub.color;
+            } else {
+                p.classList.remove('selected');
+                p.style.backgroundColor = '';
+                p.style.borderColor = '';
+                p.style.color = '';
+            }
         });
     };
 
@@ -306,6 +321,7 @@ function initTodoTab() {
 
     input.addEventListener('click', () => { if (tray) tray.classList.add('active'); });
 
+    // --- PC-ONLY BLUR ON MANUAL SCROLL ---
     window.addEventListener('wheel', () => {
         const isDesktop = window.innerWidth >= 768; 
         
@@ -313,7 +329,7 @@ function initTodoTab() {
             input.blur();
             if (tray) tray.classList.remove('active');
         }
-    }, { capture: true, passive: true });
+    }, { capture: true, passive: true }); 
 
     document.addEventListener('mousedown', (e) => {
         if (e.target === input || input.contains(e.target)) return; 
@@ -478,6 +494,10 @@ function initTodoTab() {
                         
                         taskNode.classList.add('is-editing'); 
                         window.isEditingTask = true; 
+
+                        window.isAutoScrolling = true;
+                        taskNode.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        setTimeout(() => window.isAutoScrolling = false, 800);
 
                         const wrapper = document.createElement('div');
                         wrapper.className = 'todo-edit-wrapper';
@@ -781,6 +801,10 @@ function initTodoTab() {
                         
                         taskNode.classList.add('is-editing'); 
                         window.isEditingTask = true; 
+
+                        window.isAutoScrolling = true;
+                        taskNode.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        setTimeout(() => window.isAutoScrolling = false, 800);
 
                         const wrapper = document.createElement('div');
                         wrapper.className = 'todo-edit-wrapper';
