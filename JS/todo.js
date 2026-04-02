@@ -286,14 +286,14 @@ function initTodoTab() {
 
     input.addEventListener('click', () => { if (tray) tray.classList.add('active'); });
 
-    window.addEventListener('scroll', () => {
-        const isDesktop = window.innerWidth >= 768; // Strictly fence this to PC!
+    window.addEventListener('wheel', () => {
+        const isDesktop = window.innerWidth >= 768; 
         
-        if (isDesktop && !window.isAutoScrolling && document.activeElement === input) {
+        if (isDesktop && document.activeElement === input) {
             input.blur();
             if (tray) tray.classList.remove('active');
         }
-    }, true);
+    }, { capture: true, passive: true });
 
     document.addEventListener('mousedown', (e) => {
         if (e.target === input || input.contains(e.target)) return; 
