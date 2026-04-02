@@ -235,7 +235,7 @@ function initTodoTab() {
         window.visualViewport.addEventListener('scroll', anchorToKeyboard);
     }
 
-    const renderSubjectTray = () => {
+   const renderSubjectTray = () => {
         if (!tray) return;
         tray.innerHTML = '';
         const subjects = getSubjects().filter(s => s.id !== 'off');
@@ -267,9 +267,29 @@ function initTodoTab() {
             }
             
             const handlePillInteraction = (e) => {
+                // Keep the cursor locked in the input!
                 e.preventDefault(); e.stopPropagation();
+                
+                // Toggle the selected ID
                 selectedSubjectId = selectedSubjectId === sub.id ? null : sub.id;
-                renderSubjectTray(); 
+                
+                // THE FIX: Safely strip the colors from ALL pills without destroying the DOM elements
+                Array.from(tray.children).forEach(p => {
+                    p.classList.remove('selected');
+                    p.style.backgroundColor = '';
+                    p.style.borderColor = '';
+                    p.style.color = '';
+                });
+                
+                // Apply the highlight ONLY to the pill you just clicked
+                if (selectedSubjectId === sub.id) {
+                    pill.classList.add('selected');
+                    pill.style.backgroundColor = `color-mix(in srgb, ${sub.color} 20%, var(--color-surface))`;
+                    pill.style.borderColor = sub.color;
+                    pill.style.color = sub.color;
+                }
+                
+                // Scroll the container to the newly selected subject
                 triggerTSE(100); 
             };
 
