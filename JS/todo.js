@@ -123,14 +123,17 @@ function initTodoTab() {
         } catch (e) { console.error('Storage error', e); }
     };
 
-    // --- RESTORED & POLISHED: PURE MATH TODO SCROLL ENGINE (TSE) ---
+// --- UPGRADED: STRICT CONTAINER TODO SCROLL ENGINE (TSE) ---
     let tseTimer = null; 
     const triggerTSE = (delay = 300) => {
+        window.isAutoScrolling = true; 
+        
         clearTimeout(tseTimer);
         tseTimer = setTimeout(() => {
-            if (!listEl && !pcTodo) return;
-            
-            window.isAutoScrolling = true; 
+            if (!listEl && !pcTodo) {
+                window.isAutoScrolling = false;
+                return;
+            }
             
             const isDesktop = window.innerWidth >= 768;
             const targetContainer = isDesktop ? pcTodo : listEl;
@@ -168,10 +171,11 @@ function initTodoTab() {
                 if (isDesktop) {
                     targetNode.scrollIntoView({ behavior: 'smooth', block: 'center' });
                 } else {
+                    const scrollContainer = document.getElementById('todoSwipeContainer');
                     const floatUI = document.getElementById('floatingTodoInput');
                     const trayUI = document.getElementById('todoSubjectTray');
 
-                    if (floatUI) {
+                    if (scrollContainer && floatUI) {
                         const nodeRect = targetNode.getBoundingClientRect();
                         
                         let uiTopEdge = floatUI.getBoundingClientRect().top;
@@ -183,13 +187,16 @@ function initTodoTab() {
                         const offset = nodeRect.bottom - uiTopEdge + 15;
 
                         if (Math.abs(offset) > 5) {
-                            // RESTORED: Keeping it beautifully smooth, exactly as you wanted.
-                            window.scrollBy({ top: offset, behavior: 'smooth' });
+                            scrollContainer.scrollBy({
+                                top: offset,
+                                behavior: 'smooth'
+                            });
                         }
                     }
                 }
             }
             
+            // Unlock the manual scroll listener after the smooth animation finishes
             setTimeout(() => window.isAutoScrolling = false, 800); 
         }, delay); 
     };
