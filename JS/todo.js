@@ -49,6 +49,7 @@ function initTodoTab() {
     const nextBtn = document.getElementById('todoNextDay');
     const dateDisplay = document.getElementById('todoDateDisplay');
     const tray = document.getElementById('todoSubjectTray');
+    const floatUI = document.getElementById('floatingTodoInput');
 
     const pcTodo = document.getElementById('kanban-todo');
     const pcInProgress = document.getElementById('kanban-in-progress');
@@ -88,14 +89,6 @@ function initTodoTab() {
 
     const getSubjects = () => JSON.parse(localStorage.getItem('plannerSubjects')) || [{ id: 'off', name: 'Day Off', color: '#555555' }];
 
-    const hexToRgba = (hex, alpha) => {
-        if (!hex) return `rgba(255,255,255,${alpha})`;
-        hex = hex.replace('#', '');
-        if (hex.length === 3) hex = hex.split('').map(x => x + x).join('');
-        const r = parseInt(hex.substring(0,2), 16), g = parseInt(hex.substring(2,4), 16), b = parseInt(hex.substring(4,6), 16);
-        return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-    };
-
     const updateDateDisplay = () => {
         const today = new Date(); today.setHours(0, 0, 0, 0);
         const compareDate = new Date(currentDate); compareDate.setHours(0, 0, 0, 0);
@@ -123,105 +116,96 @@ function initTodoTab() {
         } catch (e) { console.error('Storage error', e); }
     };
 
-    // --- UPGRADED: FLAWLESS WINDOW-MATH SCROLL ENGINE ---
+    // ============================================================================
+    // THE NEW TODO SCROLL ENGINE (TSE) ARCHITECTURE
+    // ============================================================================
     let tseTimer = null; 
-    const triggerTSE = (delay = 300) => {
-        window.isAutoScrolling = true; 
+
+    const getTargetTaskNode = (isDesktop, container) => {
+        const taskNodes = Array.from(container.querySelectorAll(isDesktop ? '.kanban-task' : '.todo-item'));
+        let target = null;
         
+        if (selectedSubjectId) {
+            const subjectTasks = taskNodes.filter(el => {
+                const taskData = tasks.find(t => t.id === parseInt(el.dataset.taskId || el.dataset.id, 10));
+                return taskData && taskData.subjectId === selectedSubjectId;
+            });
+            if (subjectTasks.length > 0) target = subjectTasks[subjectTasks.length - 1];
+        } else {
+            const generalTasks = taskNodes.filter(el => {
+                const taskData = tasks.find(t => t.id === parseInt(el.dataset.taskId || el.dataset.id, 10));
+                return taskData && (!taskData.subjectId || taskData.subjectId === 'null');
+            });
+            if (generalTasks.length > 0) target = generalTasks[generalTasks.length - 1];
+        }
+        
+        if (!target) {
+            target = Array.from(container.querySelectorAll(isDesktop ? '.kanban-subject-header' : '.todo-subject-header'))
+                          .find(el => el.dataset.subjectId === (selectedSubjectId ? selectedSubjectId : 'null'));
+        }
+        return target;
+    };
+
+    const runDesktopTSE = (targetNode) => {
+        targetNode.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    };
+
+    const runMobileTSE = (targetNode) => {
+        if (!floatUI) return;
+        const nodeRect = targetNode.getBoundingClientRect();
+        
+        // Find the absolute top boundary of our UI
+        let uiTopEdge = floatUI.getBoundingClientRect().top;
+        if (tray && tray.classList.contains('active')) {
+            uiTopEdge = tray.getBoundingClientRect().top;
+        }
+
+        // Calculate exact pixel distance required to rest 15px above the UI
+        const offset = nodeRect.bottom - uiTopEdge + 15;
+
+        // Execute precise window scroll
+        if (Math.abs(offset) > 5) {
+            window.scrollBy({ top: offset, behavior: 'smooth' });
+        }
+    };
+
+    const triggerTSE = (delay = 300) => {
         clearTimeout(tseTimer);
+        window.isAutoScrolling = true; 
+
         tseTimer = setTimeout(() => {
-            if (!listEl && !pcTodo) {
-                window.isAutoScrolling = false;
-                return;
-            }
-            
             const isDesktop = window.innerWidth >= 768;
-            const targetContainer = isDesktop ? pcTodo : listEl;
+            const container = isDesktop ? pcTodo : listEl;
             
-            if (!targetContainer) {
-                window.isAutoScrolling = false;
-                return;
-            }
-
-            let targetNode = null;
-            const taskNodes = Array.from(targetContainer.querySelectorAll(isDesktop ? '.kanban-task' : '.todo-item'));
-            
-            if (selectedSubjectId) {
-                const subjectTasks = taskNodes.filter(el => {
-                    const taskId = parseInt(el.dataset.taskId || el.dataset.id, 10);
-                    const taskData = tasks.find(t => t.id === taskId);
-                    return taskData && taskData.subjectId === selectedSubjectId;
-                });
-                if (subjectTasks.length > 0) targetNode = subjectTasks[subjectTasks.length - 1];
-            } else {
-                const generalTasks = taskNodes.filter(el => {
-                    const taskId = parseInt(el.dataset.taskId || el.dataset.id, 10);
-                    const taskData = tasks.find(t => t.id === taskId);
-                    return taskData && (!taskData.subjectId || taskData.subjectId === 'null');
-                });
-                if (generalTasks.length > 0) targetNode = generalTasks[generalTasks.length - 1];
-            }
-            
-            if (!targetNode) {
-                const header = Array.from(targetContainer.querySelectorAll(isDesktop ? '.kanban-subject-header' : '.todo-subject-header'))
-                                    .find(el => el.dataset.subjectId === (selectedSubjectId ? selectedSubjectId : 'null'));
-                if (header) targetNode = header;
-            }
-            
-            if (targetNode) {
-                if (isDesktop) {
-                    targetNode.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                } else {
-                    const floatUI = document.getElementById('floatingTodoInput');
-                    const trayUI = document.getElementById('todoSubjectTray');
-
-                    if (floatUI) {
-                        const nodeRect = targetNode.getBoundingClientRect();
-                        
-                        let uiTopEdge = floatUI.getBoundingClientRect().top;
-                        if (trayUI && trayUI.classList.contains('active')) {
-                            uiTopEdge = trayUI.getBoundingClientRect().top;
-                        }
-
-                        // EXACT MATH: Distance between bottom of target task and top of Float UI
-                        const offset = nodeRect.bottom - uiTopEdge + 15;
-
-                        if (Math.abs(offset) > 5) {
-                            // FLAWLESS MOBILE SCROLL: This correctly scrolls the main window!
-                            window.scrollBy({ top: offset, behavior: 'smooth' });
-                        }
-                    }
+            if (container) {
+                const targetNode = getTargetTaskNode(isDesktop, container);
+                if (targetNode) {
+                    isDesktop ? runDesktopTSE(targetNode) : runMobileTSE(targetNode);
                 }
             }
-            
             setTimeout(() => window.isAutoScrolling = false, 800); 
         }, delay); 
     };
 
-    // --- UPGRADED: "TOP-ANCHORED" VISUAL VIEWPORT LOCK ---
+
+    // ============================================================================
+    // VISUAL VIEWPORT ANCHOR & SMART UI HANDOFF
+    // ============================================================================
     if (window.visualViewport) {
-        const floatUI = document.getElementById('floatingTodoInput');
-        
         const anchorToKeyboard = () => {
             if (!floatUI) return;
             
-            const isKeyboardOpen = (window.innerHeight - window.visualViewport.height) > 100;
+            // Physical hardware check: Did the screen shrink?
+            window.isKeyboardOpen = (window.innerHeight - window.visualViewport.height) > 100;
             
-            if (document.activeElement === input && isKeyboardOpen) {
-                const vv = window.visualViewport;
-                
-                // TOP-ANCHOR FIX: By anchoring from the top, we completely ignore the 
-                // bottom URL bar collapse bug. The float will never shift up randomly!
-                const targetTop = vv.offsetTop + vv.height - floatUI.offsetHeight - 15;
-                
-                floatUI.style.top = `${targetTop}px`;
-                floatUI.style.bottom = 'auto'; // Disable CSS bottom
-                
+            if (document.activeElement === input && window.isKeyboardOpen) {
+                // Keyboard is Active: Anchor mathematically to the Visual Viewport
+                const offsetBottom = window.innerHeight - (window.visualViewport.height + window.visualViewport.offsetTop);
+                floatUI.style.bottom = `${Math.max(15, offsetBottom + 15)}px`;
                 floatUI.classList.add('keyboard-active');
-                floatUI.classList.remove('float-lowered'); 
+                floatUI.classList.remove('float-lowered'); // Disengage app.js scroll control
             } else {
-                // Restore CSS control when keyboard closes
-                floatUI.style.top = ''; 
+                // Keyboard is Closed: Release control back to CSS / app.js
                 floatUI.style.bottom = ''; 
                 floatUI.classList.remove('keyboard-active');
             }
@@ -229,18 +213,20 @@ function initTodoTab() {
 
         window.visualViewport.addEventListener('resize', () => {
             anchorToKeyboard();
-            const isKeyboardOpen = (window.innerHeight - window.visualViewport.height) > 100;
-            if (document.activeElement === input && isKeyboardOpen) {
-                triggerTSE(50); 
+            if (document.activeElement === input && window.isKeyboardOpen) {
+                triggerTSE(100); 
             }
         });
         
         window.visualViewport.addEventListener('scroll', anchorToKeyboard);
     }
 
+
+    // ============================================================================
+    // DOM-SAFE SUBJECT TRAY
+    // ============================================================================
     const renderSubjectTray = () => {
         if (!tray) return;
-        
         const subjects = getSubjects().filter(s => s.id !== 'off');
 
         if (subjects.length === 0) {
@@ -248,18 +234,15 @@ function initTodoTab() {
             const emptyPill = document.createElement('div');
             emptyPill.className = `todo-tint-pill`;
             emptyPill.textContent = "Add Subjects in Settings →";
-            
-            const handleEmptyClick = (e) => {
+            emptyPill.addEventListener('mousedown', (e) => {
                 e.preventDefault(); e.stopPropagation();
                 document.querySelector('.bottom-pill-btn[data-target="tab-settings"]')?.click();
-            };
-            emptyPill.addEventListener('mousedown', handleEmptyClick);
-            emptyPill.addEventListener('touchstart', handleEmptyClick, { passive: false });
+            });
             tray.appendChild(emptyPill);
             return;
         }
 
-        // Only rebuild DOM if the number of subjects changed (prevents initial rendering bugs)
+        // Only build the DOM elements ONCE to prevent focus-dropping layout shifts
         if (tray.children.length !== subjects.length || tray.querySelector('.empty-task-text')) {
             tray.innerHTML = '';
             subjects.forEach(sub => {
@@ -268,52 +251,43 @@ function initTodoTab() {
                 pill.textContent = sub.name;
                 pill.dataset.id = sub.id;
                 
-                const handlePillInteraction = (e) => {
-                    e.preventDefault(); e.stopPropagation();
-                    
+                const handlePillClick = (e) => {
+                    e.preventDefault(); e.stopPropagation(); // Protect Input Focus
                     selectedSubjectId = selectedSubjectId === sub.id ? null : sub.id;
-                    
-                    // DOM-SAFE HIGHLIGHT: Update colors without destroying the element!
-                    Array.from(tray.children).forEach(p => {
-                        p.classList.remove('selected');
-                        p.style.backgroundColor = '';
-                        p.style.borderColor = '';
-                        p.style.color = '';
-                    });
-                    
-                    if (selectedSubjectId === sub.id) {
-                        pill.classList.add('selected');
-                        pill.style.backgroundColor = `color-mix(in srgb, ${sub.color} 20%, var(--color-surface))`;
-                        pill.style.borderColor = sub.color;
-                        pill.style.color = sub.color;
-                    }
-                    
+                    updateTrayColors(subjects);
                     triggerTSE(100); 
                 };
 
-                pill.addEventListener('mousedown', handlePillInteraction);
-                pill.addEventListener('touchstart', handlePillInteraction, { passive: false });
+                pill.addEventListener('mousedown', handlePillClick);
+                pill.addEventListener('touchstart', handlePillClick, { passive: false });
                 tray.appendChild(pill);
             });
         }
         
-        // Ensure initial selection state is physically applied
-        Array.from(tray.children).forEach(p => {
-            const sub = subjects.find(s => s.id === p.dataset.id);
+        updateTrayColors(subjects);
+    };
+
+    const updateTrayColors = (subjects) => {
+        Array.from(tray.children).forEach(pill => {
+            const sub = subjects.find(s => s.id === pill.dataset.id);
             if (sub && selectedSubjectId === sub.id) {
-                p.classList.add('selected');
-                p.style.backgroundColor = `color-mix(in srgb, ${sub.color} 20%, var(--color-surface))`;
-                p.style.borderColor = sub.color;
-                p.style.color = sub.color;
+                pill.classList.add('selected');
+                pill.style.backgroundColor = `color-mix(in srgb, ${sub.color} 20%, var(--color-surface))`;
+                pill.style.borderColor = sub.color;
+                pill.style.color = sub.color;
             } else {
-                p.classList.remove('selected');
-                p.style.backgroundColor = '';
-                p.style.borderColor = '';
-                p.style.color = '';
+                pill.classList.remove('selected');
+                pill.style.backgroundColor = '';
+                pill.style.borderColor = '';
+                pill.style.color = '';
             }
         });
     };
 
+
+    // ============================================================================
+    // FOCUS & BLUR LOGIC
+    // ============================================================================
     input.addEventListener('focus', () => { 
         if (tray) tray.classList.add('active'); 
         triggerTSE();
@@ -321,22 +295,23 @@ function initTodoTab() {
 
     input.addEventListener('click', () => { if (tray) tray.classList.add('active'); });
 
-    // --- PC-ONLY BLUR ON MANUAL SCROLL ---
+    // PC Only: Close keyboard/tray if the user physically uses the mouse wheel
     window.addEventListener('wheel', () => {
         const isDesktop = window.innerWidth >= 768; 
-        
         if (isDesktop && document.activeElement === input) {
             input.blur();
             if (tray) tray.classList.remove('active');
         }
     }, { capture: true, passive: true }); 
 
+    // Global: Close tray if clicking outside
     document.addEventListener('mousedown', (e) => {
         if (e.target === input || input.contains(e.target)) return; 
         if (tray && (e.target === tray || tray.contains(e.target))) return; 
         if (tray && tray.classList.contains('active')) tray.classList.remove('active');
     });
 
+    // Mobile specific cleanup
     document.addEventListener('touchstart', (e) => {
         if (!e.target.closest('#mobileTodoView') && !e.target.closest('.todo-input-group')) {
             const stuckClones = document.querySelectorAll('.flying-glass-task');
@@ -348,6 +323,10 @@ function initTodoTab() {
         }
     }, { passive: true });
 
+
+    // ============================================================================
+    // KANBAN & TASK RENDERING LOGIC (Untouched Core Logic)
+    // ============================================================================
     const updateMobileOrder = () => {
         if(!listEl) return;
         const newTasks = [];
@@ -433,9 +412,7 @@ function initTodoTab() {
 
         const subjectsList = [{ id: null, name: 'General', color: '#888888' }, ...getSubjects().filter(s => s.id !== 'off')];
 
-        // ---------------------------------------------------------
-        // A. MOBILE LIST RENDERING
-        // ---------------------------------------------------------
+        // Mobile Render
         if (listEl) {
             subjectsList.forEach(sub => {
                 const subTasks = tasks.filter(t => (t.subjectId || null) === sub.id);
@@ -494,10 +471,6 @@ function initTodoTab() {
                         
                         taskNode.classList.add('is-editing'); 
                         window.isEditingTask = true; 
-
-                        window.isAutoScrolling = true;
-                        taskNode.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                        setTimeout(() => window.isAutoScrolling = false, 800);
 
                         const wrapper = document.createElement('div');
                         wrapper.className = 'todo-edit-wrapper';
@@ -741,9 +714,7 @@ function initTodoTab() {
             });
         }
 
-        // ---------------------------------------------------------
-        // B. PC KANBAN RENDERING
-        // ---------------------------------------------------------
+        // Desktop Kanban Render
         const columns = [ { el: pcTodo, status: 'todo' }, { el: pcInProgress, status: 'in-progress' }, { el: pcDone, status: 'done' } ];
         
         columns.forEach(col => {
@@ -801,10 +772,6 @@ function initTodoTab() {
                         
                         taskNode.classList.add('is-editing'); 
                         window.isEditingTask = true; 
-
-                        window.isAutoScrolling = true;
-                        taskNode.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                        setTimeout(() => window.isAutoScrolling = false, 800);
 
                         const wrapper = document.createElement('div');
                         wrapper.className = 'todo-edit-wrapper';
