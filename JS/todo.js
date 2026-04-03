@@ -154,15 +154,10 @@ function initTodoTab() {
     };
 
     const runDesktopTSE = (targetNode) => {
-        // PC BUG FIX: Only scroll the specific inner Kanban column!
-        // This prevents the main window from scrolling and ghost-shifting the Float.
-        const column = targetNode.closest('.kanban-column') || targetNode.parentElement;
-        if (column) {
-            const targetY = targetNode.offsetTop - (column.clientHeight / 2) + (targetNode.clientHeight / 2);
-            column.scrollTo({ top: targetY, behavior: 'smooth' });
-        } else {
-            targetNode.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }
+        // PC FIX: Since the Kanban columns are not independently scrollable, 
+        // and PC doesn't have virtual keyboards that break the layout, 
+        // native scrollIntoView works perfectly here!
+        targetNode.scrollIntoView({ behavior: 'smooth', block: 'center' });
     };
 
     const runMobileTSE = (targetNode) => {
@@ -209,23 +204,23 @@ function initTodoTab() {
             window.isKeyboardOpen = (window.innerHeight - window.visualViewport.height) > 100;
             
             if (document.activeElement === input && window.isKeyboardOpen) {
-                // MOBILE ELASTIC BUG FIX: Set 'bottom' mathematically on resize, and strip scroll listener.
-                // Native position:fixed handles thumb scrolling flawlessly without JS rubber-banding.
-                const keyboardHeight = window.innerHeight - window.visualViewport.height;
-                floatUI.style.bottom = `${keyboardHeight + 15}px`;
-                floatUI.style.top = 'auto'; // Clear top constraint
+                const vv = window.visualViewport;
+                
+                // Real-time calculation of the visual frame
+                const targetTop = vv.offsetTop + vv.height - floatUI.offsetHeight - 15;
+                
+                floatUI.style.top = `${targetTop}px`;
+                floatUI.style.bottom = 'auto'; 
                 
                 floatUI.classList.add('keyboard-active');
                 floatUI.classList.remove('float-lowered'); 
                 
-                // MOBILE PADDING FIX: Ensure bottom-most items can scroll above tray
                 toggleListPadding(true);
             } else {
-                floatUI.style.bottom = ''; 
-                floatUI.style.top = '';
+                floatUI.style.top = ''; 
+                floatUI.style.bottom = '';
                 floatUI.classList.remove('keyboard-active');
                 
-                // Clean up padding
                 toggleListPadding(false);
             }
         };
@@ -237,10 +232,11 @@ function initTodoTab() {
             }
         });
         
-        // DELETED the window.visualViewport.addEventListener('scroll') here. 
-        // This is what completely eliminates the elastic bounce!
+        // MOBILE THUMB-SCROLL FIX: We MUST track the scroll so the TFI moves 
+        // down the canvas exactly as fast as your thumb moves the canvas up. 
+        // Because CSS transition is off, it locks flawlessly without elastic bounding.
+        window.visualViewport.addEventListener('scroll', anchorToKeyboard);
     }
-
     // ============================================================================
     // DOM-SAFE SUBJECT TRAY
     // ============================================================================
