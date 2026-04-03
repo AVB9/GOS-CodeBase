@@ -121,6 +121,13 @@ function initTodoTab() {
     // ============================================================================
     let tseTimer = null; 
 
+    // Helper: Dynamic Padding to ensure bottom-most tasks can be scrolled on mobile
+    const toggleListPadding = (expand) => {
+        if (listEl) {
+            listEl.style.paddingBottom = expand ? '60vh' : '';
+        }
+    };
+
     const getTargetTaskNode = (isDesktop, container) => {
         const taskNodes = Array.from(container.querySelectorAll(isDesktop ? '.kanban-task' : '.todo-item'));
         let target = null;
@@ -147,23 +154,28 @@ function initTodoTab() {
     };
 
     const runDesktopTSE = (targetNode) => {
-        targetNode.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        // PC BUG FIX: Only scroll the specific inner Kanban column!
+        // This prevents the main window from scrolling and ghost-shifting the Float.
+        const column = targetNode.closest('.kanban-column') || targetNode.parentElement;
+        if (column) {
+            const targetY = targetNode.offsetTop - (column.clientHeight / 2) + (targetNode.clientHeight / 2);
+            column.scrollTo({ top: targetY, behavior: 'smooth' });
+        } else {
+            targetNode.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
     };
 
     const runMobileTSE = (targetNode) => {
         if (!floatUI) return;
         const nodeRect = targetNode.getBoundingClientRect();
         
-        // Find the absolute top boundary of our UI
         let uiTopEdge = floatUI.getBoundingClientRect().top;
         if (tray && tray.classList.contains('active')) {
             uiTopEdge = tray.getBoundingClientRect().top;
         }
 
-        // Calculate exact pixel distance required to rest 15px above the UI
         const offset = nodeRect.bottom - uiTopEdge + 15;
 
-        // Execute precise window scroll
         if (Math.abs(offset) > 5) {
             window.scrollBy({ top: offset, behavior: 'smooth' });
         }
@@ -187,27 +199,34 @@ function initTodoTab() {
         }, delay); 
     };
 
-
     // ============================================================================
-    // VISUAL VIEWPORT ANCHOR & SMART UI HANDOFF
+    // VISUAL VIEWPORT ANCHOR (MOBILE)
     // ============================================================================
     if (window.visualViewport) {
         const anchorToKeyboard = () => {
             if (!floatUI) return;
             
-            // Physical hardware check: Did the screen shrink?
             window.isKeyboardOpen = (window.innerHeight - window.visualViewport.height) > 100;
             
             if (document.activeElement === input && window.isKeyboardOpen) {
-                // Keyboard is Active: Anchor mathematically to the Visual Viewport
-                const offsetBottom = window.innerHeight - (window.visualViewport.height + window.visualViewport.offsetTop);
-                floatUI.style.bottom = `${Math.max(15, offsetBottom + 15)}px`;
+                // MOBILE ELASTIC BUG FIX: Set 'bottom' mathematically on resize, and strip scroll listener.
+                // Native position:fixed handles thumb scrolling flawlessly without JS rubber-banding.
+                const keyboardHeight = window.innerHeight - window.visualViewport.height;
+                floatUI.style.bottom = `${keyboardHeight + 15}px`;
+                floatUI.style.top = 'auto'; // Clear top constraint
+                
                 floatUI.classList.add('keyboard-active');
-                floatUI.classList.remove('float-lowered'); // Disengage app.js scroll control
+                floatUI.classList.remove('float-lowered'); 
+                
+                // MOBILE PADDING FIX: Ensure bottom-most items can scroll above tray
+                toggleListPadding(true);
             } else {
-                // Keyboard is Closed: Release control back to CSS / app.js
                 floatUI.style.bottom = ''; 
+                floatUI.style.top = '';
                 floatUI.classList.remove('keyboard-active');
+                
+                // Clean up padding
+                toggleListPadding(false);
             }
         };
 
@@ -218,9 +237,9 @@ function initTodoTab() {
             }
         });
         
-        window.visualViewport.addEventListener('scroll', anchorToKeyboard);
+        // DELETED the window.visualViewport.addEventListener('scroll') here. 
+        // This is what completely eliminates the elastic bounce!
     }
-
 
     // ============================================================================
     // DOM-SAFE SUBJECT TRAY
@@ -242,7 +261,6 @@ function initTodoTab() {
             return;
         }
 
-        // Only build the DOM elements ONCE to prevent focus-dropping layout shifts
         if (tray.children.length !== subjects.length || tray.querySelector('.empty-task-text')) {
             tray.innerHTML = '';
             subjects.forEach(sub => {
@@ -252,7 +270,7 @@ function initTodoTab() {
                 pill.dataset.id = sub.id;
                 
                 const handlePillClick = (e) => {
-                    e.preventDefault(); e.stopPropagation(); // Protect Input Focus
+                    e.preventDefault(); e.stopPropagation(); 
                     selectedSubjectId = selectedSubjectId === sub.id ? null : sub.id;
                     updateTrayColors(subjects);
                     triggerTSE(100); 
@@ -284,7 +302,6 @@ function initTodoTab() {
         });
     };
 
-
     // ============================================================================
     // FOCUS & BLUR LOGIC
     // ============================================================================
@@ -295,7 +312,7 @@ function initTodoTab() {
 
     input.addEventListener('click', () => { if (tray) tray.classList.add('active'); });
 
-    // PC Only: Close keyboard/tray if the user physically uses the mouse wheel
+    // PC Only: Deactivate Float when the user physically scrolls their mouse wheel
     window.addEventListener('wheel', () => {
         const isDesktop = window.innerWidth >= 768; 
         if (isDesktop && document.activeElement === input) {
@@ -304,14 +321,12 @@ function initTodoTab() {
         }
     }, { capture: true, passive: true }); 
 
-    // Global: Close tray if clicking outside
     document.addEventListener('mousedown', (e) => {
         if (e.target === input || input.contains(e.target)) return; 
         if (tray && (e.target === tray || tray.contains(e.target))) return; 
         if (tray && tray.classList.contains('active')) tray.classList.remove('active');
     });
 
-    // Mobile specific cleanup
     document.addEventListener('touchstart', (e) => {
         if (!e.target.closest('#mobileTodoView') && !e.target.closest('.todo-input-group')) {
             const stuckClones = document.querySelectorAll('.flying-glass-task');
@@ -322,7 +337,6 @@ function initTodoTab() {
             }
         }
     }, { passive: true });
-
 
     // ============================================================================
     // KANBAN & TASK RENDERING LOGIC (Untouched Core Logic)
