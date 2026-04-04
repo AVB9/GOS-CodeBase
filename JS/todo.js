@@ -147,10 +147,19 @@ function initTodoTab() {
     };
 
     const runDesktopTSE = (targetNode) => {
-        // PC SMOOTH SCROLL: Adding a 50ms delay gives the browser time to paint 
-        // the Subject Tray UI changes before calculating the scroll, making it buttery smooth.
         setTimeout(() => {
-            targetNode.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            // Pure Math: Calculate absolute position of the task
+            const rect = targetNode.getBoundingClientRect();
+            const absoluteY = window.scrollY + rect.top;
+            
+            // Subtract half the window height to perfectly center it on screen
+            const targetY = absoluteY - (window.innerHeight / 2) + (rect.height / 2);
+            
+            // Force native mathematical smooth scroll
+            window.scrollTo({
+                top: targetY,
+                behavior: 'smooth'
+            });
         }, 50);
     };
 

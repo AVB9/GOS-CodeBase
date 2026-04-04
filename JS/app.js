@@ -140,42 +140,46 @@ window.isKeyboardOpen = false;
 function initSmartUI() {
     const bottomNav = document.getElementById('bottomNav');
     const floatingTodoInput = document.getElementById('floatingTodoInput');
-    const scrollContainer = document.getElementById('todoSwipeContainer'); 
     const journalEditor = document.getElementById('journalEditor');
     const baseWindowHeight = window.innerHeight;
     
     if (!bottomNav) return;
 
     let isScrolling = false;
-    let lastScrollY = 0;
     
-    if (scrollContainer) {
-        scrollContainer.addEventListener('scroll', () => {
-            if (window.isAutoScrolling) {
-                lastScrollY = scrollContainer.scrollTop;
-                return;
-            }
+    // RESTORED: We properly track the main window scroll!
+    let lastScrollY = window.scrollY;
+    
+    window.addEventListener('scroll', () => {
+        if (window.isAutoScrolling) {
+            lastScrollY = window.scrollY;
+            return;
+        }
 
-            if (!isScrolling) {
-                window.requestAnimationFrame(() => {
-                    const currentScrollY = scrollContainer.scrollTop;
-                    const isFocused = document.activeElement && (document.activeElement.id === 'newTaskInput' || document.activeElement.classList.contains('todo-edit-input'));
-                    
-                    if (currentScrollY > lastScrollY && currentScrollY > 20) {
-                        bottomNav.classList.add('nav-hidden');
-                        if (floatingTodoInput && !isFocused) floatingTodoInput.classList.add('float-lowered');
-                    } else if (currentScrollY < lastScrollY) {
+        if (!isScrolling) {
+            window.requestAnimationFrame(() => {
+                const currentScrollY = window.scrollY;
+                const isFocused = document.activeElement && (document.activeElement.id === 'newTaskInput' || document.activeElement.classList.contains('todo-edit-input'));
+                
+                // Scrolling Down -> Hide Nav Pill & Lower Float
+                if (currentScrollY > lastScrollY && currentScrollY > 40) {
+                    bottomNav.classList.add('nav-hidden');
+                    if (floatingTodoInput && !isFocused) floatingTodoInput.classList.add('float-lowered');
+                } 
+                // Scrolling Up -> Show Nav Pill & Raise Float
+                else if (currentScrollY < lastScrollY) {
+                    if (!window.isKeyboardOpen) {
                         bottomNav.classList.remove('nav-hidden');
                         if (floatingTodoInput && !isFocused) floatingTodoInput.classList.remove('float-lowered');
                     }
-                    
-                    lastScrollY = currentScrollY;
-                    isScrolling = false;
-                });
-                isScrolling = true;
-            }
-        }, { passive: true });
-    }
+                }
+                
+                lastScrollY = currentScrollY;
+                isScrolling = false;
+            });
+            isScrolling = true;
+        }
+    }, { passive: true });
 
     if (journalEditor) {
         let isJournalScrolling = false;
@@ -199,7 +203,6 @@ function initSmartUI() {
         }, { passive: true });
     }
 
-    // Keyboard Fallbacks & Viewport Resize Tracker
     if (window.visualViewport) {
         window.visualViewport.addEventListener('resize', () => {
             window.isKeyboardOpen = (baseWindowHeight - window.visualViewport.height) > 100;
@@ -207,8 +210,7 @@ function initSmartUI() {
             if (window.isKeyboardOpen) {
                 bottomNav.classList.add('nav-hidden'); 
             } else {
-                // THE MOBILE BUG FIX: Keyboard closed via Back Button!
-                // If the input is still focused, we FORCE it to blur to reset the tray/cursor.
+                // MOBILE BUG FIX: Keyboard closed mid-air via 'Back' button
                 const isFocused = document.activeElement && (document.activeElement.id === 'newTaskInput' || document.activeElement.classList.contains('todo-edit-input'));
                 if (isFocused) {
                     document.activeElement.blur(); 
@@ -216,9 +218,7 @@ function initSmartUI() {
                     if (tray) tray.classList.remove('active');
                 }
 
-                // Only restore the Nav Pill if we are at the top of the scroll!
-                const currentScroll = scrollContainer ? scrollContainer.scrollTop : 0;
-                if (currentScroll <= 20) {
+                if (window.scrollY <= 40) {
                     bottomNav.classList.remove('nav-hidden'); 
                 }
 
@@ -242,16 +242,15 @@ function initSmartUI() {
     });
 
     document.addEventListener('focusout', (e) => {
-        // Increased timeout slightly to let the scroll event register first
+        // Increased delay to 100ms. This guarantees the scroll event has time to fire 
+        // if the user dragged the PC scrollbar, preventing the buggy UI stutter!
         setTimeout(() => {
             const activeTag = document.activeElement ? document.activeElement.tagName : '';
             if (activeTag !== 'INPUT' && activeTag !== 'TEXTAREA') {
                 window.isKeyboardOpen = false;
                 
-                // THE DESKTOP BUG FIX: Scrollbar Conflict!
-                // Check the actual scroll position. If we scrolled down, leave the Nav Pill hidden!
-                const currentScroll = scrollContainer ? scrollContainer.scrollTop : 0;
-                if (currentScroll <= 20) {
+                // PC SCROLLBAR FIX: Only force the Nav Pill back if we are at the top of the page.
+                if (window.scrollY <= 40) {
                     bottomNav.classList.remove('nav-hidden');
                 }
                 
@@ -260,7 +259,7 @@ function initSmartUI() {
                     floatingTodoInput.classList.remove('float-lowered');
                 }
             }
-        }, 50); 
+        }, 100); 
     });
 }
 
