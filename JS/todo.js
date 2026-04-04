@@ -117,15 +117,9 @@ function initTodoTab() {
     };
 
     // ============================================================================
-    // THE TODO SCROLL ENGINE (TSE)
+    // THE NEW APP-SHELL TODO SCROLL ENGINE (TSE)
     // ============================================================================
     let tseTimer = null; 
-
-    const toggleListPadding = (expand) => {
-        if (listEl) {
-            listEl.style.paddingBottom = expand ? '60vh' : '';
-        }
-    };
 
     const getTargetTaskNode = (isDesktop, container) => {
         const taskNodes = Array.from(container.querySelectorAll(isDesktop ? '.kanban-task' : '.todo-item'));
@@ -152,6 +146,29 @@ function initTodoTab() {
         return target;
     };
 
+    const runDesktopTSE = (targetNode) => {
+        targetNode.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    };
+
+    const runMobileTSE = (targetNode) => {
+        const scrollContainer = document.getElementById('todoSwipeContainer');
+        if (!scrollContainer || !floatUI) return;
+
+        const nodeRect = targetNode.getBoundingClientRect();
+        
+        let uiTopEdge = floatUI.getBoundingClientRect().top;
+        if (tray && tray.classList.contains('active')) {
+            uiTopEdge = tray.getBoundingClientRect().top;
+        }
+
+        const offset = nodeRect.bottom - uiTopEdge + 15;
+
+        if (Math.abs(offset) > 5) {
+            // ARCHITECTURE FIX: Scroll the internal container, not the window!
+            scrollContainer.scrollBy({ top: offset, behavior: 'smooth' });
+        }
+    };
+
     const triggerTSE = (delay = 300) => {
         clearTimeout(tseTimer);
         window.isAutoScrolling = true; 
@@ -163,71 +180,15 @@ function initTodoTab() {
             if (container) {
                 const targetNode = getTargetTaskNode(isDesktop, container);
                 if (targetNode) {
-                    if (isDesktop) {
-                        targetNode.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    } else {
-                        if (!floatUI) return;
-                        const nodeRect = targetNode.getBoundingClientRect();
-                        
-                        let uiTopEdge = floatUI.getBoundingClientRect().top;
-                        if (tray && tray.classList.contains('active')) {
-                            uiTopEdge = tray.getBoundingClientRect().top;
-                        }
-
-                        const offset = nodeRect.bottom - uiTopEdge + 15;
-                        if (Math.abs(offset) > 5) {
-                            window.scrollBy({ top: offset, behavior: 'smooth' });
-                        }
-                    }
+                    isDesktop ? runDesktopTSE(targetNode) : runMobileTSE(targetNode);
                 }
             }
             setTimeout(() => window.isAutoScrolling = false, 800); 
         }, delay); 
     };
 
-    // ============================================================================
-    // VISUAL VIEWPORT ANCHOR (STRICTLY MOBILE ONLY)
-    // ============================================================================
-    const isTouchDevice = window.matchMedia("(pointer: coarse)").matches;
-
-    if (window.visualViewport && isTouchDevice) {
-        const anchorToKeyboard = () => {
-            if (!floatUI) return;
-            
-            window.isKeyboardOpen = (window.innerHeight - window.visualViewport.height) > 100;
-            
-            if (document.activeElement === input && window.isKeyboardOpen) {
-                const vv = window.visualViewport;
-                
-                // TOP-ANCHOR: Locks it mathematically to the visual glass of the screen
-                const targetTop = vv.offsetTop + vv.height - floatUI.offsetHeight - 15;
-                floatUI.style.top = `${targetTop}px`;
-                floatUI.style.bottom = 'auto'; 
-                
-                floatUI.classList.add('keyboard-active');
-                floatUI.classList.remove('float-lowered'); 
-                
-                toggleListPadding(true);
-            } else {
-                floatUI.style.top = ''; 
-                floatUI.style.bottom = '';
-                floatUI.classList.remove('keyboard-active');
-                
-                toggleListPadding(false);
-            }
-        };
-
-        window.visualViewport.addEventListener('resize', () => {
-            anchorToKeyboard();
-            if (document.activeElement === input && window.isKeyboardOpen) {
-                triggerTSE(100); 
-            }
-        });
-        
-        // WE KEEP THIS: Because CSS transition is set to 'none', this will perfectly 
-        // lock the TFI to the keyboard without any elastic lag!
-        window.visualViewport.addEventListener('scroll', anchorToKeyboard);
-    }
+    // Note: The entire window.visualViewport event listener block is GONE.
+    // The interactive-widget=resizes-content meta tag handles the keyboard natively!
 
     // ============================================================================
     // DOM-SAFE SUBJECT TRAY
@@ -291,7 +252,7 @@ function initTodoTab() {
     };
 
     // ============================================================================
-    // FOCUS & BLUR LOGIC (PC Scrollbar & Wheel Support)
+    // FOCUS & BLUR LOGIC
     // ============================================================================
     input.addEventListener('focus', () => { 
         if (tray) tray.classList.add('active'); 
@@ -300,9 +261,7 @@ function initTodoTab() {
 
     input.addEventListener('click', () => { if (tray) tray.classList.add('active'); });
 
-    // We removed the custom 'wheel' blur listener. 
-    // Mouse wheel = keeps focus. Clicking scrollbar = loses focus natively!
-
+    // PC Blur Logic: Scroll wheel keeps focus. Clicking outside drops it.
     document.addEventListener('mousedown', (e) => {
         if (e.target === input || input.contains(e.target)) return; 
         if (tray && (e.target === tray || tray.contains(e.target))) return; 
@@ -467,10 +426,6 @@ function initTodoTab() {
                         
                         taskNode.classList.add('is-editing'); 
                         window.isEditingTask = true; 
-
-                        window.isAutoScrolling = true;
-                        taskNode.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                        setTimeout(() => window.isAutoScrolling = false, 800);
 
                         const wrapper = document.createElement('div');
                         wrapper.className = 'todo-edit-wrapper';

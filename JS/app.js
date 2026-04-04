@@ -135,93 +135,49 @@ function initNavigation() {
 // 4. SMART UI (SCROLL HIDING)
 // =================================================================
 window.isAutoScrolling = false; 
-window.isKeyboardOpen = false; 
 
 function initSmartUI() {
     const bottomNav = document.getElementById('bottomNav');
     const floatingTodoInput = document.getElementById('floatingTodoInput');
-    const journalEditor = document.getElementById('journalEditor');
-    const baseWindowHeight = window.innerHeight;
+    const scrollContainer = document.getElementById('todoSwipeContainer'); // The new boss
     
     if (!bottomNav) return;
 
     let isScrolling = false;
-    let lastScrollY = window.scrollY;
+    let lastScrollY = 0;
     
-    window.addEventListener('scroll', () => {
-        if (window.isAutoScrolling) {
-            lastScrollY = window.scrollY;
-            return;
-        }
+    // THE FIX: Listen to the container, not the window!
+    if (scrollContainer) {
+        scrollContainer.addEventListener('scroll', () => {
+            if (window.isAutoScrolling) {
+                lastScrollY = scrollContainer.scrollTop;
+                return;
+            }
 
-        if (!isScrolling) {
-            window.requestAnimationFrame(() => {
-                const currentScrollY = window.scrollY;
-                
-                if (currentScrollY > lastScrollY && currentScrollY > 40) {
-                    // Scrolling Down: Hide Nav, Lower the Float
-                    bottomNav.classList.add('nav-hidden');
-                    if (floatingTodoInput && !window.isKeyboardOpen) {
-                        floatingTodoInput.classList.add('float-lowered');
-                    }
-                } else if (currentScrollY < lastScrollY) {
-                    // Scrolling Up: Show Nav, Raise the Float (Only if keyboard is closed!)
-                    if (!window.isKeyboardOpen) {
-                        bottomNav.classList.remove('nav-hidden');
-                        if (floatingTodoInput) floatingTodoInput.classList.remove('float-lowered');
-                    }
-                }
-                
-                lastScrollY = currentScrollY;
-                isScrolling = false;
-            });
-            isScrolling = true;
-        }
-    }, { passive: true });
-
-    if (journalEditor) {
-        let isJournalScrolling = false;
-        let lastJournalScrollY = 0;
-        journalEditor.addEventListener('scroll', () => {
-            if (window.isAutoScrolling) return;
-
-             if (!isJournalScrolling) {
+            if (!isScrolling) {
                 window.requestAnimationFrame(() => {
-                    const currentScrollY = journalEditor.scrollTop;
-                    if (currentScrollY > lastJournalScrollY && currentScrollY > 20) {
+                    const currentScrollY = scrollContainer.scrollTop;
+                    const isFocused = document.activeElement && (document.activeElement.id === 'newTaskInput' || document.activeElement.classList.contains('todo-edit-input'));
+                    
+                    if (currentScrollY > lastScrollY && currentScrollY > 20) {
                         bottomNav.classList.add('nav-hidden');
-                    } else if (currentScrollY < lastJournalScrollY) {
+                        if (floatingTodoInput && !isFocused) floatingTodoInput.classList.add('float-lowered');
+                    } else if (currentScrollY < lastScrollY) {
                         bottomNav.classList.remove('nav-hidden');
+                        if (floatingTodoInput && !isFocused) floatingTodoInput.classList.remove('float-lowered');
                     }
-                    lastJournalScrollY = currentScrollY;
-                    isJournalScrolling = false;
+                    
+                    lastScrollY = currentScrollY;
+                    isScrolling = false;
                 });
-                isJournalScrolling = true;
+                isScrolling = true;
             }
         }, { passive: true });
     }
 
-    // NATIVE VIEWPORT KEYBOARD DETECTION
-    if (window.visualViewport) {
-        window.visualViewport.addEventListener('resize', () => {
-            window.isKeyboardOpen = (baseWindowHeight - window.visualViewport.height) > 100;
-            
-            if (window.isKeyboardOpen) {
-                bottomNav.classList.add('nav-hidden'); 
-            } else {
-                bottomNav.classList.remove('nav-hidden'); 
-                if (floatingTodoInput) {
-                    floatingTodoInput.classList.remove('keyboard-active');
-                    floatingTodoInput.classList.remove('float-lowered'); // Reset Float height
-                }
-            }
-        });
-    }
-
-    // Fallbacks for older browsers/desktop
+    // Keyboard Fallbacks
     document.addEventListener('focusin', (e) => {
-        if ((e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') && e.target.id !== 'journalEditor') {
-            window.isKeyboardOpen = true;
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
             bottomNav.classList.add('nav-hidden');
             if (floatingTodoInput && e.target.id === 'newTaskInput') {
                 floatingTodoInput.classList.add('keyboard-active');
@@ -234,7 +190,6 @@ function initSmartUI() {
         setTimeout(() => {
             const activeTag = document.activeElement ? document.activeElement.tagName : '';
             if (activeTag !== 'INPUT' && activeTag !== 'TEXTAREA') {
-                window.isKeyboardOpen = false;
                 bottomNav.classList.remove('nav-hidden');
                 if (floatingTodoInput) {
                     floatingTodoInput.classList.remove('keyboard-active');

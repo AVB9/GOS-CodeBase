@@ -77,6 +77,35 @@ input, textarea {
     color: var(--color-text);
 }
 
+/* 1. LOCK THE MAIN DOCUMENT */
+html, body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden !important; /* Kills window scrolling */
+    overscroll-behavior: none; /* Kills native bounce/pull-to-refresh */
+}
+
+/* 2. THE FLEX WRAPPER */
+#app-container {
+    display: flex;
+    flex-direction: column;
+    height: 100dvh; /* Dynamic Viewport Height adapts to URL bar */
+    width: 100%;
+    overflow: hidden;
+}
+
+/* 3. THE INTERNAL SCROLL CONTAINER */
+#todoSwipeContainer {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto; /* The actual scrolling happens here now */
+    -webkit-overflow-scrolling: touch; /* Smooth iOS momentum scrolling */
+    overscroll-behavior-y: contain;
+    padding-bottom: 120px; /* Keep enough space for the float/nav pill */
+}
+
 /* =================================================================
    2. BASE RESET & TYPOGRAPHY
    ================================================================= */
