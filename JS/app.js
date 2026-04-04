@@ -135,49 +135,87 @@ function initNavigation() {
 // 4. SMART UI (SCROLL HIDING)
 // =================================================================
 window.isAutoScrolling = false; 
+window.isKeyboardOpen = false;
 
 function initSmartUI() {
     const bottomNav = document.getElementById('bottomNav');
     const floatingTodoInput = document.getElementById('floatingTodoInput');
-    const scrollContainer = document.getElementById('todoSwipeContainer'); // The new boss
+    const journalEditor = document.getElementById('journalEditor');
+    const baseWindowHeight = window.innerHeight;
     
     if (!bottomNav) return;
 
     let isScrolling = false;
-    let lastScrollY = 0;
+    let lastScrollY = window.scrollY;
     
-    // THE FIX: Listen to the container, not the window!
-    if (scrollContainer) {
-        scrollContainer.addEventListener('scroll', () => {
-            if (window.isAutoScrolling) {
-                lastScrollY = scrollContainer.scrollTop;
-                return;
-            }
+    // RESTORED: Listening to the main window natively
+    window.addEventListener('scroll', () => {
+        if (window.isAutoScrolling) {
+            lastScrollY = window.scrollY;
+            return;
+        }
 
-            if (!isScrolling) {
-                window.requestAnimationFrame(() => {
-                    const currentScrollY = scrollContainer.scrollTop;
-                    const isFocused = document.activeElement && (document.activeElement.id === 'newTaskInput' || document.activeElement.classList.contains('todo-edit-input'));
-                    
-                    if (currentScrollY > lastScrollY && currentScrollY > 20) {
-                        bottomNav.classList.add('nav-hidden');
-                        if (floatingTodoInput && !isFocused) floatingTodoInput.classList.add('float-lowered');
-                    } else if (currentScrollY < lastScrollY) {
+        if (!isScrolling) {
+            window.requestAnimationFrame(() => {
+                const currentScrollY = window.scrollY;
+                const isFocused = document.activeElement && (document.activeElement.id === 'newTaskInput' || document.activeElement.classList.contains('todo-edit-input'));
+                
+                if (currentScrollY > lastScrollY && currentScrollY > 40) {
+                    bottomNav.classList.add('nav-hidden');
+                    if (floatingTodoInput && !isFocused) floatingTodoInput.classList.add('float-lowered');
+                } else if (currentScrollY < lastScrollY) {
+                    if (!window.isKeyboardOpen) {
                         bottomNav.classList.remove('nav-hidden');
                         if (floatingTodoInput && !isFocused) floatingTodoInput.classList.remove('float-lowered');
                     }
-                    
-                    lastScrollY = currentScrollY;
-                    isScrolling = false;
+                }
+                
+                lastScrollY = currentScrollY;
+                isScrolling = false;
+            });
+            isScrolling = true;
+        }
+    }, { passive: true });
+
+    if (journalEditor) {
+        let isJournalScrolling = false;
+        let lastJournalScrollY = 0;
+        journalEditor.addEventListener('scroll', () => {
+            if (window.isAutoScrolling) return;
+
+             if (!isJournalScrolling) {
+                window.requestAnimationFrame(() => {
+                    const currentScrollY = journalEditor.scrollTop;
+                    if (currentScrollY > lastJournalScrollY && currentScrollY > 20) {
+                        bottomNav.classList.add('nav-hidden');
+                    } else if (currentScrollY < lastJournalScrollY) {
+                        bottomNav.classList.remove('nav-hidden');
+                    }
+                    lastJournalScrollY = currentScrollY;
+                    isJournalScrolling = false;
                 });
-                isScrolling = true;
+                isJournalScrolling = true;
             }
         }, { passive: true });
     }
 
-    // Keyboard Fallbacks
+    if (window.visualViewport) {
+        window.visualViewport.addEventListener('resize', () => {
+            window.isKeyboardOpen = (baseWindowHeight - window.visualViewport.height) > 100;
+            if (window.isKeyboardOpen) bottomNav.classList.add('nav-hidden'); 
+            else {
+                bottomNav.classList.remove('nav-hidden'); 
+                if (floatingTodoInput) {
+                    floatingTodoInput.classList.remove('keyboard-active');
+                    floatingTodoInput.classList.remove('float-lowered');
+                }
+            }
+        });
+    }
+
     document.addEventListener('focusin', (e) => {
-        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
+        if ((e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') && e.target.id !== 'journalEditor') {
+            window.isKeyboardOpen = true;
             bottomNav.classList.add('nav-hidden');
             if (floatingTodoInput && e.target.id === 'newTaskInput') {
                 floatingTodoInput.classList.add('keyboard-active');
@@ -190,6 +228,7 @@ function initSmartUI() {
         setTimeout(() => {
             const activeTag = document.activeElement ? document.activeElement.tagName : '';
             if (activeTag !== 'INPUT' && activeTag !== 'TEXTAREA') {
+                window.isKeyboardOpen = false;
                 bottomNav.classList.remove('nav-hidden');
                 if (floatingTodoInput) {
                     floatingTodoInput.classList.remove('keyboard-active');

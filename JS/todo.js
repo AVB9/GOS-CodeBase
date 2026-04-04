@@ -146,14 +146,13 @@ function initTodoTab() {
         return target;
     };
 
-    const runDesktopTSE = (targetNode) => {
+   const runDesktopTSE = (targetNode) => {
+        // Safe PC scroll via scrollIntoView
         targetNode.scrollIntoView({ behavior: 'smooth', block: 'center' });
     };
 
     const runMobileTSE = (targetNode) => {
-        const scrollContainer = document.getElementById('todoSwipeContainer');
-        if (!scrollContainer || !floatUI) return;
-
+        if (!floatUI) return;
         const nodeRect = targetNode.getBoundingClientRect();
         
         let uiTopEdge = floatUI.getBoundingClientRect().top;
@@ -164,8 +163,8 @@ function initTodoTab() {
         const offset = nodeRect.bottom - uiTopEdge + 15;
 
         if (Math.abs(offset) > 5) {
-            // ARCHITECTURE FIX: Scroll the internal container, not the window!
-            scrollContainer.scrollBy({ top: offset, behavior: 'smooth' });
+            // Scroll the window natively
+            window.scrollBy({ top: offset, behavior: 'smooth' });
         }
     };
 
@@ -187,8 +186,46 @@ function initTodoTab() {
         }, delay); 
     };
 
-    // Note: The entire window.visualViewport event listener block is GONE.
-    // The interactive-widget=resizes-content meta tag handles the keyboard natively!
+    // ============================================================================
+    // VISUAL VIEWPORT ANCHOR (MOBILE THUMB SCROLL LOCK)
+    // ============================================================================
+    const isTouchDevice = window.matchMedia("(pointer: coarse)").matches;
+
+    if (window.visualViewport && isTouchDevice) {
+        const anchorToKeyboard = () => {
+            if (!floatUI) return;
+            
+            window.isKeyboardOpen = (window.innerHeight - window.visualViewport.height) > 100;
+            
+            if (document.activeElement === input && window.isKeyboardOpen) {
+                const vv = window.visualViewport;
+                // Anchor to the top of the visual screen frame
+                const targetTop = vv.offsetTop + vv.height - floatUI.offsetHeight - 15;
+                
+                floatUI.style.top = `${targetTop}px`;
+                floatUI.style.bottom = 'auto'; 
+                floatUI.classList.add('keyboard-active');
+                floatUI.classList.remove('float-lowered'); 
+                
+                toggleListPadding(true);
+            } else {
+                floatUI.style.top = ''; 
+                floatUI.style.bottom = '';
+                floatUI.classList.remove('keyboard-active');
+                toggleListPadding(false);
+            }
+        };
+
+        window.visualViewport.addEventListener('resize', () => {
+            anchorToKeyboard();
+            if (document.activeElement === input && window.isKeyboardOpen) {
+                triggerTSE(100); 
+            }
+        });
+        
+        // By setting style.top in JS and killing 'transition' in CSS, this flawlessly tracks the thumb scroll
+        window.visualViewport.addEventListener('scroll', anchorToKeyboard);
+    }
 
     // ============================================================================
     // DOM-SAFE SUBJECT TRAY

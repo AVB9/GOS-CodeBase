@@ -77,33 +77,28 @@ input, textarea {
     color: var(--color-text);
 }
 
-/* 1. LOCK THE MAIN DOCUMENT */
+/* 1. STANDARD DOCUMENT SCROLL (Restored) */
 html, body {
     margin: 0;
     padding: 0;
     width: 100%;
-    height: 100%;
-    overflow: hidden !important; /* Kills window scrolling */
-    overscroll-behavior: none; /* Kills native bounce/pull-to-refresh */
+    min-height: 100%;
+    overscroll-behavior: none; /* Keeps native bounce away */
 }
 
-/* 2. THE FLEX WRAPPER */
+/* 2. STANDARD WRAPPER */
 #app-container {
-    display: flex;
-    flex-direction: column;
-    height: 100dvh; /* Dynamic Viewport Height adapts to URL bar */
+    min-height: 100vh; 
     width: 100%;
-    overflow: hidden;
+    position: relative;
 }
 
-/* 3. THE INTERNAL SCROLL CONTAINER */
+/* 3. STANDARD CONTAINER */
 #todoSwipeContainer {
-    flex: 1;
-    min-height: 0;
-    overflow-y: auto; /* The actual scrolling happens here now */
-    -webkit-overflow-scrolling: touch; /* Smooth iOS momentum scrolling */
-    overscroll-behavior-y: contain;
-    padding-bottom: 120px; /* Keep enough space for the float/nav pill */
+    width: 100%;
+    min-height: calc(100vh - 200px); 
+    padding-bottom: 120px; 
+    overflow-y: visible; /* Lets the main window handle scrolling! */
 }
 
 /* =================================================================
