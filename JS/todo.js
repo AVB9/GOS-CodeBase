@@ -117,11 +117,10 @@ function initTodoTab() {
     };
 
     // ============================================================================
-    // THE NEW TODO SCROLL ENGINE (TSE) ARCHITECTURE
+    // THE TODO SCROLL ENGINE (TSE)
     // ============================================================================
     let tseTimer = null; 
 
-    // Helper: Dynamic Padding to ensure bottom-most tasks can be scrolled on mobile
     const toggleListPadding = (expand) => {
         if (listEl) {
             listEl.style.paddingBottom = expand ? '60vh' : '';
@@ -153,29 +152,6 @@ function initTodoTab() {
         return target;
     };
 
-    const runDesktopTSE = (targetNode) => {
-        // PC FIX: Since the Kanban columns are not independently scrollable, 
-        // and PC doesn't have virtual keyboards that break the layout, 
-        // native scrollIntoView works perfectly here!
-        targetNode.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    };
-
-    const runMobileTSE = (targetNode) => {
-        if (!floatUI) return;
-        const nodeRect = targetNode.getBoundingClientRect();
-        
-        let uiTopEdge = floatUI.getBoundingClientRect().top;
-        if (tray && tray.classList.contains('active')) {
-            uiTopEdge = tray.getBoundingClientRect().top;
-        }
-
-        const offset = nodeRect.bottom - uiTopEdge + 15;
-
-        if (Math.abs(offset) > 5) {
-            window.scrollBy({ top: offset, behavior: 'smooth' });
-        }
-    };
-
     const triggerTSE = (delay = 300) => {
         clearTimeout(tseTimer);
         window.isAutoScrolling = true; 
@@ -187,7 +163,22 @@ function initTodoTab() {
             if (container) {
                 const targetNode = getTargetTaskNode(isDesktop, container);
                 if (targetNode) {
-                    isDesktop ? runDesktopTSE(targetNode) : runMobileTSE(targetNode);
+                    if (isDesktop) {
+                        targetNode.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    } else {
+                        if (!floatUI) return;
+                        const nodeRect = targetNode.getBoundingClientRect();
+                        
+                        let uiTopEdge = floatUI.getBoundingClientRect().top;
+                        if (tray && tray.classList.contains('active')) {
+                            uiTopEdge = tray.getBoundingClientRect().top;
+                        }
+
+                        const offset = nodeRect.bottom - uiTopEdge + 15;
+                        if (Math.abs(offset) > 5) {
+                            window.scrollBy({ top: offset, behavior: 'smooth' });
+                        }
+                    }
                 }
             }
             setTimeout(() => window.isAutoScrolling = false, 800); 
@@ -195,9 +186,11 @@ function initTodoTab() {
     };
 
     // ============================================================================
-    // VISUAL VIEWPORT ANCHOR (MOBILE)
+    // VISUAL VIEWPORT ANCHOR (STRICTLY MOBILE ONLY)
     // ============================================================================
-    if (window.visualViewport) {
+    const isTouchDevice = window.matchMedia("(pointer: coarse)").matches;
+
+    if (window.visualViewport && isTouchDevice) {
         const anchorToKeyboard = () => {
             if (!floatUI) return;
             
@@ -206,9 +199,8 @@ function initTodoTab() {
             if (document.activeElement === input && window.isKeyboardOpen) {
                 const vv = window.visualViewport;
                 
-                // Real-time calculation of the visual frame
+                // TOP-ANCHOR: Locks it mathematically to the visual glass of the screen
                 const targetTop = vv.offsetTop + vv.height - floatUI.offsetHeight - 15;
-                
                 floatUI.style.top = `${targetTop}px`;
                 floatUI.style.bottom = 'auto'; 
                 
@@ -232,11 +224,11 @@ function initTodoTab() {
             }
         });
         
-        // MOBILE THUMB-SCROLL FIX: We MUST track the scroll so the TFI moves 
-        // down the canvas exactly as fast as your thumb moves the canvas up. 
-        // Because CSS transition is off, it locks flawlessly without elastic bounding.
+        // WE KEEP THIS: Because CSS transition is set to 'none', this will perfectly 
+        // lock the TFI to the keyboard without any elastic lag!
         window.visualViewport.addEventListener('scroll', anchorToKeyboard);
     }
+
     // ============================================================================
     // DOM-SAFE SUBJECT TRAY
     // ============================================================================
@@ -299,7 +291,7 @@ function initTodoTab() {
     };
 
     // ============================================================================
-    // FOCUS & BLUR LOGIC
+    // FOCUS & BLUR LOGIC (PC Scrollbar & Wheel Support)
     // ============================================================================
     input.addEventListener('focus', () => { 
         if (tray) tray.classList.add('active'); 
@@ -308,14 +300,8 @@ function initTodoTab() {
 
     input.addEventListener('click', () => { if (tray) tray.classList.add('active'); });
 
-    // PC Only: Deactivate Float when the user physically scrolls their mouse wheel
-    window.addEventListener('wheel', () => {
-        const isDesktop = window.innerWidth >= 768; 
-        if (isDesktop && document.activeElement === input) {
-            input.blur();
-            if (tray) tray.classList.remove('active');
-        }
-    }, { capture: true, passive: true }); 
+    // We removed the custom 'wheel' blur listener. 
+    // Mouse wheel = keeps focus. Clicking scrollbar = loses focus natively!
 
     document.addEventListener('mousedown', (e) => {
         if (e.target === input || input.contains(e.target)) return; 
@@ -335,7 +321,7 @@ function initTodoTab() {
     }, { passive: true });
 
     // ============================================================================
-    // KANBAN & TASK RENDERING LOGIC (Untouched Core Logic)
+    // KANBAN & TASK RENDERING LOGIC
     // ============================================================================
     const updateMobileOrder = () => {
         if(!listEl) return;
@@ -481,6 +467,10 @@ function initTodoTab() {
                         
                         taskNode.classList.add('is-editing'); 
                         window.isEditingTask = true; 
+
+                        window.isAutoScrolling = true;
+                        taskNode.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        setTimeout(() => window.isAutoScrolling = false, 800);
 
                         const wrapper = document.createElement('div');
                         wrapper.className = 'todo-edit-wrapper';

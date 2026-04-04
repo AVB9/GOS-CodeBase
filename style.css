@@ -474,10 +474,7 @@ input[type="search"]::-webkit-search-results-decoration { display: none !importa
 .todo-input-group.float-lowered { bottom: calc(40px + var(--safe-bottom)); }
 
 /* FIX 1: Kill the transition when keyboard is active so it instantly locks to JS math without rubber-banding */
-.todo-input-group.keyboard-active { 
-    bottom: 15px; 
-    transition: opacity 0.2s ease !important; 
-}
+.todo-input-group.keyboard-active { transition: none !important; }
 
 /* FIX 2: Violently strip native browser styling from the input */
 .todo-input-group input { 
