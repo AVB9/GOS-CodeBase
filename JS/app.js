@@ -146,9 +146,18 @@ function initSmartUI() {
     if (!bottomNav) return;
 
     let isScrolling = false;
-    
-    // RESTORED: We properly track the main window scroll!
     let lastScrollY = window.scrollY;
+
+    // Helper: Is this an actual typing input?
+    const isKeyboardInput = (el) => {
+        if (!el) return false;
+        if (el.tagName === 'TEXTAREA') return true;
+        if (el.tagName === 'INPUT') {
+            const typingTypes = ['text', 'search', 'password', 'email', 'number', 'tel', 'url'];
+            return typingTypes.includes(el.type);
+        }
+        return false;
+    };
     
     window.addEventListener('scroll', () => {
         if (window.isAutoScrolling) {
@@ -161,13 +170,10 @@ function initSmartUI() {
                 const currentScrollY = window.scrollY;
                 const isFocused = document.activeElement && (document.activeElement.id === 'newTaskInput' || document.activeElement.classList.contains('todo-edit-input'));
                 
-                // Scrolling Down -> Hide Nav Pill & Lower Float
                 if (currentScrollY > lastScrollY && currentScrollY > 40) {
                     bottomNav.classList.add('nav-hidden');
                     if (floatingTodoInput && !isFocused) floatingTodoInput.classList.add('float-lowered');
-                } 
-                // Scrolling Up -> Show Nav Pill & Raise Float
-                else if (currentScrollY < lastScrollY) {
+                } else if (currentScrollY < lastScrollY) {
                     if (!window.isKeyboardOpen) {
                         bottomNav.classList.remove('nav-hidden');
                         if (floatingTodoInput && !isFocused) floatingTodoInput.classList.remove('float-lowered');
@@ -210,7 +216,6 @@ function initSmartUI() {
             if (window.isKeyboardOpen) {
                 bottomNav.classList.add('nav-hidden'); 
             } else {
-                // MOBILE BUG FIX: Keyboard closed mid-air via 'Back' button
                 const isFocused = document.activeElement && (document.activeElement.id === 'newTaskInput' || document.activeElement.classList.contains('todo-edit-input'));
                 if (isFocused) {
                     document.activeElement.blur(); 
@@ -225,30 +230,27 @@ function initSmartUI() {
                 if (floatingTodoInput) {
                     floatingTodoInput.classList.remove('keyboard-active');
                     floatingTodoInput.classList.remove('float-lowered');
+                    floatingTodoInput.classList.remove('edit-mode-hidden'); // Reset on back button
                 }
             }
         });
     }
 
-// Helper to check if an input actually triggers a virtual typing keyboard
-    const isKeyboardInput = (el) => {
-        if (!el) return false;
-        if (el.tagName === 'TEXTAREA') return true;
-        if (el.tagName === 'INPUT') {
-            const typingTypes = ['text', 'search', 'password', 'email', 'number', 'tel', 'url'];
-            return typingTypes.includes(el.type);
-        }
-        return false;
-    };
-
     document.addEventListener('focusin', (e) => {
-        // BUG FIX: Only trigger keyboard logic for actual typing inputs!
         if (isKeyboardInput(e.target) && e.target.id !== 'journalEditor') {
             window.isKeyboardOpen = true;
             bottomNav.classList.add('nav-hidden');
-            if (floatingTodoInput && e.target.id === 'newTaskInput') {
-                floatingTodoInput.classList.add('keyboard-active');
-                floatingTodoInput.classList.remove('float-lowered');
+            
+            if (floatingTodoInput) {
+                if (e.target.id === 'newTaskInput') {
+                    // Standard task addition: Anchor to keyboard
+                    floatingTodoInput.classList.add('keyboard-active');
+                    floatingTodoInput.classList.remove('float-lowered');
+                    floatingTodoInput.classList.remove('edit-mode-hidden');
+                } else if (e.target.classList.contains('todo-edit-input')) {
+                    // GHOST FLOAT FIX: Hide the TFI completely if we are editing an inline task!
+                    floatingTodoInput.classList.add('edit-mode-hidden');
+                }
             }
         }
     });
@@ -265,6 +267,7 @@ function initSmartUI() {
                 if (floatingTodoInput) {
                     floatingTodoInput.classList.remove('keyboard-active');
                     floatingTodoInput.classList.remove('float-lowered');
+                    floatingTodoInput.classList.remove('edit-mode-hidden'); // Restore TFI visibility
                 }
             }
         }, 100); 

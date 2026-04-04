@@ -503,6 +503,12 @@ input[type="search"]::-webkit-search-results-decoration { display: none !importa
     transition: bottom 0.3s cubic-bezier(0.4, 0, 0.2, 1), transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease !important;
 }
 
+.todo-input-group.edit-mode-hidden {
+    opacity: 0 !important;
+    pointer-events: none !important;
+    transform: translateX(-50%) translateY(20px) !important;
+}
+
 /* FIX 2: Violently strip native browser styling from the input */
 .todo-input-group input { 
     flex: 1; 
