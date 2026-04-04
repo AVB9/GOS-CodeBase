@@ -117,7 +117,7 @@ function initTodoTab() {
     };
 
     // ============================================================================
-    // THE NEW APP-SHELL TODO SCROLL ENGINE (TSE)
+    // THE NATIVE TODO SCROLL ENGINE (TSE)
     // ============================================================================
     let tseTimer = null; 
 
@@ -146,9 +146,12 @@ function initTodoTab() {
         return target;
     };
 
-   const runDesktopTSE = (targetNode) => {
-        // Safe PC scroll via scrollIntoView
-        targetNode.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    const runDesktopTSE = (targetNode) => {
+        // PC SMOOTH SCROLL: Adding a 50ms delay gives the browser time to paint 
+        // the Subject Tray UI changes before calculating the scroll, making it buttery smooth.
+        setTimeout(() => {
+            targetNode.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 50);
     };
 
     const runMobileTSE = (targetNode) => {
@@ -185,47 +188,6 @@ function initTodoTab() {
             setTimeout(() => window.isAutoScrolling = false, 800); 
         }, delay); 
     };
-
-    // ============================================================================
-    // VISUAL VIEWPORT ANCHOR (MOBILE THUMB SCROLL LOCK)
-    // ============================================================================
-    const isTouchDevice = window.matchMedia("(pointer: coarse)").matches;
-
-    if (window.visualViewport && isTouchDevice) {
-        const anchorToKeyboard = () => {
-            if (!floatUI) return;
-            
-            window.isKeyboardOpen = (window.innerHeight - window.visualViewport.height) > 100;
-            
-            if (document.activeElement === input && window.isKeyboardOpen) {
-                const vv = window.visualViewport;
-                // Anchor to the top of the visual screen frame
-                const targetTop = vv.offsetTop + vv.height - floatUI.offsetHeight - 15;
-                
-                floatUI.style.top = `${targetTop}px`;
-                floatUI.style.bottom = 'auto'; 
-                floatUI.classList.add('keyboard-active');
-                floatUI.classList.remove('float-lowered'); 
-                
-                toggleListPadding(true);
-            } else {
-                floatUI.style.top = ''; 
-                floatUI.style.bottom = '';
-                floatUI.classList.remove('keyboard-active');
-                toggleListPadding(false);
-            }
-        };
-
-        window.visualViewport.addEventListener('resize', () => {
-            anchorToKeyboard();
-            if (document.activeElement === input && window.isKeyboardOpen) {
-                triggerTSE(100); 
-            }
-        });
-        
-        // By setting style.top in JS and killing 'transition' in CSS, this flawlessly tracks the thumb scroll
-        window.visualViewport.addEventListener('scroll', anchorToKeyboard);
-    }
 
     // ============================================================================
     // DOM-SAFE SUBJECT TRAY
@@ -298,10 +260,11 @@ function initTodoTab() {
 
     input.addEventListener('click', () => { if (tray) tray.classList.add('active'); });
 
-    // PC Blur Logic: Scroll wheel keeps focus. Clicking outside drops it.
     document.addEventListener('mousedown', (e) => {
         if (e.target === input || input.contains(e.target)) return; 
         if (tray && (e.target === tray || tray.contains(e.target))) return; 
+        
+        if (document.activeElement === input) input.blur();
         if (tray && tray.classList.contains('active')) tray.classList.remove('active');
     });
 
@@ -463,6 +426,10 @@ function initTodoTab() {
                         
                         taskNode.classList.add('is-editing'); 
                         window.isEditingTask = true; 
+
+                        window.isAutoScrolling = true;
+                        taskNode.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        setTimeout(() => window.isAutoScrolling = false, 800);
 
                         const wrapper = document.createElement('div');
                         wrapper.className = 'todo-edit-wrapper';
@@ -764,6 +731,10 @@ function initTodoTab() {
                         
                         taskNode.classList.add('is-editing'); 
                         window.isEditingTask = true; 
+
+                        window.isAutoScrolling = true;
+                        taskNode.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        setTimeout(() => window.isAutoScrolling = false, 800);
 
                         const wrapper = document.createElement('div');
                         wrapper.className = 'todo-edit-wrapper';

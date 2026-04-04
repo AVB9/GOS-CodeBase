@@ -213,10 +213,13 @@ function initSmartUI() {
         });
     }
 
-    document.addEventListener('focusin', (e) => {
+document.addEventListener('focusin', (e) => {
         if ((e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') && e.target.id !== 'journalEditor') {
             window.isKeyboardOpen = true;
-            bottomNav.classList.add('nav-hidden');
+            // 1. Hide the Nav Pill globally
+            bottomNav.classList.add('nav-hidden'); 
+            
+            // 2. Drop the TFI to the bottom of the screen
             if (floatingTodoInput && e.target.id === 'newTaskInput') {
                 floatingTodoInput.classList.add('keyboard-active');
                 floatingTodoInput.classList.remove('float-lowered');
@@ -229,10 +232,12 @@ function initSmartUI() {
             const activeTag = document.activeElement ? document.activeElement.tagName : '';
             if (activeTag !== 'INPUT' && activeTag !== 'TEXTAREA') {
                 window.isKeyboardOpen = false;
+                // Restore the Nav Pill
                 bottomNav.classList.remove('nav-hidden');
+                
+                // Restore the TFI to its floating position
                 if (floatingTodoInput) {
                     floatingTodoInput.classList.remove('keyboard-active');
-                    floatingTodoInput.classList.remove('float-lowered');
                 }
             }
         }, 10);
