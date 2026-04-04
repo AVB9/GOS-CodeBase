@@ -52,17 +52,6 @@ function initPlannerTab() {
     const defaultSubjects = [{ id: 'off', name: 'Day Off', color: '#555555' }];
     const getSubjects = () => JSON.parse(localStorage.getItem('plannerSubjects')) || defaultSubjects;
     
-    const getContrastColor = (hex) => {
-        if (!hex) return '#ffffff';
-        hex = hex.replace('#', '');
-        if (hex.length === 3) hex = hex.split('').map(x => x + x).join('');
-        const r = parseInt(hex.substring(0,2), 16);
-        const g = parseInt(hex.substring(2,4), 16);
-        const b = parseInt(hex.substring(4,6), 16);
-        const yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
-        return (yiq >= 128) ? '#000000' : '#ffffff';
-    };
-    
     const getTargets = () => JSON.parse(localStorage.getItem('plannerTargets')) || {};
     const saveTargets = (targs) => { 
         try { localStorage.setItem('plannerTargets', JSON.stringify(targs)); if (window.AppEvents) AppEvents.emit('PLANNER_UPDATED'); } 
@@ -163,10 +152,10 @@ function initPlannerTab() {
             let cardContentHTML = `<span class="empty-task-text">Tap to plan this day</span>`;
             
             if (day.hasTask) {
-                const textColor = getContrastColor(day.subject.color); 
+                // PREMIUM UNIFIED PILL STYLING
                 cardContentHTML = `
                     <div style="display:flex; flex-direction:column; gap: 8px;">
-                        <span class="subject-tag" style="background-color:${day.subject.color}; color:${textColor};">${day.subject.name}</span>
+                        <span class="subject-tag" style="background-color: color-mix(in srgb, ${day.subject.color} 20%, var(--color-surface)); color: ${day.subject.color}; border-color: ${day.subject.color};">${day.subject.name}</span>
                         <span class="daily-card-topic">${day.taskTopic}</span>
                     </div>
                 `;
@@ -296,9 +285,9 @@ function initPlannerTab() {
             let contentHTML = `<div class="date-num">${day.dayNum}</div>`;
             
             if (day.hasTask) {
-                const textColor = getContrastColor(day.subject.color); 
+                // PREMIUM UNIFIED PILL STYLING
                 contentHTML += `
-                    <span class="subject-tag desktop-tag" style="background-color:${day.subject.color}; color:${textColor};">${day.subject.name}</span>
+                    <span class="subject-tag desktop-tag" style="background-color: color-mix(in srgb, ${day.subject.color} 20%, var(--color-surface)); color: ${day.subject.color}; border-color: ${day.subject.color};">${day.subject.name}</span>
                     <div class="task-content" style="margin-top: 25px;">
                         <span class="desktop-task-topic">${day.taskTopic}</span>
                     </div>
@@ -371,20 +360,32 @@ function initPlannerTab() {
         container.innerHTML = '';
         getSubjects().forEach(sub => {
             const btn = document.createElement('button');
-            btn.className = `subject-pill ${sub.id === currentId ? 'active' : ''}`;
+            
+            // EXACT SAME CSS CLASS AS TODO TAB
+            btn.className = `todo-tint-pill ${sub.id === currentId ? 'selected' : ''}`;
             btn.textContent = sub.name;
+            
+            // EXACT SAME COLOR MATH AS TODO TAB
             if (sub.id === currentId) {
-                btn.style.backgroundColor = sub.color;
+                btn.style.backgroundColor = `color-mix(in srgb, ${sub.color} 20%, var(--color-surface))`;
                 btn.style.borderColor = sub.color;
-                btn.style.color = getContrastColor(sub.color);
+                btn.style.color = sub.color;
             }
+            
             btn.addEventListener('click', (e) => {
                 e.preventDefault();
-                container.querySelectorAll('.subject-pill').forEach(p => { p.classList.remove('active'); p.style.cssText = ''; });
-                btn.classList.add('active');
-                btn.style.backgroundColor = sub.color;
+                container.querySelectorAll('.todo-tint-pill').forEach(p => { 
+                    p.classList.remove('selected'); 
+                    p.style.backgroundColor = '';
+                    p.style.borderColor = '';
+                    p.style.color = '';
+                });
+                
+                btn.classList.add('selected');
+                btn.style.backgroundColor = `color-mix(in srgb, ${sub.color} 20%, var(--color-surface))`;
                 btn.style.borderColor = sub.color;
-                btn.style.color = getContrastColor(sub.color);
+                btn.style.color = sub.color;
+                
                 onSelect(sub.id);
             });
             container.appendChild(btn);

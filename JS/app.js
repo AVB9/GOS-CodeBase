@@ -230,8 +230,20 @@ function initSmartUI() {
         });
     }
 
+// Helper to check if an input actually triggers a virtual typing keyboard
+    const isKeyboardInput = (el) => {
+        if (!el) return false;
+        if (el.tagName === 'TEXTAREA') return true;
+        if (el.tagName === 'INPUT') {
+            const typingTypes = ['text', 'search', 'password', 'email', 'number', 'tel', 'url'];
+            return typingTypes.includes(el.type);
+        }
+        return false;
+    };
+
     document.addEventListener('focusin', (e) => {
-        if ((e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') && e.target.id !== 'journalEditor') {
+        // BUG FIX: Only trigger keyboard logic for actual typing inputs!
+        if (isKeyboardInput(e.target) && e.target.id !== 'journalEditor') {
             window.isKeyboardOpen = true;
             bottomNav.classList.add('nav-hidden');
             if (floatingTodoInput && e.target.id === 'newTaskInput') {
@@ -242,14 +254,10 @@ function initSmartUI() {
     });
 
     document.addEventListener('focusout', (e) => {
-        // Increased delay to 100ms. This guarantees the scroll event has time to fire 
-        // if the user dragged the PC scrollbar, preventing the buggy UI stutter!
         setTimeout(() => {
-            const activeTag = document.activeElement ? document.activeElement.tagName : '';
-            if (activeTag !== 'INPUT' && activeTag !== 'TEXTAREA') {
+            if (!isKeyboardInput(document.activeElement)) {
                 window.isKeyboardOpen = false;
                 
-                // PC SCROLLBAR FIX: Only force the Nav Pill back if we are at the top of the page.
                 if (window.scrollY <= 40) {
                     bottomNav.classList.remove('nav-hidden');
                 }
