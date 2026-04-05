@@ -148,7 +148,6 @@ function initSmartUI() {
     let isScrolling = false;
     let lastScrollY = window.scrollY;
 
-    // Helper: Is this an actual typing input?
     const isKeyboardInput = (el) => {
         if (!el) return false;
         if (el.tagName === 'TEXTAREA') return true;
@@ -223,14 +222,18 @@ function initSmartUI() {
                     if (tray) tray.classList.remove('active');
                 }
 
-                if (window.scrollY <= 40) {
-                    bottomNav.classList.remove('nav-hidden'); 
-                }
-
                 if (floatingTodoInput) {
                     floatingTodoInput.classList.remove('keyboard-active');
-                    floatingTodoInput.classList.remove('float-lowered');
-                    floatingTodoInput.classList.remove('edit-mode-hidden'); // Reset on back button
+                    floatingTodoInput.classList.remove('edit-mode-hidden');
+                }
+
+                // THE FIX: Strict State Sync!
+                if (window.scrollY <= 40) {
+                    bottomNav.classList.remove('nav-hidden'); 
+                    if (floatingTodoInput) floatingTodoInput.classList.remove('float-lowered');
+                } else {
+                    bottomNav.classList.add('nav-hidden'); 
+                    if (floatingTodoInput) floatingTodoInput.classList.add('float-lowered');
                 }
             }
         });
@@ -243,12 +246,10 @@ function initSmartUI() {
             
             if (floatingTodoInput) {
                 if (e.target.id === 'newTaskInput') {
-                    // Standard task addition: Anchor to keyboard
                     floatingTodoInput.classList.add('keyboard-active');
                     floatingTodoInput.classList.remove('float-lowered');
                     floatingTodoInput.classList.remove('edit-mode-hidden');
                 } else if (e.target.classList.contains('todo-edit-input')) {
-                    // GHOST FLOAT FIX: Hide the TFI completely if we are editing an inline task!
                     floatingTodoInput.classList.add('edit-mode-hidden');
                 }
             }
@@ -260,14 +261,18 @@ function initSmartUI() {
             if (!isKeyboardInput(document.activeElement)) {
                 window.isKeyboardOpen = false;
                 
-                if (window.scrollY <= 40) {
-                    bottomNav.classList.remove('nav-hidden');
-                }
-                
                 if (floatingTodoInput) {
                     floatingTodoInput.classList.remove('keyboard-active');
-                    floatingTodoInput.classList.remove('float-lowered');
-                    floatingTodoInput.classList.remove('edit-mode-hidden'); // Restore TFI visibility
+                    floatingTodoInput.classList.remove('edit-mode-hidden');
+                }
+
+                // THE FIX: Strict State Sync!
+                if (window.scrollY <= 40) {
+                    bottomNav.classList.remove('nav-hidden');
+                    if (floatingTodoInput) floatingTodoInput.classList.remove('float-lowered');
+                } else {
+                    bottomNav.classList.add('nav-hidden');
+                    if (floatingTodoInput) floatingTodoInput.classList.add('float-lowered');
                 }
             }
         }, 100); 
