@@ -887,9 +887,15 @@ input[type="search"]::-webkit-search-results-decoration { display: none !importa
 .desktop-only { display: none !important; }
 
 @media (min-width: 768px) {
-    .momentum-layout { display: grid; grid-template-columns: 1fr 1fr; gap: var(--pad-xl); align-items: start; height: auto; }
+    /* 1.3fr to 1fr ratio makes the left grid slightly wider than the details pane! */
+    .momentum-layout { display: grid; grid-template-columns: 1.3fr 1fr; gap: var(--pad-xl); align-items: start; height: auto; }
     
-    /* OVERRIDE MODAL BEHAVIOR ON DESKTOP */
+    /* 2 by N Grid for Active Habits */
+    .desktop-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: var(--pad-md); }
+    
+    /* 3 by N Grid for Hall of Fame */
+    .desktop-grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--pad-md); }
+    
     #tab-momentum.active .desktop-only { 
         display: flex !important; 
         flex-direction: column; 
@@ -898,3 +904,6 @@ input[type="search"]::-webkit-search-results-decoration { display: none !importa
         padding: var(--pad-xl); 
     }
 }
+
+/* Hide desktop pane completely if no habits exist */
+.momentum-desktop-pane.empty-state { opacity: 0 !important; pointer-events: none !important; }

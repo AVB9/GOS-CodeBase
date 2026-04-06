@@ -42,54 +42,58 @@
     <main id="app-container" class="app-hidden">
         
         <section id="tab-momentum" class="app-tab">
-            <div class="central-column momentum-layout">
+            <div class="central-column">
                 
-                <div class="momentum-list-pane">
-                    <div class="tab-header" style="margin-bottom: 20px;">
-                        <h2 class="tab-title">Momentum</h2>
-                        <button id="addHabitBtn" class="icon-btn" style="color: var(--color-primary); font-size: 2rem; line-height: 1;">+</button>
-                    </div>
-                    
-                    <div class="swipe-container" id="habitListContainer" style="min-height: auto;">
-                        <div id="activeHabitsList" class="habit-cards-wrapper"></div>
-                        
-                        <div class="archived-header hidden" id="archivedHabitsHeader">
-                            <span>Hall of Fame</span>
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                <div class="tab-header" style="margin-bottom: 25px;">
+                    <h2 class="tab-title">Momentum</h2>
+                    <button id="openAddHabitModalBtn" class="icon-btn" style="color: var(--color-primary); font-size: 2rem; line-height: 1;">+</button>
+                </div>
+                
+                <div class="momentum-layout">
+                    <div class="momentum-list-pane">
+                        <div class="swipe-container" id="habitListContainer" style="min-height: auto;">
+                            <div id="activeHabitsList" class="habit-cards-wrapper desktop-grid-2"></div>
                         </div>
-                        <div id="archivedHabitsList" class="habit-cards-wrapper hidden"></div>
+                    </div>
+
+                    <div class="momentum-details-pane glass-panel desktop-only" id="desktopHabitDetailsPane">
+                        <h2 class="modal-title momentum-title-el" style="margin-bottom: 20px; font-size: 1.8rem; text-align: left;">Select a Habit</h2>
+                        
+                        <div class="habit-stats-grid">
+                            <div class="stat-box">
+                                <div class="stat-label">Streak</div>
+                                <div class="stat-value text-main-color momentum-streak-el">0</div>
+                            </div>
+                            <div class="stat-box">
+                                <div class="stat-label">Best</div>
+                                <div class="stat-value text-main-color momentum-best-el">0</div>
+                            </div>
+                            <div class="stat-box">
+                                <div class="stat-label">Total</div>
+                                <div class="stat-value text-main-color momentum-total-el">0</div>
+                            </div>
+                        </div>
+
+                        <div class="habit-calendar-wrapper" style="margin-bottom: 20px;">
+                            <div class="cal-header">
+                                <span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span><span>S</span>
+                            </div>
+                            <div class="cal-grid momentum-cal-grid"></div>
+                        </div>
+
+                        <div class="modal-buttons expanded" style="margin-top: auto;">
+                            <button class="btn-danger momentum-delete-btn" style="flex: 0.5;">Delete</button>
+                            <button class="btn-primary momentum-archive-btn" style="flex: 1;">Achieve</button>
+                        </div>
                     </div>
                 </div>
 
-                <div class="momentum-details-pane glass-panel desktop-only" id="desktopHabitDetailsPane">
-                    <h2 class="modal-title momentum-title-el" style="margin-bottom: 20px; font-size: 1.8rem;">Select a Habit</h2>
-                    
-                    <div class="habit-stats-grid">
-                        <div class="stat-box">
-                            <div class="stat-label">Streak</div>
-                            <div class="stat-value text-main-color momentum-streak-el">0</div>
-                        </div>
-                        <div class="stat-box">
-                            <div class="stat-label">Best</div>
-                            <div class="stat-value text-main-color momentum-best-el">0</div>
-                        </div>
-                        <div class="stat-box">
-                            <div class="stat-label">Total</div>
-                            <div class="stat-value text-main-color momentum-total-el">0</div>
-                        </div>
+                <div class="archived-section" style="margin-top: 30px;">
+                    <div class="archived-header hidden" id="archivedHabitsHeader">
+                        <span>Hall of Fame</span>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
                     </div>
-
-                    <div class="habit-calendar-wrapper" style="margin-bottom: 20px;">
-                        <div class="cal-header">
-                            <span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span><span>S</span>
-                        </div>
-                        <div class="cal-grid momentum-cal-grid"></div>
-                    </div>
-
-                    <div class="modal-buttons expanded" style="margin-top: auto;">
-                        <button class="btn-danger momentum-delete-btn" style="flex: 0.5;">Delete</button>
-                        <button class="btn-primary momentum-archive-btn" style="flex: 1;">Achieve</button>
-                    </div>
+                    <div id="archivedHabitsList" class="habit-cards-wrapper hidden desktop-grid-3"></div>
                 </div>
 
             </div>

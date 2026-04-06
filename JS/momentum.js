@@ -10,7 +10,7 @@ function initMomentumTab() {
     const homeWidgetList = document.getElementById('homeHabitList');
 
     // Modals
-    const openAddBtn = document.getElementById('addHabitBtn'); 
+    const openAddBtn = document.getElementById('openAddHabitModalBtn'); 
     const addModal = document.getElementById('addHabitModalOverlay');
     const closeAddBtn = document.getElementById('closeAddHabitModalBtn');
     const saveAddBtn = document.getElementById('saveNewHabitBtn');
@@ -78,20 +78,17 @@ function initMomentumTab() {
         localStorage.setItem('momentumHabits', JSON.stringify(habits));
         renderList();
         renderHomeWidget();
-        if (selectedHabitId) renderDetails(selectedHabitId);
     };
 
     const toggleCompletion = (habitId, dateStr) => {
         const habit = habits.find(h => h.id === habitId);
         if (!habit) return;
 
-        // Logic Lock 1: Prevent editing achieved habits
         if (habit.archived) {
             window.showAppToast("Archived habits cannot be edited!");
             return;
         }
 
-        // Logic Lock 2: Prevent cheating by marking future dates
         const selectedDate = new Date(dateStr);
         selectedDate.setHours(0,0,0,0);
         const todayDate = new Date();
@@ -185,9 +182,22 @@ function initMomentumTab() {
         const archived = habits.filter(h => h.archived);
         const todayStr = getTodayStr();
 
+        const desktopPane = document.getElementById('desktopHabitDetailsPane');
+
         if (active.length === 0 && archived.length === 0) {
             listContainer.innerHTML = `<div class="empty-task-text" style="text-align: center; margin-top: 40px;">No habits yet. Click + to build momentum.</div>`;
+            if (desktopPane) desktopPane.classList.add('empty-state');
             return;
+        }
+
+        if (desktopPane) desktopPane.classList.remove('empty-state');
+
+        // Auto-select first item on Desktop Load
+        if (window.innerWidth >= 768) {
+            const currentExists = habits.find(h => h.id === selectedHabitId);
+            if (!currentExists) {
+                selectedHabitId = active.length > 0 ? active[0].id : archived[0].id;
+            }
         }
 
         active.forEach(habit => {
@@ -195,7 +205,6 @@ function initMomentumTab() {
             const card = document.createElement('div');
             card.className = `habit-card ${selectedHabitId === habit.id ? 'active-selection' : ''}`;
             
-            // Build the 7 Pure Dots (Oldest to Today)
             let dotsHtml = '';
             for (let i = 6; i >= 0; i--) {
                 const d = new Date();
@@ -235,10 +244,10 @@ function initMomentumTab() {
             });
 
             card.addEventListener('click', () => {
-                document.querySelectorAll('.habit-card').forEach(c => c.classList.remove('active-selection'));
+                document.querySelectorAll('.habit-card, .home-habit-item').forEach(c => c.classList.remove('active-selection'));
                 card.classList.add('active-selection');
                 selectedHabitId = habit.id;
-                renderDetails(habit.id);
+                renderDetails(habit.id, true); // true = User Clicked
             });
 
             listContainer.appendChild(card);
@@ -250,30 +259,36 @@ function initMomentumTab() {
             archHeader.classList.remove('hidden');
             archived.forEach(habit => {
                 const card = document.createElement('div');
-                card.className = `home-habit-item done`;
+                card.className = `home-habit-item done ${selectedHabitId === habit.id ? 'active-selection' : ''}`;
                 card.innerHTML = `<span class="habit-name">${habit.name}</span><span style="color:var(--color-primary); font-weight:800;">★ ACHIEVED</span>`;
                 card.addEventListener('click', () => {
+                    document.querySelectorAll('.habit-card, .home-habit-item').forEach(c => c.classList.remove('active-selection'));
+                    card.classList.add('active-selection');
                     selectedHabitId = habit.id;
-                    renderDetails(habit.id);
+                    renderDetails(habit.id, true);
                 });
                 archivedContainer.appendChild(card);
             });
         } else {
             archHeader.classList.add('hidden');
         }
+
+        // Render Desktop details without popping mobile modal
+        if (selectedHabitId && window.innerWidth >= 768) {
+            renderDetails(selectedHabitId, false);
+        }
     };
 
-    const renderDetails = (habitId) => {
+    const renderDetails = (habitId, isUserClick = true) => {
         const habit = habits.find(h => h.id === habitId);
         if (!habit) return;
 
-        // Pop the true mobile modal if on mobile
-        if (window.innerWidth < 768) {
+        // Only pop modal if it's a mobile screen AND the user physically clicked it
+        if (window.innerWidth < 768 && isUserClick) {
             mobileDetailsModal.style.display = 'flex';
             document.body.classList.add('modal-open');
         }
 
-        // Update BOTH the Desktop Pane and Mobile Modal simultaneously via Classes
         document.querySelectorAll('.momentum-title-el').forEach(el => el.textContent = habit.name);
         document.querySelectorAll('.momentum-streak-el').forEach(el => el.textContent = calculateStreak(habit));
         document.querySelectorAll('.momentum-best-el').forEach(el => el.textContent = calculateLongestStreak(habit));
