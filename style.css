@@ -826,3 +826,76 @@ input[type="search"]::-webkit-search-results-decoration { display: none !importa
     position: relative !important;
     margin-bottom: 50px !important; /* Increased to prevent overlapping the Tomorrow pill */
 }
+
+/* =================================================================
+   18. HOME DASHBOARD GRID UPDATE
+================================================================= */
+.home-col-left { display: flex; flex-direction: column; gap: var(--pad-md); }
+#homeHabitWidget { display: flex; flex-direction: column; height: 100%; justify-content: flex-start; }
+.home-habit-list { flex: 1; display: flex; flex-direction: column; gap: 8px; overflow-y: auto; padding-right: 5px; }
+
+/* Desktop Asymmetrical Split */
+@media (min-width: 768px) {
+    .home-grid { grid-template-columns: 1fr 1fr; grid-auto-rows: min-content; }
+    #focusModeWidget { grid-column: span 2; }
+    .home-col-left { height: 100%; }
+    #homeHabitWidget { grid-column: 2; grid-row: 1; height: auto; min-height: 265px; }
+}
+
+/* Home Habit Checklist Items */
+.home-habit-item { display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; background: rgba(255,255,255,0.03); border-radius: var(--rad-sm); border: 1px solid var(--color-glass-border); cursor: pointer; transition: background 0.2s; }
+.home-habit-item:active { transform: scale(0.98); }
+.home-habit-item.done { opacity: 0.5; }
+.home-habit-item.done .habit-name { text-decoration: line-through; color: var(--color-primary); }
+
+/* =================================================================
+   19. MOMENTUM (HABITS) TAB STYLES
+================================================================= */
+.habit-cards-wrapper { display: flex; flex-direction: column; gap: 15px; }
+.archived-header { display: flex; align-items: center; justify-content: space-between; padding: 15px 5px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; color: var(--color-text-muted); cursor: pointer; margin-top: 20px; border-top: 1px solid var(--color-glass-border); }
+.archived-header.hidden { display: none; }
+
+/* Habit Bento Card */
+.habit-card { position: relative; background: var(--color-glass-bg); backdrop-filter: var(--blur-glass); border: 1px solid var(--color-glass-border); border-radius: var(--rad-lg); padding: var(--pad-lg); display: flex; flex-direction: column; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; }
+.habit-card:active { transform: scale(0.97); }
+.habit-card.active-selection { border-color: var(--color-primary); box-shadow: 0 0 20px color-mix(in srgb, var(--color-primary) 15%, transparent); }
+
+.habit-header-row { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 15px; }
+.habit-streak-display { display: flex; align-items: baseline; gap: 5px; }
+.habit-streak-num { font-size: 2.5rem; font-weight: 800; line-height: 1; color: var(--color-primary); }
+.habit-streak-label { font-size: 0.85rem; font-weight: 700; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 1px; padding-bottom: 4px; }
+
+/* Weekly Dots Tracker */
+.weekly-dots { display: flex; justify-content: space-between; gap: 4px; margin-top: 5px; }
+.dot-day { display: flex; flex-direction: column; align-items: center; gap: 6px; flex: 1; }
+.dot-label { font-size: 0.65rem; color: var(--color-text-muted); text-transform: uppercase; font-weight: 700; }
+.dot { width: 100%; height: 8px; border-radius: 4px; background: rgba(255,255,255,0.1); transition: background 0.3s ease; }
+.dot.filled { background: var(--color-primary); box-shadow: 0 0 8px color-mix(in srgb, var(--color-primary) 50%, transparent); }
+.dot.buffer { background: #f39c12; } /* Orange for Grace Period */
+.dot.today-empty { border: 1px solid var(--color-primary); background: transparent; }
+
+/* Desktop Split Layout Logic */
+.momentum-details-pane { display: none; flex-direction: column; padding: var(--pad-xl); height: 100%; position: sticky; top: 0; }
+.habit-details-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--color-glass-border); padding-bottom: 15px; margin-bottom: 20px; }
+.habit-details-header h3 { font-size: 1.5rem; margin: 0; }
+
+.habit-stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 25px; }
+.stat-box { background: rgba(0,0,0,0.2); padding: 15px; border-radius: var(--rad-md); text-align: center; border: 1px solid var(--color-glass-border); }
+.stat-box .stat-label { font-size: 0.75rem; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px; }
+.stat-box .stat-value { font-size: 1.8rem; font-weight: 800; color: var(--color-text); }
+
+.mobile-only { display: none; }
+
+@media (min-width: 768px) {
+    .momentum-layout { display: grid; grid-template-columns: 1fr 1fr; gap: var(--pad-xl); height: auto; }
+    .momentum-details-pane { display: flex; }
+    .momentum-details-pane.hidden { opacity: 0; pointer-events: none; }
+}
+
+/* Fallback for mobile modal pop-up */
+@media (max-width: 767px) {
+    .momentum-details-pane { position: fixed; top: auto; bottom: 0; left: 0; width: 100%; height: 85vh; border-radius: 30px 30px 0 0; z-index: 5000; display: flex; transform: translateY(100%); transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+    .momentum-details-pane.active { transform: translateY(0); }
+    .momentum-details-pane.hidden { display: none; }
+    .mobile-only { display: block; }
+}

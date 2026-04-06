@@ -26,7 +26,7 @@
     <script src="JS/todo.js" defer></script>
     <script src="JS/settings.js" defer></script>
     <script src="JS/planner.js" defer></script>
-    <script src="JS/journal.js" defer></script>
+    <script src="JS/momentum.js" defer></script>
 </head>
 <body>
 
@@ -42,18 +42,57 @@
     
     <main id="app-container" class="app-hidden">
         
-        <section id="tab-journal" class="app-tab">
-            <div class="central-column">
-                <div class="tab-header">
-                    <h2 class="tab-title">Journal</h2>
-                    <div class="date-navigator" id="journalDateNav">
-                        <button id="journalPrevDay" class="icon-btn">‹</button>
-                        <span id="journalDateDisplay" class="date-display">Today</span>
-                        <button id="journalNextDay" class="icon-btn">›</button>
+        <section id="tab-momentum" class="app-tab">
+            <div class="central-column momentum-layout">
+                <div class="momentum-list-pane">
+                    <div class="tab-header" style="margin-bottom: 20px;">
+                        <h2 class="tab-title">Momentum</h2>
+                        <button id="addHabitBtn" class="icon-btn" style="color: var(--color-primary);">+</button>
+                    </div>
+                    
+                    <div class="swipe-container" id="habitListContainer" style="min-height: auto;">
+                        <div id="activeHabitsList" class="habit-cards-wrapper"></div>
+                        
+                        <div class="archived-header hidden" id="archivedHabitsHeader">
+                            <span>Hall of Fame</span>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                        </div>
+                        <div id="archivedHabitsList" class="habit-cards-wrapper hidden"></div>
                     </div>
                 </div>
-                <div class="swipe-container" id="journalSwipeContainer">
-                    <textarea id="journalEditor" class="journal-textarea" placeholder="Start journaling your thoughts..."></textarea>
+
+                <div class="momentum-details-pane glass-panel hidden" id="habitDetailsPane">
+                    <div class="habit-details-header">
+                        <h3 id="detailHabitTitle">Select a Habit</h3>
+                        <button id="closeDetailsBtn" class="icon-btn mobile-only">×</button>
+                    </div>
+                    
+                    <div class="habit-stats-grid">
+                        <div class="stat-box">
+                            <div class="stat-label">Current Streak</div>
+                            <div class="stat-value" id="detailCurrentStreak">0</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-label">Longest Streak</div>
+                            <div class="stat-value" id="detailLongestStreak">0</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-label">Total Days</div>
+                            <div class="stat-value" id="detailTotalDays">0</div>
+                        </div>
+                    </div>
+
+                    <div class="habit-calendar-wrapper">
+                        <div class="cal-header">
+                            <span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span><span>S</span>
+                        </div>
+                        <div class="cal-grid" id="habitDetailGrid"></div>
+                    </div>
+
+                    <div style="margin-top: 20px; text-align: center;">
+                        <button id="archiveHabitBtn" class="btn-secondary settings-action-btn">Achieve & Archive</button>
+                        <button id="deleteHabitBtn" class="btn-danger settings-action-btn" style="margin-top: 10px;">Delete Habit</button>
+                    </div>
                 </div>
             </div>
         </section>
@@ -121,16 +160,25 @@
                 </div>
 
                 <div class="home-grid">
-                    <article class="glass-panel bento-card" id="openGoalModalBtn">
-                        <div class="bento-title">Goal Countdown</div>
-                        <div class="bento-value text-main-color" id="daysRemaining">000</div>
-                        <div class="bento-sub" id="goalDisplayText">Set your goal...</div>
-                    </article>
+                    <div class="home-col-left">
+                        <article class="glass-panel bento-card" id="openGoalModalBtn">
+                            <div class="bento-title">Goal Countdown</div>
+                            <div class="bento-value text-main-color" id="daysRemaining">000</div>
+                            <div class="bento-sub" id="goalDisplayText">Set your goal...</div>
+                        </article>
 
-                    <article class="glass-panel bento-card" id="homeTargetWidget">
-                        <div class="bento-title flex-between">Today's Target ↗</div>
-                        <div id="dashTaskContainer">
-                            <div class="empty-task-text">Pulling from planner...</div>
+                        <article class="glass-panel bento-card" id="homeTargetWidget">
+                            <div class="bento-title flex-between">Today's Target ↗</div>
+                            <div id="dashTaskContainer">
+                                <div class="empty-task-text">Pulling from planner...</div>
+                            </div>
+                        </article>
+                    </div>
+
+                    <article class="glass-panel bento-card" id="homeHabitWidget">
+                        <div class="bento-title">Daily Momentum</div>
+                        <div id="homeHabitList" class="home-habit-list">
+                            <div class="empty-task-text">No active habits.</div>
                         </div>
                     </article>
 
@@ -313,7 +361,7 @@
     <button id="mobileEditDoneBtn" class="mobile-edit-done-btn">Done</button>
 
     <nav class="bottom-pill-nav" id="bottomNav">
-        <button class="bottom-pill-btn" data-target="tab-journal" title="Journal"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/></svg></button>
+        <button class="bottom-pill-btn" data-target="tab-momentum" title="Momentum"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg></button>
         <button class="bottom-pill-btn" data-target="tab-planner" title="Planner"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></button>
         <button class="bottom-pill-btn active" data-target="tab-home" title="Home"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></button>
         <button class="bottom-pill-btn" data-target="tab-todo" title="Todo"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></button>
