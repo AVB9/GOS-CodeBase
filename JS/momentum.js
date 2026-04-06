@@ -1,3 +1,5 @@
+// JS/momentum.js
+
 document.addEventListener('DOMContentLoaded', () => {
     initMomentumTab();
 });
@@ -5,38 +7,32 @@ document.addEventListener('DOMContentLoaded', () => {
 function initMomentumTab() {
     const listContainer = document.getElementById('activeHabitsList');
     const archivedContainer = document.getElementById('archivedHabitsList');
-    const addBtn = document.getElementById('addHabitBtn');
-    
-    const detailsModal = document.getElementById('habitDetailsModal');
-    const closeDetailsBtn = document.getElementById('closeDetailsBtn');
     const homeWidgetList = document.getElementById('homeHabitList');
+
+    // Add Modal DOM
+    const openAddBtn = document.getElementById('openAddHabitModalBtn');
+    const addModal = document.getElementById('addHabitModalOverlay');
+    const closeAddBtn = document.getElementById('closeAddHabitModalBtn');
+    const saveAddBtn = document.getElementById('saveNewHabitBtn');
+    const nameInput = document.getElementById('newHabitNameInput');
+
+    // Details Modal DOM
+    const mobileDetailsModal = document.getElementById('mobileHabitDetailsModal');
+    const closeMobileDetailsBtn = document.getElementById('closeMobileHabitModalBtn');
 
     if (!listContainer) return;
 
     let habits = JSON.parse(localStorage.getItem('momentumHabits')) || [];
     let selectedHabitId = null;
 
-    // Helper: Normalize Dates
     const getTodayStr = () => {
         const d = new Date();
         return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
     };
 
-    const getPastDates = (daysCount) => {
-        const dates = [];
-        for (let i = 0; i < daysCount; i++) {
-            const d = new Date();
-            d.setDate(d.getDate() - i);
-            dates.push(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`);
-        }
-        return dates.reverse(); // oldest to newest
-    };
-
-    // The Magic Resilience Logic
     const calculateStreak = (habit) => {
         if (habit.completions.length === 0) return 0;
-        
-        const dates = habit.completions.sort((a,b) => new Date(b) - new Date(a)); // Newest first
+        const dates = habit.completions.sort((a,b) => new Date(b) - new Date(a)); 
         const today = getTodayStr();
         
         let currentStreak = 0;
@@ -53,11 +49,9 @@ function initMomentumTab() {
                 currentStreak++;
                 missedBuffer = 0; 
             } else {
-                if (checkStr === today) {
-                    // Today not done yet. Doesn't break streak.
-                } else {
+                if (checkStr !== today) {
                     missedBuffer++;
-                    if (missedBuffer > 2) break; // Buffer exceeded
+                    if (missedBuffer > 2) break; 
                 }
             }
             checkDate.setDate(checkDate.getDate() - 1);
@@ -73,7 +67,7 @@ function initMomentumTab() {
         for(let i=0; i<sorted.length; i++) {
             if (i === 0) { temp = 1; max = 1; continue; }
             const diff = (new Date(sorted[i]) - new Date(sorted[i-1])) / (1000*60*60*24);
-            if (diff <= 3) { temp++; } // Forgiving diff
+            if (diff <= 3) { temp++; } 
             else { temp = 1; }
             if (temp > max) max = temp;
         }
@@ -90,6 +84,19 @@ function initMomentumTab() {
     const toggleCompletion = (habitId, dateStr) => {
         const habit = habits.find(h => h.id === habitId);
         if (!habit) return;
+
+        if (habit.archived) {
+            window.showAppToast("Archived habits cannot be edited!");
+            return;
+        }
+
+        const selectedDate = new Date(dateStr);
+        const todayDate = new Date(getTodayStr());
+
+        if (selectedDate > todayDate) {
+            window.showAppToast("gmasti tho dekho koi inki!!");
+            return;
+        }
         
         if (habit.completions.includes(dateStr)) {
             habit.completions = habit.completions.filter(d => d !== dateStr);
@@ -99,6 +106,41 @@ function initMomentumTab() {
         }
         saveHabits();
     };
+
+    // --- NEW HABIT MODAL LOGIC ---
+    openAddBtn.addEventListener('click', () => {
+        nameInput.value = '';
+        addModal.style.display = 'flex';
+        document.body.classList.add('modal-open');
+        setTimeout(() => nameInput.focus(), 100);
+    });
+
+    const closeAddModal = () => {
+        addModal.style.display = 'none';
+        document.body.classList.remove('modal-open');
+    };
+
+    closeAddBtn.addEventListener('click', closeAddModal);
+
+    const handleCreateHabit = () => {
+        const name = nameInput.value.trim();
+        if (name) {
+            habits.unshift({
+                id: 'hab_' + Date.now(),
+                name: name,
+                createdAt: getTodayStr(),
+                archived: false,
+                completions: []
+            });
+            saveHabits();
+            closeAddModal();
+        }
+    };
+
+    saveAddBtn.addEventListener('click', handleCreateHabit);
+    nameInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') { e.preventDefault(); handleCreateHabit(); }
+    });
 
     // --- HOME DASHBOARD WIDGET ---
     const renderHomeWidget = () => {
@@ -138,7 +180,6 @@ function initMomentumTab() {
         const active = habits.filter(h => !h.archived);
         const archived = habits.filter(h => h.archived);
         const todayStr = getTodayStr();
-        const last7Days = getPastDates(7);
 
         if (active.length === 0 && archived.length === 0) {
             listContainer.innerHTML = `<div class="empty-task-text" style="text-align: center; margin-top: 40px;">No habits yet. Click + to build momentum.</div>`;
@@ -150,33 +191,31 @@ function initMomentumTab() {
             const card = document.createElement('div');
             card.className = `habit-card ${selectedHabitId === habit.id ? 'active-selection' : ''}`;
             
-            // Build Weekly Dots
             let dotsHtml = '';
-            last7Days.forEach((dateStr) => {
+            for (let i = 6; i >= 0; i--) {
+                const d = new Date();
+                d.setDate(d.getDate() - i);
+                const dateStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+                
                 const isDone = habit.completions.includes(dateStr);
                 const isToday = dateStr === todayStr;
-                let dotClass = 'dot';
+                let dotClass = 'streak-dot';
                 
                 if (isDone) dotClass += ' filled';
                 else if (isToday && !isDone) dotClass += ' today-empty';
                 else if (!isDone && streak > 0 && !isToday) dotClass += ' buffer'; 
                 
-                dotsHtml += `
-                    <div class="dot-day">
-                        <span class="dot-label">${new Date(dateStr).toLocaleDateString('en-US', {weekday: 'narrow'})}</span>
-                        <div class="${dotClass}"></div>
-                    </div>
-                `;
-            });
+                dotsHtml += `<div class="${dotClass}" title="${dateStr}"></div>`;
+            }
 
             card.innerHTML = `
-                <div class="bento-title" style="margin-bottom: 0;">${habit.name}</div>
+                <div class="bento-title">${habit.name}</div>
                 <div class="habit-header-row">
                     <div class="habit-streak-display">
                         <span class="habit-streak-num">${streak}</span>
                         <span class="habit-streak-label">Days</span>
                     </div>
-                    <div class="todo-checkbox ${habit.completions.includes(todayStr) ? 'done' : ''}" style="width: 32px; height: 32px;">
+                    <div class="todo-checkbox ${habit.completions.includes(todayStr) ? 'done' : ''}">
                         <svg viewBox="0 0 24 24" class="checkbox-svg" style="width:18px; height:18px;">
                             <polyline points="20 6 9 17 4 12" class="tick-path" style="stroke-width: 4;"></polyline>
                         </svg>
@@ -185,7 +224,6 @@ function initMomentumTab() {
                 <div class="weekly-dots">${dotsHtml}</div>
             `;
 
-            // Setup interactions
             card.querySelector('.todo-checkbox').addEventListener('click', (e) => {
                 e.stopPropagation();
                 toggleCompletion(habit.id, todayStr);
@@ -224,23 +262,19 @@ function initMomentumTab() {
         const habit = habits.find(h => h.id === habitId);
         if (!habit) return;
 
-        // Modal Display Logic
+        // Pop the mobile modal if on mobile
         if (window.innerWidth < 768) {
-            detailsModal.style.display = 'flex';
+            mobileDetailsModal.style.display = 'flex';
             document.body.classList.add('modal-open');
-        } else {
-            detailsModal.style.opacity = '1';
         }
 
-        document.getElementById('detailHabitTitle').textContent = habit.name;
-        document.getElementById('detailCurrentStreak').textContent = calculateStreak(habit);
-        document.getElementById('detailLongestStreak').textContent = calculateLongestStreak(habit);
-        document.getElementById('detailTotalDays').textContent = habit.completions.length;
+        // Update BOTH the Desktop Pane and Mobile Modal simultaneously via Classes
+        document.querySelectorAll('.momentum-title-el').forEach(el => el.textContent = habit.name);
+        document.querySelectorAll('.momentum-streak-el').forEach(el => el.textContent = calculateStreak(habit));
+        document.querySelectorAll('.momentum-best-el').forEach(el => el.textContent = calculateLongestStreak(habit));
+        document.querySelectorAll('.momentum-total-el').forEach(el => el.textContent = habit.completions.length);
 
-        // Render Mini Calendar
-        const grid = document.getElementById('habitDetailGrid');
-        grid.innerHTML = '';
-        
+        // Generate Calendar
         const d = new Date();
         const year = d.getFullYear();
         const month = d.getMonth();
@@ -248,72 +282,55 @@ function initMomentumTab() {
         let startDay = new Date(year, month, 1).getDay();
         if (startDay === 0) startDay = 7; 
 
-        for(let i = 1; i < startDay; i++) {
-            grid.innerHTML += `<div class="cal-day empty"></div>`;
-        }
-
-        for (let d = 1; d <= daysInMonth; d++) {
-            const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-            const isDone = habit.completions.includes(dateStr);
-            const isToday = dateStr === getTodayStr();
-            const cell = document.createElement('div');
-            cell.className = `cal-day ${isToday ? 'today' : ''} ${isDone ? 'completed' : ''}`;
-            cell.textContent = d;
-            
-            cell.addEventListener('click', () => toggleCompletion(habit.id, dateStr));
-            grid.appendChild(cell);
-        }
-
-        // Detail Buttons
-        const archiveBtn = document.getElementById('archiveHabitBtn');
-        archiveBtn.textContent = habit.archived ? "Unarchive" : "Achieve";
-        archiveBtn.onclick = () => {
-            habit.archived = !habit.archived;
-            saveHabits();
-            if (window.innerWidth < 768) {
-                detailsModal.style.display = 'none';
-                document.body.classList.remove('modal-open');
+        document.querySelectorAll('.momentum-cal-grid').forEach(grid => {
+            grid.innerHTML = '';
+            for(let i = 1; i < startDay; i++) {
+                grid.innerHTML += `<div class="cal-day empty"></div>`;
             }
-        };
 
-        const deleteBtn = document.getElementById('deleteHabitBtn');
-        deleteBtn.onclick = () => {
-            if(confirm("Permanently delete this habit?")) {
-                habits = habits.filter(h => h.id !== habit.id);
-                selectedHabitId = null;
-                saveHabits();
-                if (window.innerWidth < 768) {
-                    detailsModal.style.display = 'none';
-                    document.body.classList.remove('modal-open');
-                }
-            }
-        };
-    };
-
-    if(closeDetailsBtn) {
-        closeDetailsBtn.classList.add('btn-ghost');
-        closeDetailsBtn.addEventListener('click', () => {
-            if (window.innerWidth < 768) {
-                detailsModal.style.display = 'none';
-                document.body.classList.remove('modal-open');
+            for (let d = 1; d <= daysInMonth; d++) {
+                const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+                const isDone = habit.completions.includes(dateStr);
+                const isToday = dateStr === getTodayStr();
+                const cell = document.createElement('div');
+                cell.className = `cal-day ${isToday ? 'today' : ''} ${isDone ? 'completed' : ''}`;
+                cell.textContent = d;
+                
+                cell.addEventListener('click', () => toggleCompletion(habit.id, dateStr));
+                grid.appendChild(cell);
             }
         });
-    }
 
-    addBtn.addEventListener('click', () => {
-        const name = prompt("What habit are you building momentum for?");
-        if (name && name.trim()) {
-            const newHabit = {
-                id: 'hab_' + Date.now(),
-                name: name.trim(),
-                createdAt: getTodayStr(),
-                archived: false,
-                completions: []
+        // Setup Actions
+        document.querySelectorAll('.momentum-archive-btn').forEach(btn => {
+            btn.textContent = habit.archived ? "Unarchive" : "Achieve";
+            btn.onclick = () => {
+                habit.archived = !habit.archived;
+                saveHabits();
+                closeMobileDetailsModal();
             };
-            habits.unshift(newHabit);
-            saveHabits();
-        }
-    });
+        });
+
+        document.querySelectorAll('.momentum-delete-btn').forEach(btn => {
+            btn.onclick = () => {
+                if(confirm("Permanently delete this habit?")) {
+                    habits = habits.filter(h => h.id !== habit.id);
+                    selectedHabitId = null;
+                    saveHabits();
+                    closeMobileDetailsModal();
+                }
+            };
+        });
+    };
+
+    const closeMobileDetailsModal = () => {
+        mobileDetailsModal.style.display = 'none';
+        document.body.classList.remove('modal-open');
+    };
+
+    if(closeMobileDetailsBtn) {
+        closeMobileDetailsBtn.addEventListener('click', closeMobileDetailsModal);
+    }
 
     document.getElementById('archivedHabitsHeader')?.addEventListener('click', () => {
         archivedContainer.classList.toggle('hidden');

@@ -891,3 +891,45 @@ input[type="search"]::-webkit-search-results-decoration { display: none !importa
     .momentum-desktop-box { max-width: 100%; width: 100%; padding: var(--pad-xl); margin: 0; }
     .mobile-only { display: none !important; }
 }
+/* =================================================================
+   19. MOMENTUM (HABITS) TAB STYLES
+================================================================= */
+.habit-cards-wrapper { display: flex; flex-direction: column; gap: 15px; }
+.archived-header { display: flex; align-items: center; justify-content: space-between; padding: 15px 5px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; color: var(--color-text-muted); cursor: pointer; margin-top: 20px; border-top: 1px solid var(--color-glass-border); }
+.archived-header.hidden { display: none; }
+
+/* Habit Bento Card Redesign */
+.habit-card { position: relative; background: var(--color-glass-bg); backdrop-filter: var(--blur-glass); border: 1px solid var(--color-glass-border); border-radius: var(--rad-lg); padding: var(--pad-lg); display: flex; flex-direction: column; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; }
+.habit-card:active { transform: scale(0.97); }
+.habit-card.active-selection { border-color: var(--color-primary); box-shadow: 0 0 20px color-mix(in srgb, var(--color-primary) 15%, transparent); }
+
+/* Centered Layout */
+.habit-card .bento-title { font-size: 1.2rem; text-align: center; margin-bottom: 12px; color: var(--color-text); font-weight: 700; padding: 0 35px; white-space: normal; line-height: 1.2;}
+.habit-header-row { display: flex; justify-content: center; align-items: center; margin-bottom: 15px; position: relative; }
+.habit-streak-display { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.habit-streak-num { font-size: 3rem; font-weight: 800; line-height: 1; color: var(--color-primary); }
+.habit-streak-label { font-size: 0.75rem; font-weight: 700; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 1px; }
+
+/* Absolute Right Checkbox */
+.habit-card .todo-checkbox { position: absolute; right: 0; top: 50%; transform: translateY(-50%); width: 32px; height: 32px; }
+
+/* Weekly Dots Tracker (Pure Circles) */
+.weekly-dots { display: flex; justify-content: center; gap: 10px; margin-top: 5px; }
+.streak-dot { width: 12px; height: 12px; border-radius: 50%; background: rgba(255,255,255,0.1); transition: background 0.3s ease, box-shadow 0.3s ease; }
+.streak-dot.filled { background: var(--color-primary); box-shadow: 0 0 8px color-mix(in srgb, var(--color-primary) 50%, transparent); }
+.streak-dot.buffer { background: #f39c12; } 
+.streak-dot.today-empty { border: 1px solid var(--color-primary); background: transparent; }
+
+/* Hybrid Detail Layout Classes */
+.habit-stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 20px; }
+.stat-box { background: rgba(0,0,0,0.2); padding: 12px 5px; border-radius: var(--rad-md); text-align: center; border: 1px solid var(--color-glass-border); }
+.stat-box .stat-label { font-size: 0.65rem; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px; font-weight: 700; }
+.stat-box .stat-value { font-size: 1.5rem; font-weight: 800; color: var(--color-text); }
+.habit-calendar-wrapper { padding: 15px; background: rgba(0,0,0,0.2); border-radius: var(--rad-md); border: 1px solid var(--color-glass-border); }
+
+.desktop-only { display: none !important; }
+
+@media (min-width: 768px) {
+    .momentum-layout { display: grid; grid-template-columns: 1fr 1fr; gap: var(--pad-xl); align-items: start; height: auto; }
+    .desktop-only { display: flex !important; flex-direction: column; position: sticky; top: 0; padding: var(--pad-xl); }
+}
