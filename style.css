@@ -871,31 +871,23 @@ input[type="search"]::-webkit-search-results-decoration { display: none !importa
 .dot-label { font-size: 0.65rem; color: var(--color-text-muted); text-transform: uppercase; font-weight: 700; }
 .dot { width: 100%; height: 8px; border-radius: 4px; background: rgba(255,255,255,0.1); transition: background 0.3s ease; }
 .dot.filled { background: var(--color-primary); box-shadow: 0 0 8px color-mix(in srgb, var(--color-primary) 50%, transparent); }
-.dot.buffer { background: #f39c12; } /* Orange for Grace Period */
+.dot.buffer { background: #f39c12; } 
 .dot.today-empty { border: 1px solid var(--color-primary); background: transparent; }
 
-/* Desktop Split Layout Logic */
-.momentum-details-pane { display: none; flex-direction: column; padding: var(--pad-xl); height: 100%; position: sticky; top: 0; }
-.habit-details-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--color-glass-border); padding-bottom: 15px; margin-bottom: 20px; }
-.habit-details-header h3 { font-size: 1.5rem; margin: 0; }
+/* Habit Detail Modal & Desktop Pane Hybrid */
+.habit-stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 20px; }
+.stat-box { background: rgba(0,0,0,0.2); padding: 12px 5px; border-radius: var(--rad-md); text-align: center; border: 1px solid var(--color-glass-border); }
+.stat-box .stat-label { font-size: 0.65rem; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px; font-weight: 700; }
+.stat-box .stat-value { font-size: 1.5rem; font-weight: 800; color: var(--color-text); }
+.habit-calendar-wrapper { padding: 15px; background: rgba(0,0,0,0.2); border-radius: var(--rad-md); border: 1px solid var(--color-glass-border); }
 
-.habit-stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 25px; }
-.stat-box { background: rgba(0,0,0,0.2); padding: 15px; border-radius: var(--rad-md); text-align: center; border: 1px solid var(--color-glass-border); }
-.stat-box .stat-label { font-size: 0.75rem; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px; }
-.stat-box .stat-value { font-size: 1.8rem; font-weight: 800; color: var(--color-text); }
-
-.mobile-only { display: none; }
+.mobile-only { display: block; }
 
 @media (min-width: 768px) {
-    .momentum-layout { display: grid; grid-template-columns: 1fr 1fr; gap: var(--pad-xl); height: auto; }
-    .momentum-details-pane { display: flex; }
-    .momentum-details-pane.hidden { opacity: 0; pointer-events: none; }
-}
-
-/* Fallback for mobile modal pop-up */
-@media (max-width: 767px) {
-    .momentum-details-pane { position: fixed; top: auto; bottom: 0; left: 0; width: 100%; height: 85vh; border-radius: 30px 30px 0 0; z-index: 5000; display: flex; transform: translateY(100%); transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
-    .momentum-details-pane.active { transform: translateY(0); }
-    .momentum-details-pane.hidden { display: none; }
-    .mobile-only { display: block; }
+    .momentum-layout { display: grid; grid-template-columns: 1fr 1fr; gap: var(--pad-xl); align-items: start; }
+    
+    /* OVERRIDE MODAL BEHAVIOR ON DESKTOP */
+    .momentum-desktop-pane { position: sticky; top: 0; left: 0; width: 100%; height: auto; background: transparent; backdrop-filter: none; -webkit-backdrop-filter: none; z-index: 1; display: flex !important; padding: 0; pointer-events: auto; }
+    .momentum-desktop-box { max-width: 100%; width: 100%; padding: var(--pad-xl); margin: 0; }
+    .mobile-only { display: none !important; }
 }

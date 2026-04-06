@@ -39,15 +39,15 @@
 
     <div id="dynamicBackground" class="dynamic-bg"></div>
     
-    
     <main id="app-container" class="app-hidden">
         
         <section id="tab-momentum" class="app-tab">
             <div class="central-column momentum-layout">
+                
                 <div class="momentum-list-pane">
                     <div class="tab-header" style="margin-bottom: 20px;">
                         <h2 class="tab-title">Momentum</h2>
-                        <button id="addHabitBtn" class="icon-btn" style="color: var(--color-primary);">+</button>
+                        <button id="addHabitBtn" class="icon-btn" style="color: var(--color-primary); font-size: 2rem; line-height: 1;">+</button>
                     </div>
                     
                     <div class="swipe-container" id="habitListContainer" style="min-height: auto;">
@@ -61,39 +61,42 @@
                     </div>
                 </div>
 
-                <div class="momentum-details-pane glass-panel hidden" id="habitDetailsPane">
-                    <div class="habit-details-header">
-                        <h3 id="detailHabitTitle">Select a Habit</h3>
-                        <button id="closeDetailsBtn" class="icon-btn mobile-only">×</button>
-                    </div>
-                    
-                    <div class="habit-stats-grid">
-                        <div class="stat-box">
-                            <div class="stat-label">Current Streak</div>
-                            <div class="stat-value" id="detailCurrentStreak">0</div>
+                <div id="habitDetailsModal" class="modal-overlay momentum-desktop-pane">
+                    <div class="modal-box glass-panel momentum-desktop-box">
+                        <h2 id="detailHabitTitle" class="modal-title" style="margin-bottom: 15px;">Select a Habit</h2>
+                        
+                        <div class="habit-stats-grid">
+                            <div class="stat-box">
+                                <div class="stat-label">Streak</div>
+                                <div class="stat-value text-main-color" id="detailCurrentStreak">0</div>
+                            </div>
+                            <div class="stat-box">
+                                <div class="stat-label">Best</div>
+                                <div class="stat-value text-main-color" id="detailLongestStreak">0</div>
+                            </div>
+                            <div class="stat-box">
+                                <div class="stat-label">Total</div>
+                                <div class="stat-value text-main-color" id="detailTotalDays">0</div>
+                            </div>
                         </div>
-                        <div class="stat-box">
-                            <div class="stat-label">Longest Streak</div>
-                            <div class="stat-value" id="detailLongestStreak">0</div>
-                        </div>
-                        <div class="stat-box">
-                            <div class="stat-label">Total Days</div>
-                            <div class="stat-value" id="detailTotalDays">0</div>
-                        </div>
-                    </div>
 
-                    <div class="habit-calendar-wrapper">
-                        <div class="cal-header">
-                            <span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span><span>S</span>
+                        <div class="habit-calendar-wrapper" style="margin-bottom: 20px;">
+                            <div class="cal-header">
+                                <span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span><span>S</span>
+                            </div>
+                            <div class="cal-grid" id="habitDetailGrid"></div>
                         </div>
-                        <div class="cal-grid" id="habitDetailGrid"></div>
-                    </div>
 
-                    <div style="margin-top: 20px; text-align: center;">
-                        <button id="archiveHabitBtn" class="btn-secondary settings-action-btn">Achieve & Archive</button>
-                        <button id="deleteHabitBtn" class="btn-danger settings-action-btn" style="margin-top: 10px;">Delete Habit</button>
+                        <div class="modal-buttons expanded">
+                            <button id="deleteHabitBtn" class="btn-danger" style="flex: 0.5;">Delete</button>
+                            <button id="archiveHabitBtn" class="btn-primary" style="flex: 1;">Achieve</button>
+                        </div>
+                        <div class="modal-buttons mobile-only" style="margin-top: 10px;">
+                            <button id="closeDetailsBtn" class="btn-ghost btn-block">Close</button>
+                        </div>
                     </div>
                 </div>
+
             </div>
         </section>
         
@@ -253,7 +256,7 @@
                 <div class="glass-panel settings-card">
                     <h3 class="settings-title">Date Change</h3>
                     <div class="settings-group toggle-group">
-                        <label>Wanna swipe anywhere on the screen to change dates in Todo & Journal?</label>
+                        <label>Wanna swipe anywhere on the screen to change dates in Todo?</label>
                         <label class="switch">
                             <input type="checkbox" id="globalSwipeToggle" checked>
                             <span class="slider"></span>
@@ -337,36 +340,25 @@
         </section>
     </main>
 
-    <div class="todo-input-group glass-panel" id="floatingTodoInput">
-        <div id="todoSubjectTray" class="todo-subject-tray"></div>
-        
-        <input 
-            type="search" 
-            name="q"
-            id="newTaskInput" 
-            placeholder="What needs to be done?" 
-            autocomplete="off" 
-            spellcheck="false" 
-            enterkeyhint="done"
-        />
-        
-        <button id="addTaskBtn" type="button" aria-label="Add task">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <line x1="12" y1="5" x2="12" y2="19"></line>
-                <line x1="5" y1="12" x2="19" y2="12"></line>
-            </svg>
-        </button>
-    </div>
-
     <button id="mobileEditDoneBtn" class="mobile-edit-done-btn">Done</button>
 
     <nav class="bottom-pill-nav" id="bottomNav">
-        <button class="bottom-pill-btn" data-target="tab-momentum" title="Momentum"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg></button>
+        <button class="bottom-pill-btn" data-target="tab-momentum" title="Momentum"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg></button>
         <button class="bottom-pill-btn" data-target="tab-planner" title="Planner"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></button>
         <button class="bottom-pill-btn active" data-target="tab-home" title="Home"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></button>
         <button class="bottom-pill-btn" data-target="tab-todo" title="Todo"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></button>
         <button class="bottom-pill-btn" data-target="tab-settings" title="Settings"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
     </nav>
+
+    <div class="todo-input-group glass-panel" id="floatingTodoInput">
+        <div id="todoSubjectTray" class="todo-subject-tray"></div>
+        <input type="search" name="q" id="newTaskInput" placeholder="What needs to be done?" autocomplete="off" spellcheck="false" enterkeyhint="done" />
+        <button id="addTaskBtn" type="button" aria-label="Add task">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+        </button>
+    </div>
 
     <div class="bottom-sheet glass-panel" id="agendaBottomSheet">
         <div class="sheet-swipe-zone" id="sheetDragZone">
@@ -452,19 +444,16 @@
 
     <div id="authModalOverlay" class="modal-overlay">
         <div class="modal-box glass-panel auth-modal">
-            
             <div class="auth-header">
                 <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/></svg>
                 <h2 class="modal-title" id="authModalTitle" style="margin-bottom: 0;">Welcome Back</h2>
                 <p class="auth-subtitle" id="authModalSubtitle">Log in to sync your diary</p>
             </div>
-            
             <div id="authFeedback" style="display: none; padding: 10px; border-radius: 8px; margin-bottom: 15px; font-size: 0.85rem; text-align: center; font-weight: bold; transition: all 0.3s ease;"></div>
             
             <form id="authForm" novalidate onsubmit="return false;" style="width: 100%;">
                 <div class="modal-form-group">
                     <div id="mainAuthInputContainer" style="width: 100%;"></div>
-                    
                     <div style="display: flex; justify-content: flex-end; margin-top: 5px;">
                         <button type="button" id="forgotPasswordBtn" class="standalone-forgot-btn">Forgot password?</button>
                     </div>
@@ -472,9 +461,7 @@
 
                 <div class="auth-action-stack">
                     <button type="button" id="primaryAuthBtn" class="btn-primary btn-block">Login</button>
-                    
                     <div class="auth-separator"><span>OR</span></div>
-                    
                     <button type="button" id="googleAuthBtn" class="btn-ghost btn-block google-btn">
                         <svg viewBox="0 0 24 24" width="20" height="20" xmlns="http://www.w3.org/2000/svg">
                             <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
@@ -499,9 +486,7 @@
     <div id="updatePasswordModalOverlay" class="modal-overlay">
         <div class="modal-box glass-panel">
             <h2 class="modal-title">New Password</h2>
-            
             <div id="updateAuthFeedback" style="display: none; padding: 10px; border-radius: 8px; margin-bottom: 15px; font-size: 0.85rem; text-align: center; font-weight: bold; transition: all 0.3s ease;"></div>
-
             <div class="modal-form-group">
                 <div id="updatePasswordContainer" style="width: 100%;"></div>
             </div>
@@ -513,31 +498,25 @@
     </div>
 
     <div id="desktopEditModalOverlay" class="modal-overlay">
-            <div class="modal-box glass-panel" style="max-width: 450px;">
-                
-                <div style="text-align: center; margin-bottom: 20px; border-bottom: 1px solid var(--color-glass-border); padding-bottom: 15px;">
-                    <h3 id="desktopModalDateTitle" class="sheet-title" style="margin: 0;">Select a Date</h3>
-                </div>
-                
-                <div class="sheet-content" style="padding-bottom: 0;">
-                    <div id="desktopModalSubjectPills" class="subject-pills-wrapper mb-md" style="justify-content: center;"></div>
-                    
-                    <textarea id="desktopEditTopicInput" class="settings-input target-textarea" placeholder="What exactly do you want to accomplish?" rows="3"></textarea>
-                    
-                    <div class="sheet-actions">
-                        <button id="desktopClearTaskBtn" class="btn-ghost">Clear</button>
-                        <button id="desktopSaveTaskBtn" class="btn-primary flex-2">Save</button>
-                    </div>
-                </div>
-                
+        <div class="modal-box glass-panel" style="max-width: 450px;">
+            <div style="text-align: center; margin-bottom: 20px; border-bottom: 1px solid var(--color-glass-border); padding-bottom: 15px;">
+                <h3 id="desktopModalDateTitle" class="sheet-title" style="margin: 0;">Select a Date</h3>
             </div>
+            <div class="sheet-content" style="padding-bottom: 0;">
+                <div id="desktopModalSubjectPills" class="subject-pills-wrapper mb-md" style="justify-content: center;"></div>
+                <textarea id="desktopEditTopicInput" class="settings-input target-textarea" placeholder="What exactly do you want to accomplish?" rows="3"></textarea>
+                <div class="sheet-actions">
+                    <button id="desktopClearTaskBtn" class="btn-ghost">Clear</button>
+                    <button id="desktopSaveTaskBtn" class="btn-primary flex-2">Save</button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <div id="monthPickerModalOverlay" class="modal-overlay">
         <div class="modal-box glass-panel" style="max-width: 320px; padding: 20px;">
             <h2 class="modal-title" style="margin-bottom: 15px; font-size: 1.1rem; text-transform: uppercase; letter-spacing: 1px;">Select Month</h2>
-            <div id="monthGrid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;">
-                </div>
+            <div id="monthGrid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;"></div>
             <button class="btn-ghost" style="width: 100%; margin-top: 15px; padding: 14px 0; font-size: 1.05rem;" onclick="document.getElementById('monthPickerModalOverlay').style.display='none'">Cancel</button>
         </div>
     </div>

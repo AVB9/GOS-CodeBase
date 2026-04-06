@@ -6,7 +6,8 @@ function initMomentumTab() {
     const listContainer = document.getElementById('activeHabitsList');
     const archivedContainer = document.getElementById('archivedHabitsList');
     const addBtn = document.getElementById('addHabitBtn');
-    const detailsPane = document.getElementById('habitDetailsPane');
+    
+    const detailsModal = document.getElementById('habitDetailsModal');
     const closeDetailsBtn = document.getElementById('closeDetailsBtn');
     const homeWidgetList = document.getElementById('homeHabitList');
 
@@ -41,7 +42,6 @@ function initMomentumTab() {
         let currentStreak = 0;
         let missedBuffer = 0;
         
-        // Start checking from today backwards
         const checkDate = new Date();
         let loopSafeGuard = 0;
         
@@ -51,26 +51,21 @@ function initMomentumTab() {
             
             if (dates.includes(checkStr)) {
                 currentStreak++;
-                missedBuffer = 0; // Reset buffer on success
+                missedBuffer = 0; 
             } else {
                 if (checkStr === today) {
-                    // It's today, haven't done it yet. Doesn't break streak.
+                    // Today not done yet. Doesn't break streak.
                 } else {
                     missedBuffer++;
-                    if (missedBuffer > 2) {
-                        // Buffer exceeded. Streak broken.
-                        break;
-                    }
+                    if (missedBuffer > 2) break; // Buffer exceeded
                 }
             }
             checkDate.setDate(checkDate.getDate() - 1);
         }
-        
         return currentStreak;
     };
 
     const calculateLongestStreak = (habit) => {
-        // Simplified for performance: Just tracking maximum continuous blocks
         let max = 0;
         let temp = 0;
         const sorted = [...habit.completions].sort((a,b) => new Date(a) - new Date(b));
@@ -78,7 +73,7 @@ function initMomentumTab() {
         for(let i=0; i<sorted.length; i++) {
             if (i === 0) { temp = 1; max = 1; continue; }
             const diff = (new Date(sorted[i]) - new Date(sorted[i-1])) / (1000*60*60*24);
-            if (diff <= 3) { temp++; } // Forgiving diff due to buffer
+            if (diff <= 3) { temp++; } // Forgiving diff
             else { temp = 1; }
             if (temp > max) max = temp;
         }
@@ -144,7 +139,6 @@ function initMomentumTab() {
         const archived = habits.filter(h => h.archived);
         const todayStr = getTodayStr();
         const last7Days = getPastDates(7);
-        const dayNames = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 
         if (active.length === 0 && archived.length === 0) {
             listContainer.innerHTML = `<div class="empty-task-text" style="text-align: center; margin-top: 40px;">No habits yet. Click + to build momentum.</div>`;
@@ -158,14 +152,13 @@ function initMomentumTab() {
             
             // Build Weekly Dots
             let dotsHtml = '';
-            last7Days.forEach((dateStr, index) => {
+            last7Days.forEach((dateStr) => {
                 const isDone = habit.completions.includes(dateStr);
                 const isToday = dateStr === todayStr;
                 let dotClass = 'dot';
                 
                 if (isDone) dotClass += ' filled';
                 else if (isToday && !isDone) dotClass += ' today-empty';
-                // Buffer visual: If missed, but streak > 0, show orange.
                 else if (!isDone && streak > 0 && !isToday) dotClass += ' buffer'; 
                 
                 dotsHtml += `
@@ -192,7 +185,7 @@ function initMomentumTab() {
                 <div class="weekly-dots">${dotsHtml}</div>
             `;
 
-            // Separate Click Areas
+            // Setup interactions
             card.querySelector('.todo-checkbox').addEventListener('click', (e) => {
                 e.stopPropagation();
                 toggleCompletion(habit.id, todayStr);
@@ -231,10 +224,12 @@ function initMomentumTab() {
         const habit = habits.find(h => h.id === habitId);
         if (!habit) return;
 
-        detailsPane.classList.remove('hidden');
+        // Modal Display Logic
         if (window.innerWidth < 768) {
-            detailsPane.classList.add('active'); // Slide up on mobile
-            document.body.style.overflow = 'hidden'; // Prevent bg scroll
+            detailsModal.style.display = 'flex';
+            document.body.classList.add('modal-open');
+        } else {
+            detailsModal.style.opacity = '1';
         }
 
         document.getElementById('detailHabitTitle').textContent = habit.name;
@@ -242,7 +237,7 @@ function initMomentumTab() {
         document.getElementById('detailLongestStreak').textContent = calculateLongestStreak(habit);
         document.getElementById('detailTotalDays').textContent = habit.completions.length;
 
-        // Render Mini Calendar for this habit
+        // Render Mini Calendar
         const grid = document.getElementById('habitDetailGrid');
         grid.innerHTML = '';
         
@@ -265,39 +260,45 @@ function initMomentumTab() {
             cell.className = `cal-day ${isToday ? 'today' : ''} ${isDone ? 'completed' : ''}`;
             cell.textContent = d;
             
-            // Allow retro-active completion tracking in the calendar!
             cell.addEventListener('click', () => toggleCompletion(habit.id, dateStr));
             grid.appendChild(cell);
         }
 
-        // Setup Buttons
+        // Detail Buttons
         const archiveBtn = document.getElementById('archiveHabitBtn');
-        archiveBtn.textContent = habit.archived ? "Unarchive" : "Achieve & Archive";
+        archiveBtn.textContent = habit.archived ? "Unarchive" : "Achieve";
         archiveBtn.onclick = () => {
             habit.archived = !habit.archived;
             saveHabits();
-            closeMobileDetails();
+            if (window.innerWidth < 768) {
+                detailsModal.style.display = 'none';
+                document.body.classList.remove('modal-open');
+            }
         };
 
         const deleteBtn = document.getElementById('deleteHabitBtn');
         deleteBtn.onclick = () => {
-            if(confirm("Permanently delete this habit and all its history?")) {
+            if(confirm("Permanently delete this habit?")) {
                 habits = habits.filter(h => h.id !== habit.id);
                 selectedHabitId = null;
                 saveHabits();
-                closeMobileDetails();
-                detailsPane.classList.add('hidden');
+                if (window.innerWidth < 768) {
+                    detailsModal.style.display = 'none';
+                    document.body.classList.remove('modal-open');
+                }
             }
         };
     };
 
-    const closeMobileDetails = () => {
-        detailsPane.classList.remove('active');
-        document.body.style.overflow = '';
-        setTimeout(() => { if(window.innerWidth < 768) detailsPane.classList.add('hidden'); }, 300);
-    };
-
-    if(closeDetailsBtn) closeDetailsBtn.addEventListener('click', closeMobileDetails);
+    if(closeDetailsBtn) {
+        closeDetailsBtn.classList.add('btn-ghost');
+        closeDetailsBtn.addEventListener('click', () => {
+            if (window.innerWidth < 768) {
+                detailsModal.style.display = 'none';
+                document.body.classList.remove('modal-open');
+            }
+        });
+    }
 
     addBtn.addEventListener('click', () => {
         const name = prompt("What habit are you building momentum for?");
