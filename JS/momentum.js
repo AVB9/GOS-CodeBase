@@ -9,14 +9,14 @@ function initMomentumTab() {
     const archivedContainer = document.getElementById('archivedHabitsList');
     const homeWidgetList = document.getElementById('homeHabitList');
 
-    // Add Modal DOM
-    const openAddBtn = document.getElementById('openAddHabitModalBtn');
+    // FIX: Match the correct ID from HTML!
+    const openAddBtn = document.getElementById('addHabitBtn'); 
+    
     const addModal = document.getElementById('addHabitModalOverlay');
     const closeAddBtn = document.getElementById('closeAddHabitModalBtn');
     const saveAddBtn = document.getElementById('saveNewHabitBtn');
     const nameInput = document.getElementById('newHabitNameInput');
 
-    // Details Modal DOM
     const mobileDetailsModal = document.getElementById('mobileHabitDetailsModal');
     const closeMobileDetailsBtn = document.getElementById('closeMobileHabitModalBtn');
 

@@ -931,5 +931,13 @@ input[type="search"]::-webkit-search-results-decoration { display: none !importa
 
 @media (min-width: 768px) {
     .momentum-layout { display: grid; grid-template-columns: 1fr 1fr; gap: var(--pad-xl); align-items: start; height: auto; }
-    .desktop-only { display: flex !important; flex-direction: column; position: sticky; top: 0; padding: var(--pad-xl); }
+    
+    /* FIX: Only show the desktop pane if the parent tab is actually active! */
+    #tab-momentum.active .desktop-only { 
+        display: flex !important; 
+        flex-direction: column; 
+        position: sticky; 
+        top: 0; 
+        padding: var(--pad-xl); 
+    }
 }
