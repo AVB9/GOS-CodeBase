@@ -141,6 +141,7 @@ function initSmartUI() {
     const bottomNav = document.getElementById('bottomNav');
     const floatingTodoInput = document.getElementById('floatingTodoInput');
     const journalEditor = document.getElementById('journalEditor');
+    const editDoneBtn = document.getElementById('mobileEditDoneBtn'); // <-- NEW BUTTON
     const baseWindowHeight = window.innerHeight;
     
     if (!bottomNav) return;
@@ -158,6 +159,20 @@ function initSmartUI() {
         return false;
     };
     
+    // --- NEW: Handle clicks on the "Done" button ---
+    if (editDoneBtn) {
+        const executeSave = (e) => {
+            e.preventDefault(); // Prevents the browser from dropping focus before we want to
+            const activeEl = document.activeElement;
+            if (activeEl && activeEl.classList.contains('todo-edit-input')) {
+                activeEl.blur(); // This safely triggers your save logic in todo.js!
+            }
+        };
+        // mousedown and touchstart react faster than 'click'
+        editDoneBtn.addEventListener('mousedown', executeSave);
+        editDoneBtn.addEventListener('touchstart', executeSave, { passive: false });
+    }
+
     window.addEventListener('scroll', () => {
         if (window.isAutoScrolling) {
             lastScrollY = window.scrollY;
@@ -226,8 +241,8 @@ function initSmartUI() {
                     floatingTodoInput.classList.remove('keyboard-active');
                     floatingTodoInput.classList.remove('edit-mode-hidden');
                 }
+                if (editDoneBtn) editDoneBtn.classList.remove('active'); // Hide Done Button
 
-                // THE FIX: Strict State Sync!
                 if (window.scrollY <= 40) {
                     bottomNav.classList.remove('nav-hidden'); 
                     if (floatingTodoInput) floatingTodoInput.classList.remove('float-lowered');
@@ -244,14 +259,18 @@ function initSmartUI() {
             window.isKeyboardOpen = true;
             bottomNav.classList.add('nav-hidden');
             
-            if (floatingTodoInput) {
-                if (e.target.id === 'newTaskInput') {
+            if (e.target.id === 'newTaskInput') {
+                // New Task Mode
+                if (floatingTodoInput) {
                     floatingTodoInput.classList.add('keyboard-active');
                     floatingTodoInput.classList.remove('float-lowered');
                     floatingTodoInput.classList.remove('edit-mode-hidden');
-                } else if (e.target.classList.contains('todo-edit-input')) {
-                    floatingTodoInput.classList.add('edit-mode-hidden');
                 }
+                if (editDoneBtn) editDoneBtn.classList.remove('active'); 
+            } else if (e.target.classList.contains('todo-edit-input')) {
+                // Edit Mode! Hide Float, Show Done Button
+                if (floatingTodoInput) floatingTodoInput.classList.add('edit-mode-hidden');
+                if (editDoneBtn) editDoneBtn.classList.add('active'); 
             }
         }
     });
@@ -265,8 +284,8 @@ function initSmartUI() {
                     floatingTodoInput.classList.remove('keyboard-active');
                     floatingTodoInput.classList.remove('edit-mode-hidden');
                 }
+                if (editDoneBtn) editDoneBtn.classList.remove('active'); // Hide Done Button
 
-                // THE FIX: Strict State Sync!
                 if (window.scrollY <= 40) {
                     bottomNav.classList.remove('nav-hidden');
                     if (floatingTodoInput) floatingTodoInput.classList.remove('float-lowered');

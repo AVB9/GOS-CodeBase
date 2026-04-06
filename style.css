@@ -745,3 +745,44 @@ input[type="search"]::-webkit-search-results-decoration { display: none !importa
     transform: scale(1.05);
     box-shadow: var(--shadow-sm);
 }
+
+/* =================================================================
+   17. INLINE EDIT "DONE" BUTTON (MOBILE & PC)
+================================================================= */
+.mobile-edit-done-btn {
+    position: fixed;
+    bottom: calc(15px + var(--safe-bottom));
+    left: 50%;
+    transform: translateX(-50%) translateY(80px);
+    opacity: 0;
+    pointer-events: none;
+    z-index: 9999;
+    
+    /* Colors requested */
+    background: var(--color-primary) !important;
+    color: var(--color-text) !important;
+    
+    border: none;
+    padding: 12px 35px;
+    font-size: 1.05rem;
+    font-weight: 800;
+    border-radius: var(--rad-pill);
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    box-shadow: var(--shadow-lg);
+    
+    transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.2s ease;
+    will-change: transform, opacity;
+}
+
+/* Pops up when active */
+.mobile-edit-done-btn.active {
+    transform: translateX(-50%) translateY(0);
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.mobile-edit-done-btn:active {
+    transform: translateX(-50%) scale(0.95);
+    transition: transform 0.1s ease;
+}
