@@ -26,7 +26,15 @@ let realTimeListener = null;
 let authPromise = null; 
 
 const SYNC_CONFIG = {
-    staticKeys: ['plannerTargets', 'plannerCompleted', 'plannerSubjects', 'userDisplayName', 'userUltimateGoalName', 'userUltimateGoalDate'],
+    staticKeys: [
+        'plannerTargets', 
+        'plannerCompleted', 
+        'plannerSubjects', 
+        'userDisplayName', 
+        'userUltimateGoalName', 
+        'userUltimateGoalDate',
+        'momentumHabits' // <-- NEW: Added Momentum to the sync suitcase!
+    ],
     dynamicPrefixes: ['todo_', 'journal_']
 };
 
@@ -115,7 +123,7 @@ const AppDB = {
         } catch (error) { console.error("Firebase Sync Failed:", error); }
     },
 
-startRealTimeSync() {
+    startRealTimeSync() {
         if (!this.session || realTimeListener) return;
 
         realTimeListener = db.collection('users').doc(this.session.uid)
@@ -168,6 +176,7 @@ startRealTimeSync() {
                         window.AppEvents.emit('PLANNER_UPDATED');
                         window.AppEvents.emit('DATE_CHANGE', { tab: 'todo', direction: 0 });
                         window.AppEvents.emit('DATE_CHANGE', { tab: 'journal', direction: 0 });
+                        window.AppEvents.emit('MOMENTUM_SYNCED'); // <-- NEW: Tell Momentum to re-render!
                     }
                     if (typeof window.forcePlannerRefresh === 'function') {
                         window.forcePlannerRefresh();

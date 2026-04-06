@@ -861,7 +861,7 @@ input[type="search"]::-webkit-search-results-decoration { display: none !importa
 .habit-card.active-selection { border-color: var(--color-primary); box-shadow: 0 0 20px color-mix(in srgb, var(--color-primary) 15%, transparent); }
 
 /* Left-Aligned Layout */
-.habit-card .bento-title { font-size: 1.4rem; text-align: left; margin-bottom: 8px; color: var(--color-text); font-weight: 800; white-space: normal; line-height: 1.2; padding-right: 45px; }
+.habit-card .bento-title { font-size: clamp(1.1rem, 4vw, 1.4rem); text-align: left; margin-bottom: 8px; color: var(--color-text); font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-right: 45px; line-height: 1.2; }
 .habit-header-row { display: flex; justify-content: flex-start; align-items: center; margin-bottom: 10px; position: relative; width: 100%; }
 .habit-streak-display { display: flex; flex-direction: row; align-items: baseline; gap: 8px; }
 .habit-streak-num { font-size: 3.2rem; font-weight: 800; line-height: 1; color: var(--color-primary); }

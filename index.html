@@ -75,10 +75,18 @@
                         </div>
 
                         <div class="habit-calendar-wrapper" style="margin-bottom: 20px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                                <span style="font-size: 0.85rem; font-weight: 700; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 1px;">Monthly Tracker</span>
+                                <div class="date-navigator" style="margin: 0; background: rgba(0,0,0,0.2); padding: 4px 8px; border-radius: var(--rad-pill); border: 1px solid var(--color-glass-border);">
+                                    <button class="icon-btn momentum-prev-month" style="width: 24px; height: 24px; min-height: 24px; font-size: 1.2rem;">‹</button>
+                                    <span class="date-display momentum-month-display" style="font-size: 0.75rem; min-width: 60px; text-align: center;">...</span>
+                                    <button class="icon-btn momentum-next-month" style="width: 24px; height: 24px; min-height: 24px; font-size: 1.2rem;">›</button>
+                                </div>
+                            </div>
                             <div class="cal-header">
                                 <span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span><span>S</span>
                             </div>
-                            <div class="cal-grid momentum-cal-grid"></div>
+                            <div class="cal-grid momentum-cal-grid" style="touch-action: pan-y;"></div>
                         </div>
 
                         <div class="modal-buttons expanded" style="margin-top: auto;">
@@ -372,11 +380,19 @@
             </div>
 
             <div class="habit-calendar-wrapper" style="margin-bottom: 20px;">
-                <div class="cal-header">
-                    <span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span><span>S</span>
-                </div>
-                <div class="cal-grid momentum-cal-grid"></div>
-            </div>
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                                <span style="font-size: 0.85rem; font-weight: 700; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 1px;">Monthly Tracker</span>
+                                <div class="date-navigator" style="margin: 0; background: rgba(0,0,0,0.2); padding: 4px 8px; border-radius: var(--rad-pill); border: 1px solid var(--color-glass-border);">
+                                    <button class="icon-btn momentum-prev-month" style="width: 24px; height: 24px; min-height: 24px; font-size: 1.2rem;">‹</button>
+                                    <span class="date-display momentum-month-display" style="font-size: 0.75rem; min-width: 60px; text-align: center;">...</span>
+                                    <button class="icon-btn momentum-next-month" style="width: 24px; height: 24px; min-height: 24px; font-size: 1.2rem;">›</button>
+                                </div>
+                            </div>
+                            <div class="cal-header">
+                                <span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span><span>S</span>
+                            </div>
+                            <div class="cal-grid momentum-cal-grid" style="touch-action: pan-y;"></div>
+                        </div>
 
             <div class="modal-buttons expanded">
                 <button class="btn-danger momentum-delete-btn" style="flex: 0.5;">Delete</button>

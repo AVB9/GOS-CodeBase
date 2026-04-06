@@ -23,12 +23,36 @@ function initMomentumTab() {
 
     let habits = JSON.parse(localStorage.getItem('momentumHabits')) || [];
     let selectedHabitId = null;
+    let currentHabitViewDate = new Date(); // NEW: Tracks the calendar's current month
 
     const getDateKey = (dateObj) => {
         return `${dateObj.getFullYear()}-${String(dateObj.getMonth()+1).padStart(2,'0')}-${String(dateObj.getDate()).padStart(2,'0')}`;
     };
 
     const getTodayStr = () => getDateKey(new Date());
+
+    // --- NEW: MONTH NAVIGATION & SWIPE LOGIC ---
+    const changeMonth = (direction) => {
+        currentHabitViewDate.setMonth(currentHabitViewDate.getMonth() + direction);
+        if (selectedHabitId) renderDetails(selectedHabitId, false);
+    };
+
+    document.querySelectorAll('.momentum-prev-month').forEach(btn => btn.addEventListener('click', () => changeMonth(-1)));
+    document.querySelectorAll('.momentum-next-month').forEach(btn => btn.addEventListener('click', () => changeMonth(1)));
+
+    document.querySelectorAll('.momentum-cal-grid').forEach(grid => {
+        let touchStartX = 0;
+        grid.addEventListener('touchstart', e => {
+            touchStartX = e.changedTouches[0].screenX;
+        }, { passive: true });
+        
+        grid.addEventListener('touchend', e => {
+            let touchEndX = e.changedTouches[0].screenX;
+            if (touchStartX - touchEndX > 40) changeMonth(1);  // Swipe Left -> Next Month
+            if (touchEndX - touchStartX > 40) changeMonth(-1); // Swipe Right -> Prev Month
+        }, { passive: true });
+    });
+    // -------------------------------------------
 
     const calculateStreak = (habit) => {
         if (habit.completions.length === 0) return 0;
@@ -78,6 +102,8 @@ function initMomentumTab() {
         localStorage.setItem('momentumHabits', JSON.stringify(habits));
         renderList();
         renderHomeWidget();
+        if (selectedHabitId) renderDetails(selectedHabitId, false);
+        if (window.AppEvents) AppEvents.emit('MOMENTUM_UPDATED');
     };
 
     const toggleCompletion = (habitId, dateStr) => {
@@ -181,7 +207,6 @@ function initMomentumTab() {
         const active = habits.filter(h => !h.archived);
         const archived = habits.filter(h => h.archived);
         const todayStr = getTodayStr();
-
         const desktopPane = document.getElementById('desktopHabitDetailsPane');
 
         if (active.length === 0 && archived.length === 0) {
@@ -192,12 +217,9 @@ function initMomentumTab() {
 
         if (desktopPane) desktopPane.classList.remove('empty-state');
 
-        // Auto-select first item on Desktop Load
         if (window.innerWidth >= 768) {
             const currentExists = habits.find(h => h.id === selectedHabitId);
-            if (!currentExists) {
-                selectedHabitId = active.length > 0 ? active[0].id : archived[0].id;
-            }
+            if (!currentExists) selectedHabitId = active.length > 0 ? active[0].id : archived[0].id;
         }
 
         active.forEach(habit => {
@@ -210,12 +232,10 @@ function initMomentumTab() {
                 const d = new Date();
                 d.setDate(d.getDate() - i);
                 const dateStr = getDateKey(d);
-                
                 const isDone = habit.completions.includes(dateStr);
                 
                 let dotClass = 'streak-dot';
                 if (isDone) dotClass += ' filled';
-                
                 dotsHtml += `<div class="${dotClass}" title="${dateStr}"></div>`;
             }
 
@@ -244,7 +264,8 @@ function initMomentumTab() {
                 document.querySelectorAll('.habit-card, .home-habit-item').forEach(c => c.classList.remove('active-selection'));
                 card.classList.add('active-selection');
                 selectedHabitId = habit.id;
-                renderDetails(habit.id, true); // true = User Clicked
+                currentHabitViewDate = new Date(); // RESET calendar to this month!
+                renderDetails(habit.id, true);
             });
 
             listContainer.appendChild(card);
@@ -262,6 +283,7 @@ function initMomentumTab() {
                     document.querySelectorAll('.habit-card, .home-habit-item').forEach(c => c.classList.remove('active-selection'));
                     card.classList.add('active-selection');
                     selectedHabitId = habit.id;
+                    currentHabitViewDate = new Date(); // RESET calendar to this month!
                     renderDetails(habit.id, true);
                 });
                 archivedContainer.appendChild(card);
@@ -270,7 +292,6 @@ function initMomentumTab() {
             archHeader.classList.add('hidden');
         }
 
-        // Render Desktop details without popping mobile modal
         if (selectedHabitId && window.innerWidth >= 768) {
             renderDetails(selectedHabitId, false);
         }
@@ -280,7 +301,6 @@ function initMomentumTab() {
         const habit = habits.find(h => h.id === habitId);
         if (!habit) return;
 
-        // Only pop modal if it's a mobile screen AND the user physically clicked it
         if (window.innerWidth < 768 && isUserClick) {
             mobileDetailsModal.style.display = 'flex';
             document.body.classList.add('modal-open');
@@ -291,13 +311,18 @@ function initMomentumTab() {
         document.querySelectorAll('.momentum-best-el').forEach(el => el.textContent = calculateLongestStreak(habit));
         document.querySelectorAll('.momentum-total-el').forEach(el => el.textContent = habit.completions.length);
 
-        // Generate Calendar
-        const d = new Date();
-        const year = d.getFullYear();
-        const month = d.getMonth();
+        // Generate Calendar using `currentHabitViewDate` instead of Today
+        const year = currentHabitViewDate.getFullYear();
+        const month = currentHabitViewDate.getMonth();
         const daysInMonth = new Date(year, month + 1, 0).getDate();
         let startDay = new Date(year, month, 1).getDay();
         if (startDay === 0) startDay = 7; 
+
+        // Update Month Pill Text
+        const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+        document.querySelectorAll('.momentum-month-display').forEach(el => {
+            el.textContent = `${monthNames[month]} ${year}`;
+        });
 
         document.querySelectorAll('.momentum-cal-grid').forEach(grid => {
             grid.innerHTML = '';
@@ -352,6 +377,15 @@ function initMomentumTab() {
     document.getElementById('archivedHabitsHeader')?.addEventListener('click', () => {
         archivedContainer.classList.toggle('hidden');
     });
+
+    if (window.AppEvents) {
+        AppEvents.on('MOMENTUM_SYNCED', () => {
+            habits = JSON.parse(localStorage.getItem('momentumHabits')) || [];
+            renderList();
+            renderHomeWidget();
+            if (selectedHabitId) renderDetails(selectedHabitId, false);
+        });
+    }
 
     renderList();
     renderHomeWidget();
