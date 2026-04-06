@@ -786,3 +786,71 @@ input[type="search"]::-webkit-search-results-decoration { display: none !importa
     transform: translateX(-50%) scale(0.95);
     transition: transform 0.1s ease;
 }
+
+/* 1. The Buttery Smooth Done Pill Transition */
+.mobile-edit-done-btn {
+    position: fixed;
+    bottom: calc(20px + var(--safe-bottom));
+    left: 50%;
+    transform: translate(-50%, 150px); /* Starts completely off-screen */
+    opacity: 0;
+    pointer-events: none;
+    z-index: 9999;
+    
+    background: var(--color-primary) !important;
+    color: var(--color-text) !important;
+    
+    border: none;
+    padding: 12px 35px;
+    font-size: 1.05rem;
+    font-weight: 800;
+    border-radius: var(--rad-pill);
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    box-shadow: var(--shadow-lg);
+    
+    /* Upgraded bezier curve for a native "spring" slide-up effect */
+    transition: transform 0.4s cubic-bezier(0.34, 1.15, 0.64, 1), opacity 0.3s ease;
+    will-change: transform, opacity;
+}
+
+.mobile-edit-done-btn.active {
+    transform: translate(-50%, 0);
+    opacity: 1;
+    pointer-events: auto;
+}
+
+/* 2. Extra breathing room below the task being edited */
+.todo-item.is-editing, .kanban-task.is-editing {
+    z-index: 100 !important;
+    position: relative !important;
+    margin-bottom: 50px !important; /* Increased to prevent overlapping the Tomorrow pill */
+}
+
+/* 3. Ensure Tomorrow pill sits cleanly below */
+.shift-tomorrow-popup {
+    position: absolute !important;
+    top: calc(100% + 12px) !important; /* Clean 12px gap beneath the task */
+    left: 50% !important;
+    z-index: -1 !important; 
+    
+    background: var(--color-glass-bg) !important;
+    backdrop-filter: var(--blur-glass) !important;
+    -webkit-backdrop-filter: var(--blur-glass) !important;
+    border: 1px solid var(--color-primary) !important;
+    color: var(--color-primary) !important;
+    border-radius: var(--rad-pill) !important;
+    
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 6px 16px !important;
+    font-size: 0.75rem !important;
+    font-weight: 700 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 1px !important;
+    white-space: nowrap;
+    
+    box-shadow: var(--shadow-md) !important;
+    animation: popupSpringDown 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards !important;
+}
