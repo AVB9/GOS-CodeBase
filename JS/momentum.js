@@ -9,9 +9,8 @@ function initMomentumTab() {
     const archivedContainer = document.getElementById('archivedHabitsList');
     const homeWidgetList = document.getElementById('homeHabitList');
 
-    // FIX: Match the correct ID from HTML!
+    // Modals
     const openAddBtn = document.getElementById('addHabitBtn'); 
-    
     const addModal = document.getElementById('addHabitModalOverlay');
     const closeAddBtn = document.getElementById('closeAddHabitModalBtn');
     const saveAddBtn = document.getElementById('saveNewHabitBtn');
@@ -25,10 +24,11 @@ function initMomentumTab() {
     let habits = JSON.parse(localStorage.getItem('momentumHabits')) || [];
     let selectedHabitId = null;
 
-    const getTodayStr = () => {
-        const d = new Date();
-        return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    const getDateKey = (dateObj) => {
+        return `${dateObj.getFullYear()}-${String(dateObj.getMonth()+1).padStart(2,'0')}-${String(dateObj.getDate()).padStart(2,'0')}`;
     };
+
+    const getTodayStr = () => getDateKey(new Date());
 
     const calculateStreak = (habit) => {
         if (habit.completions.length === 0) return 0;
@@ -43,7 +43,7 @@ function initMomentumTab() {
         
         while(loopSafeGuard < 1000) {
             loopSafeGuard++;
-            const checkStr = `${checkDate.getFullYear()}-${String(checkDate.getMonth()+1).padStart(2,'0')}-${String(checkDate.getDate()).padStart(2,'0')}`;
+            const checkStr = getDateKey(checkDate);
             
             if (dates.includes(checkStr)) {
                 currentStreak++;
@@ -85,13 +85,17 @@ function initMomentumTab() {
         const habit = habits.find(h => h.id === habitId);
         if (!habit) return;
 
+        // Logic Lock 1: Prevent editing achieved habits
         if (habit.archived) {
             window.showAppToast("Archived habits cannot be edited!");
             return;
         }
 
+        // Logic Lock 2: Prevent cheating by marking future dates
         const selectedDate = new Date(dateStr);
-        const todayDate = new Date(getTodayStr());
+        selectedDate.setHours(0,0,0,0);
+        const todayDate = new Date();
+        todayDate.setHours(0,0,0,0);
 
         if (selectedDate > todayDate) {
             window.showAppToast("gmasti tho dekho koi inki!!");
@@ -191,19 +195,20 @@ function initMomentumTab() {
             const card = document.createElement('div');
             card.className = `habit-card ${selectedHabitId === habit.id ? 'active-selection' : ''}`;
             
+            // Build the 7 Pure Dots (Oldest to Today)
             let dotsHtml = '';
             for (let i = 6; i >= 0; i--) {
                 const d = new Date();
                 d.setDate(d.getDate() - i);
-                const dateStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+                const dateStr = getDateKey(d);
                 
                 const isDone = habit.completions.includes(dateStr);
-                const isToday = dateStr === todayStr;
-                let dotClass = 'streak-dot';
+                const isToday = (i === 0);
                 
+                let dotClass = 'streak-dot';
                 if (isDone) dotClass += ' filled';
-                else if (isToday && !isDone) dotClass += ' today-empty';
-                else if (!isDone && streak > 0 && !isToday) dotClass += ' buffer'; 
+                else if (isToday) dotClass += ' today-empty';
+                else if (streak > 0) dotClass += ' buffer'; 
                 
                 dotsHtml += `<div class="${dotClass}" title="${dateStr}"></div>`;
             }
@@ -262,7 +267,7 @@ function initMomentumTab() {
         const habit = habits.find(h => h.id === habitId);
         if (!habit) return;
 
-        // Pop the mobile modal if on mobile
+        // Pop the true mobile modal if on mobile
         if (window.innerWidth < 768) {
             mobileDetailsModal.style.display = 'flex';
             document.body.classList.add('modal-open');

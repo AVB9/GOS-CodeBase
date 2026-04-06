@@ -61,39 +61,34 @@
                     </div>
                 </div>
 
-                <div id="habitDetailsModal" class="modal-overlay momentum-desktop-pane">
-                    <div class="modal-box glass-panel momentum-desktop-box">
-                        <h2 id="detailHabitTitle" class="modal-title" style="margin-bottom: 15px;">Select a Habit</h2>
-                        
-                        <div class="habit-stats-grid">
-                            <div class="stat-box">
-                                <div class="stat-label">Streak</div>
-                                <div class="stat-value text-main-color" id="detailCurrentStreak">0</div>
-                            </div>
-                            <div class="stat-box">
-                                <div class="stat-label">Best</div>
-                                <div class="stat-value text-main-color" id="detailLongestStreak">0</div>
-                            </div>
-                            <div class="stat-box">
-                                <div class="stat-label">Total</div>
-                                <div class="stat-value text-main-color" id="detailTotalDays">0</div>
-                            </div>
+                <div class="momentum-details-pane glass-panel desktop-only" id="desktopHabitDetailsPane">
+                    <h2 class="modal-title momentum-title-el" style="margin-bottom: 20px; font-size: 1.8rem;">Select a Habit</h2>
+                    
+                    <div class="habit-stats-grid">
+                        <div class="stat-box">
+                            <div class="stat-label">Streak</div>
+                            <div class="stat-value text-main-color momentum-streak-el">0</div>
                         </div>
+                        <div class="stat-box">
+                            <div class="stat-label">Best</div>
+                            <div class="stat-value text-main-color momentum-best-el">0</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-label">Total</div>
+                            <div class="stat-value text-main-color momentum-total-el">0</div>
+                        </div>
+                    </div>
 
-                        <div class="habit-calendar-wrapper" style="margin-bottom: 20px;">
-                            <div class="cal-header">
-                                <span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span><span>S</span>
-                            </div>
-                            <div class="cal-grid" id="habitDetailGrid"></div>
+                    <div class="habit-calendar-wrapper" style="margin-bottom: 20px;">
+                        <div class="cal-header">
+                            <span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span><span>S</span>
                         </div>
+                        <div class="cal-grid momentum-cal-grid"></div>
+                    </div>
 
-                        <div class="modal-buttons expanded">
-                            <button id="deleteHabitBtn" class="btn-danger" style="flex: 0.5;">Delete</button>
-                            <button id="archiveHabitBtn" class="btn-primary" style="flex: 1;">Achieve</button>
-                        </div>
-                        <div class="modal-buttons mobile-only" style="margin-top: 10px;">
-                            <button id="closeDetailsBtn" class="btn-ghost btn-block">Close</button>
-                        </div>
+                    <div class="modal-buttons expanded" style="margin-top: auto;">
+                        <button class="btn-danger momentum-delete-btn" style="flex: 0.5;">Delete</button>
+                        <button class="btn-primary momentum-archive-btn" style="flex: 1;">Achieve</button>
                     </div>
                 </div>
 
@@ -339,6 +334,55 @@
             </div>
         </section>
     </main>
+
+    <div id="addHabitModalOverlay" class="modal-overlay">
+        <div class="modal-box glass-panel">
+            <h2 class="modal-title">New Momentum</h2>
+            <div class="modal-form-group">
+                <input type="search" id="newHabitNameInput" placeholder="What habit are you building?" autocomplete="off" spellcheck="false" enterkeyhint="done" />
+            </div>
+            <div class="modal-buttons expanded">
+                <button id="closeAddHabitModalBtn" class="btn-ghost">Cancel</button>
+                <button id="saveNewHabitBtn" class="btn-primary">Create</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="mobileHabitDetailsModal" class="modal-overlay">
+        <div class="modal-box glass-panel">
+            <h2 class="modal-title momentum-title-el" style="margin-bottom: 20px; font-size: 1.6rem;">Select a Habit</h2>
+            
+            <div class="habit-stats-grid">
+                <div class="stat-box">
+                    <div class="stat-label">Streak</div>
+                    <div class="stat-value text-main-color momentum-streak-el">0</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label">Best</div>
+                    <div class="stat-value text-main-color momentum-best-el">0</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label">Total</div>
+                    <div class="stat-value text-main-color momentum-total-el">0</div>
+                </div>
+            </div>
+
+            <div class="habit-calendar-wrapper" style="margin-bottom: 20px;">
+                <div class="cal-header">
+                    <span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span><span>S</span>
+                </div>
+                <div class="cal-grid momentum-cal-grid"></div>
+            </div>
+
+            <div class="modal-buttons expanded">
+                <button class="btn-danger momentum-delete-btn" style="flex: 0.5;">Delete</button>
+                <button class="btn-primary momentum-archive-btn" style="flex: 1;">Achieve</button>
+            </div>
+            <div class="modal-buttons" style="margin-top: 10px;">
+                <button id="closeMobileHabitModalBtn" class="btn-ghost btn-block">Close</button>
+            </div>
+        </div>
+    </div>
 
     <button id="mobileEditDoneBtn" class="mobile-edit-done-btn">Done</button>
 
