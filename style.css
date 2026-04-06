@@ -860,22 +860,20 @@ input[type="search"]::-webkit-search-results-decoration { display: none !importa
 .habit-card:active { transform: scale(0.97); }
 .habit-card.active-selection { border-color: var(--color-primary); box-shadow: 0 0 20px color-mix(in srgb, var(--color-primary) 15%, transparent); }
 
-/* Centered Layout */
-.habit-card .bento-title { font-size: 1.6rem; text-align: center; margin-bottom: 15px; color: var(--color-text); font-weight: 800; white-space: normal; line-height: 1.2; padding: 0 35px; }
-.habit-header-row { display: flex; justify-content: center; align-items: center; margin-bottom: 15px; position: relative; }
-.habit-streak-display { display: flex; flex-direction: column; align-items: center; gap: 2px; }
-.habit-streak-num { font-size: 3.5rem; font-weight: 800; line-height: 1; color: var(--color-primary); }
-.habit-streak-label { font-size: 0.85rem; font-weight: 700; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 1px; margin-top: 5px; }
+/* Left-Aligned Layout */
+.habit-card .bento-title { font-size: 1.4rem; text-align: left; margin-bottom: 8px; color: var(--color-text); font-weight: 800; white-space: normal; line-height: 1.2; padding-right: 45px; }
+.habit-header-row { display: flex; justify-content: flex-start; align-items: center; margin-bottom: 10px; position: relative; width: 100%; }
+.habit-streak-display { display: flex; flex-direction: row; align-items: baseline; gap: 8px; }
+.habit-streak-num { font-size: 3.2rem; font-weight: 800; line-height: 1; color: var(--color-primary); }
+.habit-streak-label { font-size: 0.95rem; font-weight: 700; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 1px; }
 
 /* Absolute Right Checkbox */
-.habit-card .todo-checkbox { position: absolute; right: 0; top: 50%; transform: translateY(-50%); width: 32px; height: 32px; }
+.habit-card .todo-checkbox { position: absolute; right: 20px; top: 50%; transform: translateY(-50%); width: 32px; height: 32px; }
 
-/* Weekly Dots Tracker (Pure Circles) */
-.weekly-dots { display: flex; justify-content: center; gap: 12px; margin-top: 10px; }
-.streak-dot { width: 14px; height: 14px; border-radius: 50%; background: rgba(255,255,255,0.1); transition: background 0.3s ease, box-shadow 0.3s ease; }
-.streak-dot.filled { background: var(--color-primary); box-shadow: 0 0 10px color-mix(in srgb, var(--color-primary) 50%, transparent); }
-.streak-dot.buffer { background: #f39c12; } 
-.streak-dot.today-empty { border: 2px solid var(--color-primary); background: transparent; }
+/* Weekly Dots Tracker (NEET OS Style) */
+.weekly-dots { display: flex; justify-content: flex-start; gap: 6px; margin-top: 5px; }
+.streak-dot { width: 12px; height: 12px; border-radius: 50%; background: rgba(255,255,255,0.15); transition: background 0.3s ease, box-shadow 0.3s ease; }
+.streak-dot.filled { background: var(--color-primary); box-shadow: 0 0 8px var(--color-primary); }
 
 /* Hybrid Detail Layout Classes */
 .habit-stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 20px; }

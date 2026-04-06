@@ -212,12 +212,9 @@ function initMomentumTab() {
                 const dateStr = getDateKey(d);
                 
                 const isDone = habit.completions.includes(dateStr);
-                const isToday = (i === 0);
                 
                 let dotClass = 'streak-dot';
                 if (isDone) dotClass += ' filled';
-                else if (isToday) dotClass += ' today-empty';
-                else if (streak > 0) dotClass += ' buffer'; 
                 
                 dotsHtml += `<div class="${dotClass}" title="${dateStr}"></div>`;
             }
