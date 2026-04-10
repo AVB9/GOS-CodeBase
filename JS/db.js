@@ -1,7 +1,6 @@
 // =================================================================
-// BILLU'S DIARY: FIREBASE KERNEL (STRICT PROTOTYPE BINDING)
+// 1.0 [FIREBASE KERNEL & CONFIG]
 // =================================================================
-
 const firebaseConfig = {
     apiKey: "AIzaSyAxX3iJr--KNulCnYXqpqe6eew8_0A7lEw",
     authDomain: "gos-backend.firebaseapp.com",
@@ -33,11 +32,14 @@ const SYNC_CONFIG = {
         'userDisplayName', 
         'userUltimateGoalName', 
         'userUltimateGoalDate',
-        'momentumHabits' // <-- NEW: Added Momentum to the sync suitcase!
+        'momentumHabits'
     ],
     dynamicPrefixes: ['todo_', 'journal_']
 };
 
+// =================================================================
+// 2.0 [AppDB CONTROLLER]
+// =================================================================
 const AppDB = {
     session: null,
 
@@ -102,6 +104,11 @@ const AppDB = {
 
     async pushToCloud() {
         if (!this.session || !window.hasInitialSyncCompleted) return;
+        this.forcePushToCloud();
+    },
+
+    async forcePushToCloud() {
+        if (!this.session) return;
 
         const payload = {};
         SYNC_CONFIG.staticKeys.forEach(key => {
@@ -134,10 +141,6 @@ const AppDB = {
                     return;
                 }
 
-                // ==========================================
-                // THE OPTIMISTIC UI SHIELD
-                // If the user is actively making changes, ignore the cloud echo!
-                // ==========================================
                 if (window.isLocalMutating) return; 
 
                 const state = doc.data();
@@ -169,14 +172,13 @@ const AppDB = {
                     window.hasInitialSyncCompleted = true;
                 }
 
-                // SILENT UI REFRESH
                 if (needsRefresh) {
                     if (window.AppEvents) {
                         window.AppEvents.emit('SUBJECTS_UPDATED');
                         window.AppEvents.emit('PLANNER_UPDATED');
                         window.AppEvents.emit('DATE_CHANGE', { tab: 'todo', direction: 0 });
                         window.AppEvents.emit('DATE_CHANGE', { tab: 'journal', direction: 0 });
-                        window.AppEvents.emit('MOMENTUM_SYNCED'); // <-- NEW: Tell Momentum to re-render!
+                        window.AppEvents.emit('MOMENTUM_SYNCED'); 
                     }
                     if (typeof window.forcePlannerRefresh === 'function') {
                         window.forcePlannerRefresh();
@@ -189,11 +191,10 @@ const AppDB = {
 window.AppDB = AppDB;
 
 // =================================================================
-// THE UNBREAKABLE PROTOTYPE WIRETAP & SHIELD GENERATOR
+// 3.0 [OPTIMISTIC UI SHIELD & WIRETAP]
 // =================================================================
 const originalSetItem = Storage.prototype.setItem;
 
-// Global Shield variables
 window.isLocalMutating = false;
 window.mutationShieldTimer = null;
 
@@ -212,16 +213,13 @@ Storage.prototype.setItem = function(key, value) {
 
     if (isTracked && AppDB.session && window.hasInitialSyncCompleted) {
         
-        // 1. RAISE THE SHIELD the millisecond the user changes data
         window.isLocalMutating = true;
         clearTimeout(window.mutationShieldTimer);
 
-        // 2. Drop the shield 2.5 seconds after they STOP making changes
         window.mutationShieldTimer = setTimeout(() => {
             window.isLocalMutating = false;
         }, 2500);
 
-        // 3. Queue the cloud push for 1 second after they stop making changes
         clearTimeout(window.syncTimeout);
         window.syncTimeout = setTimeout(() => {
             AppDB.pushToCloud();

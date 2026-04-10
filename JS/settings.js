@@ -1,145 +1,180 @@
+// =================================================================
+// 1.0 [UTILITIES]
+// =================================================================
+const SettingsUtils = {
+    showFeedback: (element, msg, type = 'error') => {
+        if (!element) return;
+        element.textContent = msg;
+        element.style.display = 'block';
+        if (type === 'error') {
+            element.style.backgroundColor = 'rgba(255, 59, 59, 0.1)';
+            element.style.color = '#ff3b3b';
+            element.style.border = '1px solid rgba(255, 59, 59, 0.3)';
+        } else {
+            element.style.backgroundColor = 'rgba(76, 175, 80, 0.1)';
+            element.style.color = '#4caf50';
+            element.style.border = '1px solid rgba(76, 175, 80, 0.3)';
+        }
+    },
+    
+    clearFeedback: (element) => { 
+        if (element) element.style.display = 'none'; 
+    },
+
+    injectPasswordUI: (container, inputId, placeholder) => {
+        if (!container) return;
+        container.innerHTML = `
+            <div class="password-wrapper" style="width: 100%;">
+                <input type="password" id="${inputId}" class="auth-input" placeholder="${placeholder}" autocomplete="current-password" style="margin-bottom: 0; padding-right: 40px; width: 100%;" />
+                <button id="${inputId}_toggle" class="password-eye-btn" type="button">
+                    <svg id="${inputId}_eyeHidden" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/><path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/><line x1="2" y1="2" x2="22" y2="22"/></svg>
+                    <svg id="${inputId}_eyeVisible" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display: none;"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+                </button>
+            </div>
+        `;
+
+        document.getElementById(`${inputId}_toggle`).addEventListener('click', () => {
+            const passInput = document.getElementById(inputId);
+            const eyeHidden = document.getElementById(`${inputId}_eyeHidden`);
+            const eyeVisible = document.getElementById(`${inputId}_eyeVisible`);
+            if (passInput.type === 'password') {
+                passInput.type = 'text';
+                eyeHidden.style.display = 'none';
+                eyeVisible.style.display = 'block';
+            } else {
+                passInput.type = 'password';
+                eyeHidden.style.display = 'block';
+                eyeVisible.style.display = 'none';
+            }
+        });
+    }
+};
+
+// =================================================================
+// 2.0 [INITIALIZATION]
+// =================================================================
 document.addEventListener('DOMContentLoaded', () => {
     initSettingsTab();
 });
 
 function initSettingsTab() {
-    setupProfileSettings();
-    setupThemeSettings();
-    setupDataManagement();
+    setupAppearanceController();
     setupSubjectManager();
-    setupAesthetics();
+    setupDataManagement();
     initAuthUI();
 }
 
-function setupProfileSettings() {
+// =================================================================
+// 3.0 [APPEARANCE CONTROLLER]
+// =================================================================
+function setupAppearanceController() {
+    // 3.1 [PROFILE NAME]
     const nameInput = document.getElementById('settingsNameInput');
     const saveBtn = document.getElementById('saveNameBtn');
 
-    if (!nameInput || !saveBtn) return;
+    if (nameInput && saveBtn) {
+        const savedName = localStorage.getItem('userDisplayName') || 'jiruuuu... :)';
+        nameInput.value = savedName === 'jiruuuu... :)' ? '' : savedName;
 
-    const savedName = localStorage.getItem('userDisplayName') || 'jiruuuu... :)';
-    nameInput.value = savedName === 'jiruuuu... :)' ? '' : savedName;
+        saveBtn.addEventListener('click', () => {
+            const newName = nameInput.value.trim();
+            if (newName) localStorage.setItem('userDisplayName', newName);
+            else localStorage.removeItem('userDisplayName'); 
+            
+            const originalText = saveBtn.textContent;
+            saveBtn.textContent = 'Saved!';
+            setTimeout(() => saveBtn.textContent = originalText, 1500);
+        });
+    }
 
-    saveBtn.addEventListener('click', () => {
-        const newName = nameInput.value.trim();
-        if (newName) {
-            localStorage.setItem('userDisplayName', newName);
-        } else {
-            localStorage.removeItem('userDisplayName'); 
-        }
-        
-        const originalText = saveBtn.textContent;
-        saveBtn.textContent = 'Saved!';
-        setTimeout(() => saveBtn.textContent = originalText, 1500);
-    });
-}
+    // 3.2 [THEME & COLORS]
+    const applyOLEDTheme = (isOLED) => {
+        document.documentElement.style.setProperty('--color-bg', isOLED ? '#000000' : '#0a0a0a');
+        document.documentElement.style.setProperty('--color-surface', isOLED ? '#0a0a0a' : '#1a1a1a');
+    };
 
-function setupThemeSettings() {
     const themeToggle = document.getElementById('themeToggle');
-    if (!themeToggle) return;
+    if (themeToggle) {
+        const isOLED = localStorage.getItem('themeOLED') === 'true';
+        themeToggle.checked = isOLED;
+        applyOLEDTheme(isOLED);
 
-    const isOLED = localStorage.getItem('themeOLED') === 'true';
-    themeToggle.checked = isOLED;
-    applyTheme(isOLED);
+        themeToggle.addEventListener('change', (e) => {
+            localStorage.setItem('themeOLED', e.target.checked);
+            applyOLEDTheme(e.target.checked);
+        });
+    }
 
-    themeToggle.addEventListener('change', (e) => {
-        const isDarkest = e.target.checked;
-        localStorage.setItem('themeOLED', isDarkest);
-        applyTheme(isDarkest);
-    });
-}
+    const bindColorPicker = (pickerId, cssVar, storageKey, defaultColor) => {
+        const input = document.getElementById(pickerId);
+        const savedColor = localStorage.getItem(storageKey) || defaultColor;
+        document.documentElement.style.setProperty(cssVar, savedColor);
+        
+        if (input) {
+            input.value = savedColor;
+            input.addEventListener('input', (e) => {
+                document.documentElement.style.setProperty(cssVar, e.target.value);
+                localStorage.setItem(storageKey, e.target.value);
+            });
+        }
+    };
 
-function applyTheme(isOLED) {
-    if (isOLED) {
-        document.documentElement.style.setProperty('--color-bg', '#000000');
-        document.documentElement.style.setProperty('--color-surface', '#0a0a0a');
-    } else {
-        document.documentElement.style.setProperty('--color-bg', '#0a0a0a');
-        document.documentElement.style.setProperty('--color-surface', '#1a1a1a');
+    bindColorPicker('themeColorPicker', '--color-primary', 'appAccentColor', '#ff3b3b');
+    bindColorPicker('textColorPicker', '--color-text', 'appTextColor', '#ffffff');
+
+    // 3.3 [CUSTOM BACKGROUND]
+    const bgContainer = document.getElementById('dynamicBackground');
+    const uploader = document.getElementById('bgUploader');
+    const clearBtn = document.getElementById('clearBgBtn');
+
+    const savedBg = localStorage.getItem('appCustomBg');
+    if (savedBg && bgContainer) bgContainer.style.backgroundImage = `url(${savedBg})`;
+
+    if (uploader) {
+        uploader.addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const img = new Image();
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    const MAX_WIDTH = 800; 
+                    const scaleSize = MAX_WIDTH / img.width;
+                    
+                    canvas.width = MAX_WIDTH;
+                    canvas.height = img.height * scaleSize;
+
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+                    try {
+                        const dataUrl = canvas.toDataURL('image/jpeg', 0.6); 
+                        localStorage.setItem('appCustomBg', dataUrl);
+                        if (bgContainer) bgContainer.style.backgroundImage = `url(${dataUrl})`;
+                    } catch (err) {
+                        alert("Image is too large to save! Try a smaller picture.");
+                    }
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        });
+    }
+
+    if (clearBtn) {
+        clearBtn.addEventListener('click', () => {
+            localStorage.removeItem('appCustomBg');
+            if (bgContainer) bgContainer.style.backgroundImage = 'none';
+            if (uploader) uploader.value = '';
+        });
     }
 }
 
-function setupDataManagement() {
-    const exportBtn = document.getElementById('exportDataBtn');
-    const importBtn = document.getElementById('importDataBtn');
-    const importInput = document.getElementById('importDataInput');
-    const resetBtn = document.getElementById('factoryResetBtn');
-
-    if (!exportBtn || !importBtn || !importInput || !resetBtn) return;
-
-    exportBtn.addEventListener('click', () => {
-        try {
-            const appData = {};
-            for (let i = 0; i < localStorage.length; i++) {
-                const key = localStorage.key(i);
-                appData[key] = localStorage.getItem(key);
-            }
-            
-            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(appData, null, 2));
-            const downloadAnchorNode = document.createElement('a');
-            downloadAnchorNode.setAttribute("href", dataStr);
-            
-            const dateStr = new Date().toISOString().split('T')[0];
-            downloadAnchorNode.setAttribute("download", `billus_diary_backup_${dateStr}.json`);
-            
-            document.body.appendChild(downloadAnchorNode); 
-            downloadAnchorNode.click();
-            downloadAnchorNode.remove();
-        } catch (err) {
-            console.error("Backup failed:", err);
-            alert("Failed to generate backup.");
-        }
-    });
-
-    importBtn.addEventListener('click', () => importInput.click());
-
-    importInput.addEventListener('change', (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-
-        const reader = new FileReader();
-        reader.onload = (event) => {
-            try {
-                const importedData = JSON.parse(event.target.result);
-                
-                if (typeof importedData !== 'object' || importedData === null) {
-                    throw new Error("Invalid file structure");
-                }
-
-                if (confirm("This will overwrite your current data with the backup. Are you sure?")) {
-                    Object.keys(importedData).forEach(key => {
-                        if (importedData[key] !== null && importedData[key] !== undefined) {
-                            localStorage.setItem(key, importedData[key]);
-                        }
-                    });
-                    
-                    alert("Data restored successfully. The app will now reload.");
-                    window.location.reload();
-                }
-            } catch (err) {
-                console.error("Restore failed:", err);
-                alert("Invalid backup file format. Please ensure it is a valid backup.");
-            }
-        };
-        reader.readAsText(file);
-    });
-
-    resetBtn.addEventListener('click', () => {
-        if (confirm("WARNING: This will permanently delete all tasks, journal entries, and settings. This cannot be undone. Are you absolutely sure?")) {
-            const keysToRemove = [];
-            for (let i = 0; i < localStorage.length; i++) {
-                const key = localStorage.key(i);
-                if (key.startsWith('todo_') || key.startsWith('journal_') || 
-                    ['plannerTargets', 'plannerCompleted', 'plannerSubjects', 'userDisplayName', 'userUltimateGoalName', 'userUltimateGoalDate', 'appCustomBg', 'themeOLED', 'appAccentColor', 'appTextColor'].includes(key)) {
-                    keysToRemove.push(key);
-                }
-            }
-            keysToRemove.forEach(k => localStorage.removeItem(k));
-            window.location.reload();
-        }
-    });
-}
-
+// =================================================================
+// 4.0 [SUBJECT MANAGER]
+// =================================================================
 function setupSubjectManager() {
     const manageBtn = document.getElementById('manageSubjectsBtn');
     const modal = document.getElementById('subjectModalOverlay');
@@ -161,17 +196,13 @@ function setupSubjectManager() {
             const stored = localStorage.getItem('plannerSubjects');
             return stored ? JSON.parse(stored) : defaultSubjects;
         } catch (e) {
-            console.warn("Corrupted subjects data detected, reverting to defaults.");
             return defaultSubjects; 
         }
     };
 
     const saveSubjects = (subs) => {
-        try {
-            localStorage.setItem('plannerSubjects', JSON.stringify(subs));
-        } catch (e) {
-            console.error("Failed to save subjects to storage.", e);
-        }
+        try { localStorage.setItem('plannerSubjects', JSON.stringify(subs)); } 
+        catch (e) { console.error("Failed to save subjects to storage.", e); }
     };
 
     const renderSubjects = () => {
@@ -179,7 +210,6 @@ function setupSubjectManager() {
         getSubjects().forEach(sub => {
             const div = document.createElement('div');
             div.className = 'subject-manager-item';
-            // Make the cursor a pointer so the user knows they can interact with it
             div.style.cursor = 'pointer'; 
             div.innerHTML = `
                 <div style="display:flex; align-items:center; gap:10px; flex: 1;">
@@ -189,33 +219,28 @@ function setupSubjectManager() {
                 ${sub.id === 'off' ? '' : `<button class="subject-delete-btn" data-id="${sub.id}">×</button>`}
             `;
             
-            // --- FEATURE 6: DOUBLE-TAP TO EDIT SUBJECTS ---
             if (sub.id !== 'off') {
                 let tapCount = 0;
                 let tapTimer;
                 
                 const handleEdit = () => {
-                    // Populate inputs with current data
                     nameInput.value = sub.name;
                     colorInput.value = sub.color;
                     if (colorWrapper) colorWrapper.style.backgroundColor = sub.color;
                     
-                    // Remove the old subject so it can be saved as new
                     const newSubs = getSubjects().filter(s => s.id !== sub.id);
                     saveSubjects(newSubs);
                     renderSubjects();
                     
                     nameInput.focus();
-                    addBtn.textContent = 'Save'; // Change text to Save for UX clarity
+                    addBtn.textContent = 'Save'; 
                 };
 
-                // Desktop double click
                 div.addEventListener('dblclick', (e) => {
                     if (e.target.classList.contains('subject-delete-btn')) return;
                     handleEdit();
                 });
 
-                // Mobile double tap
                 div.addEventListener('touchend', (e) => {
                     if (e.target.classList.contains('subject-delete-btn')) return;
                     tapCount++;
@@ -228,7 +253,6 @@ function setupSubjectManager() {
                     }
                 });
             }
-
             subList.appendChild(div);
         });
     };
@@ -268,7 +292,7 @@ function setupSubjectManager() {
             nameInput.value = '';
             colorInput.value = '#ff3b3b'; 
             if (colorWrapper) colorWrapper.style.backgroundColor = '#ff3b3b'; 
-            addBtn.textContent = 'Add'; // Reset button text
+            addBtn.textContent = 'Add';
             
             renderSubjects();
             subList.scrollTop = subList.scrollHeight;
@@ -276,94 +300,102 @@ function setupSubjectManager() {
     };
 
     addBtn.addEventListener('click', handleAddSubject);
-
     nameInput.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') {
-            e.preventDefault(); 
-            handleAddSubject();
+        if (e.key === 'Enter') { e.preventDefault(); handleAddSubject(); }
+    });
+}
+
+// =================================================================
+// 5.0 [DATA MANAGEMENT]
+// =================================================================
+function setupDataManagement() {
+    const exportBtn = document.getElementById('exportDataBtn');
+    const importBtn = document.getElementById('importDataBtn');
+    const importInput = document.getElementById('importDataInput');
+    const resetBtn = document.getElementById('factoryResetBtn');
+
+    if (!exportBtn || !importBtn || !importInput || !resetBtn) return;
+
+    exportBtn.addEventListener('click', () => {
+        try {
+            const appData = {};
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                appData[key] = localStorage.getItem(key);
+            }
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(appData, null, 2));
+            const downloadAnchorNode = document.createElement('a');
+            downloadAnchorNode.setAttribute("href", dataStr);
+            const dateStr = new Date().toISOString().split('T')[0];
+            downloadAnchorNode.setAttribute("download", `billus_diary_backup_${dateStr}.json`);
+            
+            document.body.appendChild(downloadAnchorNode); 
+            downloadAnchorNode.click();
+            downloadAnchorNode.remove();
+        } catch (err) {
+            alert("Failed to generate backup.");
+        }
+    });
+
+    importBtn.addEventListener('click', () => importInput.click());
+
+    importInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        // FIXED: Made this callback async so we can await the forced cloud push
+        reader.onload = async (event) => {
+            try {
+                const importedData = JSON.parse(event.target.result);
+                if (typeof importedData !== 'object' || importedData === null) throw new Error("Invalid file structure");
+
+                if (confirm("This will overwrite your current data with the backup. Are you sure?")) {
+                    Object.keys(importedData).forEach(key => {
+                        if (importedData[key] !== null && importedData[key] !== undefined) {
+                            localStorage.setItem(key, importedData[key]);
+                        }
+                    });
+                    
+                    // THE FIX: Force the cloud to accept the newly imported data before reloading
+                    if (window.AppDB && AppDB.session) {
+                        await AppDB.forcePushToCloud();
+                    }
+                    
+                    alert("Data restored successfully. The app will now reload.");
+                    window.location.reload();
+                }
+            } catch (err) {
+                alert("Invalid backup file format. Please ensure it is a valid backup.");
+            }
+        };
+        reader.readAsText(file);
+    });
+
+    resetBtn.addEventListener('click', () => {
+        if (confirm("WARNING: This will permanently delete all tasks, journal entries, and settings. This cannot be undone. Are you absolutely sure?")) {
+            const keysToRemove = [];
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key.startsWith('todo_') || key.startsWith('journal_') || 
+                    ['plannerTargets', 'plannerCompleted', 'plannerSubjects', 'userDisplayName', 'userUltimateGoalName', 'userUltimateGoalDate', 'appCustomBg', 'themeOLED', 'appAccentColor', 'appTextColor'].includes(key)) {
+                    keysToRemove.push(key);
+                }
+            }
+            keysToRemove.forEach(k => localStorage.removeItem(k));
+            
+            // Push the empty state to the cloud before reloading
+            if (window.AppDB && AppDB.session) {
+                AppDB.forcePushToCloud().then(() => window.location.reload());
+            } else {
+                window.location.reload();
+            }
         }
     });
 }
 
-function setupAesthetics() {
-    const themeInput = document.getElementById('themeColorPicker');
-    const savedThemeColor = localStorage.getItem('appAccentColor') || '#ff3b3b';
-    document.documentElement.style.setProperty('--color-primary', savedThemeColor);
-    if(themeInput) themeInput.value = savedThemeColor;
-
-    if (themeInput) {
-        themeInput.addEventListener('input', (e) => {
-            const newColor = e.target.value;
-            document.documentElement.style.setProperty('--color-primary', newColor);
-            localStorage.setItem('appAccentColor', newColor);
-        });
-    }
-
-    const textInput = document.getElementById('textColorPicker');
-    const savedTextColor = localStorage.getItem('appTextColor') || '#ffffff';
-    document.documentElement.style.setProperty('--color-text', savedTextColor);
-    if(textInput) textInput.value = savedTextColor;
-
-    if (textInput) {
-        textInput.addEventListener('input', (e) => {
-            const newColor = e.target.value;
-            document.documentElement.style.setProperty('--color-text', newColor);
-            localStorage.setItem('appTextColor', newColor);
-        });
-    }
-
-    const bgContainer = document.getElementById('dynamicBackground');
-    const uploader = document.getElementById('bgUploader');
-    const clearBtn = document.getElementById('clearBgBtn');
-
-    const savedBg = localStorage.getItem('appCustomBg');
-    if (savedBg && bgContainer) bgContainer.style.backgroundImage = `url(${savedBg})`;
-
-    if (uploader) {
-        uploader.addEventListener('change', (event) => {
-            const file = event.target.files[0];
-            if (!file) return;
-
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                const img = new Image();
-                img.onload = () => {
-                    const canvas = document.createElement('canvas');
-                    const MAX_WIDTH = 800; 
-                    const scaleSize = MAX_WIDTH / img.width;
-                    
-                    canvas.width = MAX_WIDTH;
-                    canvas.height = img.height * scaleSize;
-
-                    const ctx = canvas.getContext('2d');
-                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-
-                    const dataUrl = canvas.toDataURL('image/jpeg', 0.6); 
-                    
-                    try {
-                        localStorage.setItem('appCustomBg', dataUrl);
-                        if (bgContainer) bgContainer.style.backgroundImage = `url(${dataUrl})`;
-                    } catch (err) {
-                        alert("Image is too large to save! Try a smaller picture.");
-                    }
-                };
-                img.src = e.target.result;
-            };
-            reader.readAsDataURL(file);
-        });
-    }
-
-    if (clearBtn) {
-        clearBtn.addEventListener('click', () => {
-            localStorage.removeItem('appCustomBg');
-            if (bgContainer) bgContainer.style.backgroundImage = 'none';
-            if (uploader) uploader.value = '';
-        });
-    }
-}
-
 // =================================================================
-// UPGRADED AUTH UI
+// 6.0 [AUTHENTICATION CONTROLLER]
 // =================================================================
 function initAuthUI() {
     const loggedOutSettingsView = document.getElementById('loggedOutSettingsView');
@@ -391,23 +423,6 @@ function initAuthUI() {
     const saveNewPasswordBtn = document.getElementById('saveNewPasswordBtn');
     const updateAuthFeedback = document.getElementById('updateAuthFeedback');
 
-    const showFeedback = (element, msg, type = 'error') => {
-        if (!element) return;
-        element.textContent = msg;
-        element.style.display = 'block';
-        if (type === 'error') {
-            element.style.backgroundColor = 'rgba(255, 59, 59, 0.1)';
-            element.style.color = '#ff3b3b';
-            element.style.border = '1px solid rgba(255, 59, 59, 0.3)';
-        } else {
-            element.style.backgroundColor = 'rgba(76, 175, 80, 0.1)';
-            element.style.color = '#4caf50';
-            element.style.border = '1px solid rgba(76, 175, 80, 0.3)';
-        }
-    };
-
-    const clearFeedback = (element) => { if (element) element.style.display = 'none'; };
-
     const checkSession = async () => {
         try {
             const session = await AppDB.checkSession();
@@ -426,7 +441,7 @@ function initAuthUI() {
 
     const toggleModalMode = () => {
         isLoginMode = !isLoginMode;
-        clearFeedback(authFeedback); 
+        SettingsUtils.clearFeedback(authFeedback); 
         
         if (isLoginMode) {
             authModalTitle.textContent = "Welcome Back";
@@ -451,41 +466,19 @@ function initAuthUI() {
 
     openAuthModalBtn.addEventListener('click', () => {
         isLoginMode = true; 
-        toggleModalMode(); toggleModalMode(); 
-        clearFeedback(authFeedback);
+        toggleModalMode(); toggleModalMode(); // Trigger UI reset
+        SettingsUtils.clearFeedback(authFeedback);
         
         const container = document.getElementById('mainAuthInputContainer');
         if (container) {
-            container.innerHTML = `
-                <input type="email" id="authEmail" class="auth-input" placeholder="Email address" autocomplete="username" style="margin-bottom: 15px; width: 100%;" />
-                <div class="password-wrapper" style="width: 100%;">
-                    <input type="password" id="authPassword" class="auth-input" placeholder="Password" autocomplete="current-password" style="margin-bottom: 0; padding-right: 40px; width: 100%;" />
-                    <button id="togglePasswordVisBtn" class="password-eye-btn" type="button">
-                        <svg id="eyeIconHidden" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/><path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/><line x1="2" y1="2" x2="22" y2="22"/></svg>
-                        <svg id="eyeIconVisible" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display: none;"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
-                    </button>
-                </div>
-            `;
+            container.innerHTML = `<input type="email" id="authEmail" class="auth-input" placeholder="Email address" autocomplete="username" style="margin-bottom: 15px; width: 100%;" />`;
+            const passContainer = document.createElement('div');
+            container.appendChild(passContainer);
+            SettingsUtils.injectPasswordUI(passContainer, 'authPassword', 'Password');
 
-            document.getElementById('togglePasswordVisBtn').addEventListener('click', () => {
-                const passInput = document.getElementById('authPassword');
-                const eyeHidden = document.getElementById('eyeIconHidden');
-                const eyeVisible = document.getElementById('eyeIconVisible');
-                if (passInput.type === 'password') {
-                    passInput.type = 'text';
-                    eyeHidden.style.display = 'none';
-                    eyeVisible.style.display = 'block';
-                } else {
-                    passInput.type = 'password';
-                    eyeHidden.style.display = 'block';
-                    eyeVisible.style.display = 'none';
-                }
-            });
-
-            document.getElementById('authEmail').addEventListener('input', () => clearFeedback(authFeedback));
-            document.getElementById('authPassword').addEventListener('input', () => clearFeedback(authFeedback));
+            document.getElementById('authEmail').addEventListener('input', () => SettingsUtils.clearFeedback(authFeedback));
+            document.getElementById('authPassword').addEventListener('input', () => SettingsUtils.clearFeedback(authFeedback));
         }
-
         authModalOverlay.style.display = 'flex';
     });
     
@@ -501,27 +494,23 @@ function initAuthUI() {
         const email = emailInput ? emailInput.value.trim() : '';
         const password = passInput ? passInput.value : '';
         
-        if(!email || !password) return showFeedback(authFeedback, "Please enter both email and password.", "error");
+        if(!email || !password) return SettingsUtils.showFeedback(authFeedback, "Please enter both email and password.", "error");
         
         const originalText = primaryAuthBtn.textContent;
         primaryAuthBtn.textContent = isLoginMode ? "Logging in..." : "Creating Account...";
         primaryAuthBtn.disabled = true;
 
         try {
-            if (isLoginMode) {
-                await AppDB.login(email, password);
-                window.location.reload(); 
-            } else {
-                await AppDB.register(email, password);
-                window.location.reload(); 
-            }
+            if (isLoginMode) await AppDB.login(email, password);
+            else await AppDB.register(email, password);
+            window.location.reload(); 
         } catch (error) {
             let msg = error.message;
             if (error.code === 'auth/invalid-credential') msg = "Incorrect email or password.";
             if (error.code === 'auth/email-already-in-use') msg = "This email is already registered.";
             if (error.code === 'auth/weak-password') msg = "Password must be at least 6 characters.";
             
-            showFeedback(authFeedback, msg, "error");
+            SettingsUtils.showFeedback(authFeedback, msg, "error");
             primaryAuthBtn.textContent = originalText;
             primaryAuthBtn.disabled = false;
         }
@@ -539,7 +528,7 @@ function initAuthUI() {
             } catch (error) {
                 let msg = error.message;
                 if (error.code === 'auth/popup-closed-by-user') msg = "Google sign-in was canceled."; 
-                showFeedback(authFeedback, msg, "error");
+                SettingsUtils.showFeedback(authFeedback, msg, "error");
                 googleAuthText.textContent = originalText;
                 googleAuthBtn.disabled = false;
             }
@@ -550,53 +539,28 @@ function initAuthUI() {
         forgotPasswordBtn.addEventListener('click', async () => {
             const emailInput = document.getElementById('authEmail');
             const email = emailInput ? emailInput.value.trim() : '';
-            if(!email) return showFeedback(authFeedback, "Please type your email address first.", "error");
+            if(!email) return SettingsUtils.showFeedback(authFeedback, "Please type your email address first.", "error");
             
             try {
                 await AppDB.resetPassword(email);
-                showFeedback(authFeedback, `Reset link sent to ${email}`, "success");
+                SettingsUtils.showFeedback(authFeedback, `Reset link sent to ${email}`, "success");
             } catch (error) {
                 let msg = error.message;
                 if (error.code === 'auth/user-not-found') msg = "No account found with this email.";
-                showFeedback(authFeedback, msg, "error");
+                SettingsUtils.showFeedback(authFeedback, msg, "error");
             }
         });
     }
 
     if (openUpdatePasswordBtn) {
         openUpdatePasswordBtn.addEventListener('click', () => {
-            clearFeedback(updateAuthFeedback);
+            SettingsUtils.clearFeedback(updateAuthFeedback);
             
             const container = document.getElementById('updatePasswordContainer');
             if (container) {
-                container.innerHTML = `
-                    <div class="password-wrapper" style="width: 100%;">
-                        <input type="password" id="newPasswordInput" class="auth-input" placeholder="Enter new password..." style="margin-bottom: 0; padding-right: 40px; width: 100%;" />
-                        <button id="toggleUpdatePasswordVisBtn" class="password-eye-btn" type="button">
-                            <svg id="updateEyeIconHidden" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/><path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/><line x1="2" y1="2" x2="22" y2="22"/></svg>
-                            <svg id="updateEyeIconVisible" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display: none;"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
-                        </button>
-                    </div>
-                `;
-
-                document.getElementById('toggleUpdatePasswordVisBtn').addEventListener('click', () => {
-                    const passInput = document.getElementById('newPasswordInput');
-                    const eyeHidden = document.getElementById('updateEyeIconHidden');
-                    const eyeVisible = document.getElementById('updateEyeIconVisible');
-                    if (passInput.type === 'password') {
-                        passInput.type = 'text';
-                        eyeHidden.style.display = 'none';
-                        eyeVisible.style.display = 'block';
-                    } else {
-                        passInput.type = 'password';
-                        eyeHidden.style.display = 'block';
-                        eyeVisible.style.display = 'none';
-                    }
-                });
-
-                document.getElementById('newPasswordInput').addEventListener('input', () => clearFeedback(updateAuthFeedback));
+                SettingsUtils.injectPasswordUI(container, 'newPasswordInput', 'Enter new password...');
+                document.getElementById('newPasswordInput').addEventListener('input', () => SettingsUtils.clearFeedback(updateAuthFeedback));
             }
-            
             updatePasswordModalOverlay.style.display = 'flex';
         });
     }
@@ -614,7 +578,7 @@ function initAuthUI() {
             const passInput = document.getElementById('newPasswordInput');
             const newPass = passInput ? passInput.value : '';
             
-            if(!newPass || newPass.length < 6) return showFeedback(updateAuthFeedback, "Password must be at least 6 characters.", "error");
+            if(!newPass || newPass.length < 6) return SettingsUtils.showFeedback(updateAuthFeedback, "Password must be at least 6 characters.", "error");
             
             const originalText = saveNewPasswordBtn.textContent;
             saveNewPasswordBtn.textContent = "Updating...";
@@ -622,14 +586,14 @@ function initAuthUI() {
 
             try {
                 await AppDB.updatePassword(newPass);
-                showFeedback(updateAuthFeedback, "Password updated successfully!", "success");
+                SettingsUtils.showFeedback(updateAuthFeedback, "Password updated successfully!", "success");
                 setTimeout(() => {
                     const container = document.getElementById('updatePasswordContainer');
                     if (container) container.innerHTML = '';
                     updatePasswordModalOverlay.style.display = 'none';
                 }, 1500);
             } catch (error) {
-                showFeedback(updateAuthFeedback, error.message, "error");
+                SettingsUtils.showFeedback(updateAuthFeedback, error.message, "error");
             } finally {
                 saveNewPasswordBtn.textContent = originalText;
                 saveNewPasswordBtn.disabled = false;

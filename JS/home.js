@@ -1,3 +1,34 @@
+// =================================================================
+// 1.0 [GLOBAL ASSETS & DATA]
+// =================================================================
+const HOME_ASSETS = {
+    greetings: (name) => [
+        `How are you ${name}... :)`,         
+        `Kashi ahes ${name}... :)`,          
+        `Kemon acho ${name}... :)`,          
+        `Kem cho ${name}... :)`,
+        `Kese ho ${name}... :)`,
+        `Kya haal hai bodmos... :)`,
+        `Padhle bodmos... :)`,              
+    ],
+    icons: {
+        day: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>`,
+        night: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>`
+    },
+    getSubGreeting: (hour) => {
+        if (hour >= 7 && hour < 12) return "gumiimornin";
+        if (hour >= 12 && hour < 15) return "Good Afternoon";
+        if (hour >= 15 && hour < 17) return "napi wapi";
+        if (hour >= 17 && hour < 20) return "Good evening";
+        if (hour >= 20 && hour < 23) return "sleepii time";
+        if (hour >= 23 || hour < 5) return "gumiinini";
+        return "waki waki"; // 5 AM to 7 AM
+    }
+};
+
+// =================================================================
+// 2.0 [INITIALIZATION]
+// =================================================================
 document.addEventListener('DOMContentLoaded', () => {
     initHomeTab();
 });
@@ -5,39 +36,45 @@ document.addEventListener('DOMContentLoaded', () => {
 function initHomeTab() {
     setupGreeting();
     setupGoalModal();
-    setupStandbyMode(); // ARCHITECTURE FIX: Consolidated boot sequence
+    setupStandbyMode();
 }
 
+// =================================================================
+// 3.0 [UI COMPONENTS]
+// =================================================================
+
+// -----------------------------------------------------------------
+// 3.1 [GREETING WIDGET]
+// -----------------------------------------------------------------
 function setupGreeting() {
     const greetingEl = document.getElementById('dynamicGreeting');
     const iconEl = document.getElementById('timeIcon');
+    const subGreetingEl = document.querySelector('.greeting-text p');
     
-    if (!greetingEl || !iconEl) return; 
+    if (!greetingEl || !iconEl || !subGreetingEl) return; 
 
     const savedName = localStorage.getItem('userDisplayName') || 'jiruuuu';
-    const greetings = [
-        `How are you ${savedName}... :)`,         
-        `Kashi ahes ${savedName}... :)`,          
-        `Kemon acho ${savedName}... :)`,          
-        `Kem cho ${savedName}... :)`,
-        `Kese ho ${savedName}... :)`,
-        `Kya haal hai bodmos... :)`,
-        `Padhle bodmos... :)`,              
-    ];
-
-    const randomIdx = Math.floor(Math.random() * greetings.length);
-    greetingEl.textContent = greetings[randomIdx];
-
+    const messages = HOME_ASSETS.greetings(savedName);
     const currentHour = new Date().getHours();
-    const isDay = currentHour >= 6 && currentHour < 18; 
+    
+    greetingEl.textContent = messages[Math.floor(Math.random() * messages.length)];
+    iconEl.innerHTML = (currentHour >= 6 && currentHour < 18) ? HOME_ASSETS.icons.day : HOME_ASSETS.icons.night;
 
-    if (isDay) {
-        iconEl.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>`;
-    } else {
-        iconEl.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>`;
-    }
+    subGreetingEl.textContent = HOME_ASSETS.getSubGreeting(currentHour);
+    subGreetingEl.style.transition = 'opacity 0.5s ease';
+
+    setTimeout(() => {
+        subGreetingEl.style.opacity = '0';
+        setTimeout(() => {
+            subGreetingEl.textContent = "gummi luck";
+            subGreetingEl.style.opacity = '1';
+        }, 500); 
+    }, 3500); 
 }
 
+// -----------------------------------------------------------------
+// 3.2 [GOAL MODAL]
+// -----------------------------------------------------------------
 function setupGoalModal() {
     const openBtn = document.getElementById('openGoalModalBtn');
     const closeBtn = document.getElementById('closeGoalModalBtn');
@@ -59,8 +96,6 @@ function setupGoalModal() {
         }
 
         try {
-            // BUG FIX: Parsing "YYYY-MM-DD" directly assumes UTC, causing timezone offset bugs.
-            // Splitting and using local date parameters fixes the off-by-one-day issue perfectly.
             const [y, m, d] = targetDateStr.split('-');
             const targetDate = new Date(y, m - 1, d);
             
@@ -101,7 +136,6 @@ function setupGoalModal() {
         const newDate = goalDateInput.value;
 
         if (newName && newDate) {
-            // These will now trigger the dynamic wiretap in db.js perfectly
             localStorage.setItem('userUltimateGoalName', newName);
             localStorage.setItem('userUltimateGoalDate', newDate);
             updateGoalUI(newName, newDate);
@@ -112,6 +146,9 @@ function setupGoalModal() {
     });
 }
 
+// -----------------------------------------------------------------
+// 3.3 [STANDBY MODE]
+// -----------------------------------------------------------------
 function setupStandbyMode() {
     const focusWidget = document.getElementById('focusModeWidget');
     const standbyOverlay = document.getElementById('standbyOverlay');
@@ -131,7 +168,6 @@ function setupStandbyMode() {
         dateEl.textContent = now.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
     };
 
-    // WAKELOCK FIX: OS kills WakeLock when app is minimized. We must re-request it when they return.
     const handleVisibilityChange = async () => {
         if (wakeLock !== null && document.visibilityState === 'visible' && !standbyOverlay.classList.contains('standby-hidden')) {
             try { wakeLock = await navigator.wakeLock.request('screen'); } 
