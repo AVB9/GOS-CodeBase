@@ -37,6 +37,15 @@ const SYNC_CONFIG = {
     dynamicPrefixes: ['todo_', 'journal_']
 };
 
+const getDeviceId = () => {
+    let id = localStorage.getItem('appDeviceId');
+    if (!id) {
+        id = 'dev_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+        localStorage.setItem('appDeviceId', id);
+    }
+    return id;
+};
+
 // =================================================================
 // 2.0 [AppDB CONTROLLER]
 // =================================================================
@@ -75,20 +84,13 @@ const AppDB = {
         const provider = new firebase.auth.GoogleAuthProvider();
         const result = await auth.signInWithPopup(provider);
         this.session = result.user;
-        
-        if (result.additionalUserInfo && result.additionalUserInfo.isNewUser) {
-            this.pushToCloud();
-        }
-        
+        if (result.additionalUserInfo && result.additionalUserInfo.isNewUser) this.pushToCloud();
         this.startRealTimeSync();
         return result.user;
     },
 
-    async logout() {
-        await auth.signOut();
-        this.session = null;
+    localWipeAndReload() {
         if (realTimeListener) { realTimeListener(); realTimeListener = null; }
-        
         SYNC_CONFIG.staticKeys.forEach(k => localStorage.removeItem(k));
         const keysToRemove = [];
         for (let i = 0; i < localStorage.length; i++) {
@@ -96,7 +98,19 @@ const AppDB = {
             if (SYNC_CONFIG.dynamicPrefixes.some(prefix => key.startsWith(prefix))) keysToRemove.push(key);
         }
         keysToRemove.forEach(k => localStorage.removeItem(k));
-        window.location.reload();
+        auth.signOut().then(() => window.location.reload());
+    },
+
+    async logout() {
+        if (this.session) {
+            try {
+                // Remove this specific device from cloud sessions before logging out
+                await db.collection('users').doc(this.session.uid).set({
+                    sessions: { [getDeviceId()]: firebase.firestore.FieldValue.delete() }
+                }, { merge: true });
+            } catch (e) {}
+        }
+        this.localWipeAndReload();
     },
 
     async resetPassword(email) { await auth.sendPasswordResetEmail(email); },
@@ -109,7 +123,6 @@ const AppDB = {
 
     async forcePushToCloud() {
         if (!this.session) return;
-
         const payload = {};
         SYNC_CONFIG.staticKeys.forEach(key => {
             const val = localStorage.getItem(key);
@@ -122,12 +135,30 @@ const AppDB = {
                 payload[key] = localStorage.getItem(key);
             }
         }
-        
         payload.updated_at = firebase.firestore.FieldValue.serverTimestamp();
 
+        try { await db.collection('users').doc(this.session.uid).set(payload, { merge: true }); } 
+        catch (error) { console.error("Firebase Sync Failed:", error); }
+    },
+
+    async nukeCloudData() {
+        if (!this.session) return;
         try {
-            await db.collection('users').doc(this.session.uid).set(payload, { merge: true });
-        } catch (error) { console.error("Firebase Sync Failed:", error); }
+            await db.collection('users').doc(this.session.uid).set({
+                _FACTORY_RESET_TRIGGERED: true,
+                updated_at: firebase.firestore.FieldValue.serverTimestamp()
+            });
+        } catch (error) { throw error; }
+    },
+
+    async registerDevice() {
+        if (!this.session) return;
+        const deviceName = /Mobi|Android/i.test(navigator.userAgent) ? 'Mobile Device' : 'Desktop Device';
+        try {
+            await db.collection('users').doc(this.session.uid).set({
+                sessions: { [getDeviceId()]: { name: deviceName, lastActive: firebase.firestore.FieldValue.serverTimestamp() } }
+            }, { merge: true });
+        } catch (e) {}
     },
 
     startRealTimeSync() {
@@ -138,12 +169,31 @@ const AppDB = {
                 if (!doc.exists) {
                     window.hasInitialSyncCompleted = true;
                     AppDB.pushToCloud();
+                    AppDB.registerDevice();
                     return;
+                }
+
+                const state = doc.data();
+
+                // 1. Cross-device Factory Reset Interceptor
+                if (state._FACTORY_RESET_TRIGGERED === true) {
+                    this.localWipeAndReload();
+                    return;
+                }
+
+                // 2. Remote Logout Interceptor
+                const myDeviceId = getDeviceId();
+                if (state.sessions) {
+                    if (!state.sessions[myDeviceId]) {
+                        if (window.hasInitialSyncCompleted) { this.localWipeAndReload(); return; } 
+                        else { this.registerDevice(); }
+                    }
+                } else {
+                    this.registerDevice();
                 }
 
                 if (window.isLocalMutating) return; 
 
-                const state = doc.data();
                 let needsRefresh = false;
                 window.isInjectingCloudData = true;
 
@@ -180,9 +230,7 @@ const AppDB = {
                         window.AppEvents.emit('DATE_CHANGE', { tab: 'journal', direction: 0 });
                         window.AppEvents.emit('MOMENTUM_SYNCED'); 
                     }
-                    if (typeof window.forcePlannerRefresh === 'function') {
-                        window.forcePlannerRefresh();
-                    }
+                    if (typeof window.forcePlannerRefresh === 'function') window.forcePlannerRefresh();
                 }
             });
     }
@@ -199,12 +247,8 @@ window.isLocalMutating = false;
 window.mutationShieldTimer = null;
 
 Storage.prototype.setItem = function(key, value) {
-    try { 
-        originalSetItem.call(this, key, value); 
-    } catch (e) { 
-        console.error("Storage Error:", e);
-        return; 
-    }
+    try { originalSetItem.call(this, key, value); } 
+    catch (e) { return; }
 
     if (window.isInjectingCloudData) return;
 
@@ -212,17 +256,12 @@ Storage.prototype.setItem = function(key, value) {
                       SYNC_CONFIG.dynamicPrefixes.some(prefix => key.startsWith(prefix));
 
     if (isTracked && AppDB.session && window.hasInitialSyncCompleted) {
-        
         window.isLocalMutating = true;
         clearTimeout(window.mutationShieldTimer);
 
-        window.mutationShieldTimer = setTimeout(() => {
-            window.isLocalMutating = false;
-        }, 2500);
+        window.mutationShieldTimer = setTimeout(() => { window.isLocalMutating = false; }, 2500);
 
         clearTimeout(window.syncTimeout);
-        window.syncTimeout = setTimeout(() => {
-            AppDB.pushToCloud();
-        }, 1000); 
+        window.syncTimeout = setTimeout(() => { AppDB.pushToCloud(); }, 1000); 
     }
 };

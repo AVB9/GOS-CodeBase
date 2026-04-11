@@ -911,3 +911,30 @@ input[type="search"]::-webkit-search-results-decoration { display: none !importa
 
 /* Hide desktop pane completely if no habits exist */
 .momentum-desktop-pane.empty-state { opacity: 0 !important; pointer-events: none !important; }
+
+/* =================================================================
+   CUSTOM GLASS SCROLLBARS (Webkit + Firefox)
+   ================================================================= */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+/* Firefox Fallback */
+* {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
+}

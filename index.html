@@ -469,21 +469,76 @@
     </div>
 
     <div id="subjectModalOverlay" class="modal-overlay">
-        <div class="modal-box glass-panel">
-            <h2 class="modal-title">Your Subjects</h2>
-            <div id="subjectList" class="subject-manager-list"></div>
-            <hr class="settings-divider modal-divider">
-            <div class="add-subject-row">
-                <div class="color-picker-wrapper" id="colorPickerWrapper">
-                    <input type="color" id="newSubjectColor" value="#ff3b3b" class="color-input" />
+        <div class="modal-box glass-panel" style="width: 90vw; max-width: 600px; height: 90vh; max-height: 800px; display: flex; flex-direction: column; padding: var(--pad-xl) var(--pad-lg);">
+        
+        <div style="flex-shrink: 0; text-align: center;">
+            <h2 class="modal-title" style="margin: 0 0 10px 0;">Your Subjects</h2>
+            <hr class="settings-divider modal-divider" style="margin: 0 0 15px 0;">
+        </div>
+        
+        <div id="smListArea" class="swipe-container" style="flex: 1 1 auto; overflow-y: auto; overflow-x: hidden; min-height: 0; padding: 20px 5px 0 0; margin-bottom: 15px; -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 5%, black 90%, transparent 100%); mask-image: linear-gradient(to bottom, transparent 0%, black 5%, black 90%, transparent 100%);">
+                <div id="unifiedSubjectList" style="display: flex; flex-direction: column; gap: 5px;"></div>
+        </div>
+
+        <div style="flex-shrink: 0; margin-bottom: 20px; position: relative; z-index: 100;">
+            <div class="glass-panel" id="floatingSubjectInput" style="display: flex; align-items: center; padding: 6px 12px; border-radius: var(--rad-pill); border: 1px solid var(--color-glass-border);">
+                
+                <div id="subjectGroupPillTray" class="todo-subject-tray">
+                    </div>
+
+                <div class="color-picker-wrapper" id="colorPickerWrapper" style="margin-right: 12px; flex-shrink: 0; width: 20px; height: 20px; border-radius: 50%; overflow: hidden; border: 2px solid rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center;">
+                    <input type="color" id="newSubjectColor" value="#ff3b3b" class="color-input" style="width: 250%; height: 250%; border: none; padding: 0; cursor: pointer; -webkit-appearance: none; background: none;" />
                 </div>
-                <input type="search" id="newSubjectName" class="settings-input" placeholder="New subject..." maxlength="20" autocomplete="off" spellcheck="false" enterkeyhint="done" />
-                <button id="addSubjectBtn" class="btn-primary">Add</button>
+                
+                <input type="search" id="newSubjectName" placeholder="New subject..." maxlength="20" autocomplete="off" spellcheck="false" enterkeyhint="done" style="flex: 1; border: none; background: transparent; color: var(--color-text); font-size: 1rem; outline: none; padding: 8px 0; margin: 0; line-height: normal; -webkit-appearance: none; box-shadow: none; min-width: 0;" />
+                
+                <button id="addSubjectBtn" type="button" aria-label="Add subject" style="background: transparent; border: none; color: var(--color-primary); cursor: pointer; padding: 5px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                    <svg id="sfiActionIcon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="pointer-events: none;">
+                        <line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line>
+                    </svg>
+                </button>
+
             </div>
-            <div class="modal-buttons expanded">
-                <button id="cancelSubjectModalBtn" class="btn-ghost">Cancel</button>
-                <button id="closeSubjectModalBtn" class="btn-primary">Done</button>
+        </div>
+
+        <div class="modal-buttons expanded" style="flex-shrink: 0; margin: 0;">
+            <button id="cancelSubjectModalBtn" class="btn-ghost">Cancel</button>
+            <button id="closeSubjectModalBtn" class="btn-primary">Done</button>
+        </div>
+        
+    </div>
+    </div>
+
+    <div id="groupManagerModalOverlay" class="modal-overlay">
+        <div class="modal-box glass-panel" style="width: 90vw; max-width: 420px; max-height: 80vh; display: flex; flex-direction: column; padding: var(--pad-xl) var(--pad-lg);">
+            
+            <h2 class="modal-title" style="margin: 0 0 10px 0; text-align: center;">Subject Groups</h2>
+            <hr class="settings-divider modal-divider" style="margin: 0 0 15px 0; flex-shrink: 0;">
+            
+            <div style="flex: 1 1 auto; overflow-y: auto; overflow-x: hidden; min-height: 0; margin-bottom: 15px; padding-top: 20px; -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 5%, black 90%, transparent 100%); mask-image: linear-gradient(to bottom, transparent 0%, black 5%, black 90%, transparent 100%);">
+                <div id="groupManagerList" style="display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; padding-bottom: 10px;">
+                    </div>
             </div>
+
+            <div style="flex-shrink: 0; margin-bottom: 20px; position: relative; z-index: 100;">
+                <div class="glass-panel" id="floatingGroupInput" style="display: flex; align-items: center; padding: 6px 12px; border-radius: var(--rad-pill); border: 1px solid var(--color-glass-border);">
+                    
+                    <input type="text" id="newGroupNameInput" placeholder="New group name..." maxlength="20" autocomplete="off" spellcheck="false" enterkeyhint="done" style="flex: 1; border: none; background: transparent; color: var(--color-text); font-size: 1rem; outline: none; padding: 8px 0; margin: 0; line-height: normal; -webkit-appearance: none; box-shadow: none; min-width: 0;" />
+                    
+                    <button id="addGroupBtn" type="button" aria-label="Add group" style="background: transparent; border: none; color: var(--color-primary); cursor: pointer; padding: 5px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                        <svg id="gfiActionIcon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="pointer-events: none;">
+                            <line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line>
+                        </svg>
+                    </button>
+
+                </div>
+            </div>
+            
+            <div class="modal-buttons expanded" style="flex-shrink: 0; margin: 0;">
+                <button id="cancelGroupManagerBtn" class="btn-ghost">Cancel</button>
+                <button id="closeGroupManagerBtn" class="btn-primary">Done</button>
+            </div>
+
         </div>
     </div>
     
@@ -582,6 +637,68 @@
             <h2 class="modal-title" style="margin-bottom: 15px; font-size: 1.1rem; text-transform: uppercase; letter-spacing: 1px;">Select Month</h2>
             <div id="monthGrid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;"></div>
             <button class="btn-ghost" style="width: 100%; margin-top: 15px; padding: 14px 0; font-size: 1.05rem;" onclick="document.getElementById('monthPickerModalOverlay').style.display='none'">Cancel</button>
+        </div>
+    </div>
+
+    <div id="customAlertOverlay" class="modal-overlay" style="z-index: 9999;">
+        <div class="modal-box glass-panel" style="max-width: 350px; text-align: center;">
+            <h2 id="alertTitle" class="modal-title" style="margin-bottom: 10px;">Alert</h2>
+            <p id="alertMessage" style="color: var(--color-text-muted); font-size: 0.95rem; margin-bottom: 15px; line-height: 1.5;"></p>
+            <input type="text" id="alertInput" class="settings-input" style="display: none; margin-bottom: 20px; width: 100%; text-align: center;" autocomplete="off" spellcheck="false" />
+            <div id="alertButtonContainer" class="modal-buttons expanded">
+                </div>
+        </div>
+    </div>
+
+    <div id="restoreBackupModalOverlay" class="modal-overlay">
+        <div class="modal-box glass-panel" style="max-width: 420px;">
+            <h2 class="modal-title">Restore Data</h2>
+            
+            <div id="restoreFileDropzone" class="settings-group" style="border: 2px dashed var(--color-glass-border); padding: 30px 15px; text-align: center; border-radius: var(--rad-md); cursor: pointer; margin-bottom: 20px; transition: all 0.3s ease; background: rgba(0,0,0,0.2);">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2" style="margin-bottom: 10px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                <div id="restoreFileName" style="font-weight: bold; margin-bottom: 5px;">Select Backup File (.json)</div>
+                <div style="font-size: 0.8rem; color: var(--color-text-muted);">Click to browse</div>
+                <input type="file" id="v2ImportInput" class="hidden-input" accept=".json" />
+            </div>
+
+            <div class="settings-group">
+                <label style="font-weight: bold; margin-bottom: 10px; display: block;">Conflict Resolution</label>
+                <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+                    <button id="restoreModeMerge" class="btn-primary" style="flex: 1; border: 1px solid var(--color-glass-border);">Merge</button>
+                    <button id="restoreModeOverwrite" class="btn-ghost" style="flex: 1; border: 1px solid transparent;">Overwrite</button>
+                </div>
+                <p id="restoreModeDesc" style="font-size: 0.8rem; color: var(--color-success); margin-bottom: 20px; text-align: center;">Safe: Fills in missing data. Current items remain untouched.</p>
+            </div>
+
+            <div class="settings-group">
+                <label style="font-weight: bold; margin-bottom: 5px; display: block;">Restore Target</label>
+                <select id="restoreScopeSelect" class="settings-input" style="width: 100%; background: rgba(0,0,0,0.4); color: var(--color-text);">
+                    <option value="all">Everything (Full App)</option>
+                    <option value="momentum">Only Momentum Habits</option>
+                    <option value="planner">Only Planner Targets</option>
+                    <option value="todo">Only Todo Tasks</option>
+                </select>
+            </div>
+
+            <div class="modal-buttons expanded" style="margin-top: 25px;">
+                <button id="closeRestoreModalBtn" class="btn-ghost">Cancel</button>
+                <button id="executeRestoreBtn" class="btn-primary" disabled style="opacity: 0.4;">Restore Now</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="linkedDevicesModalOverlay" class="modal-overlay">
+        <div class="modal-box glass-panel" style="max-width: 400px;">
+            <h2 class="modal-title">Linked Devices</h2>
+            <p style="font-size: 0.85rem; color: var(--color-text-muted); margin-bottom: 20px; text-align: center;">Manage active sessions for your account.</p>
+            
+            <div id="activeDevicesList" class="subject-manager-list" style="margin-bottom: 20px; max-height: 200px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px;">
+                </div>
+
+            <div class="modal-buttons expanded">
+                <button id="closeLinkedDevicesBtn" class="btn-ghost">Close</button>
+                <button id="logoutAllBtn" class="btn-danger">Logout All Devices</button>
+            </div>
         </div>
     </div>
 
