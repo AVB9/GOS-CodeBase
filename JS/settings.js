@@ -1168,7 +1168,7 @@ function initAuthUI() {
         finally { saveNewPasswordBtn.textContent = originalText; saveNewPasswordBtn.disabled = false; }
     });
 
-    // --- MULTI-DEVICE LOGIC ---
+    // --- MULTI-DEVICE LOGIC (MAIN DEVICE ARCHITECTURE) ---
     manageDevicesBtn?.addEventListener('click', async () => {
         if (!AppDB.session) return;
         if (activeDevicesList) activeDevicesList.innerHTML = '<div style="text-align: center; padding: 20px; color: var(--color-text-muted);">Fetching active sessions...</div>';
@@ -1181,26 +1181,67 @@ function initAuthUI() {
 
             if (data && data.sessions && activeDevicesList) {
                 const myDeviceId = localStorage.getItem('appDeviceId');
+                
+                // Determine the Main Device (Automatically falls back to the oldest surviving session)
+                let mainDeviceId = null;
+                let oldestTime = Infinity;
+                
+                Object.keys(data.sessions).forEach(id => {
+                    const sessionData = data.sessions[id];
+                    if (sessionData.isMain) {
+                        mainDeviceId = id;
+                    } else {
+                        const ts = sessionData.timestamp || sessionData.createdAt || Date.now();
+                        if (ts < oldestTime) {
+                            oldestTime = ts;
+                            mainDeviceId = id;
+                        }
+                    }
+                });
+                
+                // Failsafe
+                if (!mainDeviceId) mainDeviceId = Object.keys(data.sessions)[0];
+                const amIMain = myDeviceId === mainDeviceId;
+
                 Object.keys(data.sessions).forEach(devId => {
                     const isMe = devId === myDeviceId;
+                    const isThisMain = devId === mainDeviceId;
                     const deviceName = data.sessions[devId].name || 'Unknown Device';
                     
+                    // Create Beautiful Badges
+                    let badges = [];
+                    if (isThisMain) badges.push('Main Device');
+                    if (isMe) badges.push('This Device');
+                    const badgeHTML = badges.length > 0 ? ` <span style="font-size: 0.75rem; color: var(--color-primary); font-weight: bold;">(${badges.join(' • ')})</span>` : '';
+
+                    // ONLY the Main Device is authorized to kick OTHER devices
+                    const canRemove = amIMain && !isMe;
+
                     const item = document.createElement('div');
                     item.className = 'subject-manager-item';
                     item.innerHTML = `
                         <div style="flex: 1;">
-                            <div style="font-weight: 800; color: ${isMe ? 'var(--color-primary)' : 'var(--color-text)'}">${deviceName} ${isMe ? '(This Device)' : ''}</div>
+                            <div style="font-weight: 800; color: ${isMe ? 'var(--color-primary)' : 'var(--color-text)'}">${deviceName}${badgeHTML}</div>
                             <div style="font-size: 0.75rem; color: var(--color-text-muted);">ID: ${devId.substring(0,12)}...</div>
                         </div>
-                        ${!isMe ? `<button class="btn-danger" style="padding: 5px 15px; font-size: 0.8rem;">Logout</button>` : ''}
+                        ${canRemove ? `<button class="btn-danger remove-device-btn" style="padding: 5px 15px; font-size: 0.8rem;">Remove</button>` : ''}
                     `;
                     
-                    if (!isMe) {
-                        item.querySelector('button').addEventListener('click', async () => {
-                            await firebase.firestore().collection('users').doc(AppDB.session.uid).set({
-                                sessions: { [devId]: firebase.firestore.FieldValue.delete() }
-                            }, { merge: true });
-                            item.remove();
+                    if (canRemove) {
+                        item.querySelector('.remove-device-btn').addEventListener('click', async () => {
+                            window.AppAlert.show({
+                                title: "Remove Linked Device?",
+                                message: `Are you sure you want to remotely log out "${deviceName}"?`,
+                                buttons: [
+                                    { text: "Cancel", type: "ghost" },
+                                    { text: "Remove", type: "danger", onClick: async () => {
+                                        await firebase.firestore().collection('users').doc(AppDB.session.uid).set({
+                                            sessions: { [devId]: firebase.firestore.FieldValue.delete() }
+                                        }, { merge: true });
+                                        item.remove();
+                                    }}
+                                ]
+                            });
                         });
                     }
                     activeDevicesList.appendChild(item);
