@@ -22,7 +22,53 @@ document.addEventListener('DOMContentLoaded', () => {
     initSmartUI();
     initDateGesturesAndModals();
     initGlobalModals(); 
+    initTouchPaws(); // Activates the global paw effect
 });
+
+// --- MICRO-INTERACTION: TOUCH PAW EFFECT ---
+function initTouchPaws() {
+    const pawToggle = document.getElementById('touchPawToggle');
+    let isPawEnabled = true;
+
+    try {
+        const stored = localStorage.getItem('appTouchPawEnabled');
+        if (stored !== null) isPawEnabled = JSON.parse(stored);
+    } catch (e) {
+        console.warn("LocalStorage restricted for paw setting.");
+    }
+
+    if (pawToggle) {
+        pawToggle.checked = isPawEnabled;
+        pawToggle.addEventListener('change', (e) => {
+            isPawEnabled = e.target.checked;
+            try { localStorage.setItem('appTouchPawEnabled', isPawEnabled); } catch (err) {}
+        });
+    }
+
+    document.addEventListener('pointerdown', (e) => {
+        if (!isPawEnabled) return;
+
+        // The interactive element block has been removed. Paws will spawn everywhere.
+
+        const paw = document.createElement('div');
+        paw.className = 'touch-paw-effect';
+        
+        paw.style.left = `${e.clientX}px`;
+        paw.style.top = `${e.clientY}px`;
+        
+        const randomRot = Math.floor(Math.random() * 50) - 25;
+        
+        paw.innerHTML = `
+            <svg viewBox="350 400 160 120" style="width: 100%; height: 100%; overflow: visible; transform: rotate(${randomRot}deg);">
+                <use href="#icon-cat-paw" width="596" height="548" fill="var(--color-primary)"></use>
+            </svg>
+        `;
+        
+        document.body.appendChild(paw);
+        
+        setTimeout(() => paw.remove(), 700);
+    });
+}
 
 // =================================================================
 // 2. PREMIUM PRELOADER LOGIC

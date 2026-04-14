@@ -213,6 +213,11 @@ function setupSubjectManager() {
 
     if (!manageBtn || !modal || !pillTray || !listContainer) return;
 
+    // --- UX UPGRADE: SMART TRANSITION BUTTONS ---
+    // We inject a hidden span that will smoothly expand when typing
+    if (doneBtn) doneBtn.innerHTML = '<span class="dynamic-add-text">Add & </span>Save';
+    if (closeGroupBtn) closeGroupBtn.innerHTML = '<span class="dynamic-add-text">Add & </span>Save';
+
     // --- PURE 2-STATE TRAY LOGIC ---
     if (nameInput) {
         nameInput.addEventListener('focus', () => {
@@ -225,6 +230,26 @@ function setupSubjectManager() {
             const bottomNav = document.getElementById('bottomNav');
             if (bottomNav) bottomNav.style.display = 'flex'; 
             if (pillTray) pillTray.classList.remove('active'); 
+        });
+
+        // UX UPGRADE: Toggle "Add & Save" visibility smoothly
+        nameInput.addEventListener('input', () => {
+            const addText = doneBtn?.querySelector('.dynamic-add-text');
+            if (addText) {
+                if (nameInput.value.trim()) addText.classList.add('show');
+                else addText.classList.remove('show');
+            }
+        });
+    }
+
+    if (groupNameInput) {
+        // UX UPGRADE: Toggle "Add & Save" visibility smoothly
+        groupNameInput.addEventListener('input', () => {
+            const addText = closeGroupBtn?.querySelector('.dynamic-add-text');
+            if (addText) {
+                if (groupNameInput.value.trim()) addText.classList.add('show');
+                else addText.classList.remove('show');
+            }
         });
     }
 
@@ -240,15 +265,26 @@ function setupSubjectManager() {
     let groupManagerSnapshot = null;
 
     const getNestedSubjects = () => {
-        let appSubs = localStorage.getItem('appSubjects');
-        if (!appSubs) {
-            const legacy = JSON.parse(localStorage.getItem('plannerSubjects')) || [];
-            const validLegacy = legacy.filter(s => s.id !== 'off'); 
-            const defaultStructure = [{ id: 'group_default', name: 'General', isDeletable: false, subjects: validLegacy }];
-            localStorage.setItem('appSubjects', JSON.stringify(defaultStructure));
-            return defaultStructure;
+        try {
+            let appSubs = localStorage.getItem('appSubjects');
+            if (!appSubs) {
+                const legacy = JSON.parse(localStorage.getItem('plannerSubjects')) || [];
+                const validLegacy = Array.isArray(legacy) ? legacy.filter(s => s.id !== 'off') : []; 
+                const defaultStructure = [{ id: 'group_default', name: 'General', isDeletable: false, subjects: validLegacy }];
+                localStorage.setItem('appSubjects', JSON.stringify(defaultStructure));
+                return defaultStructure;
+            }
+            
+            const groups = JSON.parse(appSubs);
+            if (!Array.isArray(groups)) return [{ id: 'group_default', name: 'General', isDeletable: false, subjects: [] }];
+            
+            return groups.map(g => {
+                g.subjects = Array.isArray(g.subjects) ? g.subjects : [];
+                return g;
+            });
+        } catch (e) {
+            return [{ id: 'group_default', name: 'General', isDeletable: false, subjects: [] }];
         }
-        return JSON.parse(appSubs);
     };
 
     const saveNestedSubjects = (groups) => {
@@ -265,6 +301,11 @@ function setupSubjectManager() {
     const resetGroupEditMode = () => {
         editingGroupId = null;
         groupNameInput.value = '';
+        
+        // UX Reset
+        const addText = closeGroupBtn?.querySelector('.dynamic-add-text');
+        if (addText) addText.classList.remove('show');
+        
         if (gfiActionIcon) {
             gfiActionIcon.innerHTML = `<line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line>`;
             gfiActionIcon.style.color = 'var(--color-primary)';
@@ -302,6 +343,11 @@ function setupSubjectManager() {
             pill.addEventListener('click', () => {
                 editingGroupId = group.id;
                 groupNameInput.value = group.name;
+                
+                // UX Edit Trigger
+                const addText = closeGroupBtn?.querySelector('.dynamic-add-text');
+                if (addText) addText.classList.add('show');
+                
                 if (gfiActionIcon) {
                     gfiActionIcon.innerHTML = `<polyline points="20 6 9 17 4 12"></polyline>`;
                     gfiActionIcon.style.color = 'var(--color-success)';
@@ -356,10 +402,15 @@ function setupSubjectManager() {
     // GROUP MANAGER DONE & CANCEL LOGIC
     if (closeGroupBtn) {
         closeGroupBtn.onclick = () => {
+            // UX UPGRADE: If there's text waiting, add it before closing
+            if (groupNameInput && groupNameInput.value.trim()) {
+                executeAddGroup();
+            }
             groupModal.style.display = 'none';
             if (lastModifiedGroupId) { activeGroupId = lastModifiedGroupId; lastModifiedGroupId = null; }
             renderManager();
             setTimeout(() => nameInput.focus(), 100);
+            resetGroupEditMode(); // UX Reset
         };
     }
 
@@ -373,10 +424,11 @@ function setupSubjectManager() {
                     buttons: [
                         { text: "Keep Editing", type: "ghost" },
                         { text: "Discard", type: "danger", onClick: () => {
-                            saveNestedSubjects(JSON.parse(groupManagerSnapshot)); // TIME TRAVEL REVERT!
+                            saveNestedSubjects(JSON.parse(groupManagerSnapshot)); 
                             groupModal.style.display = 'none';
                             renderManager();
                             setTimeout(() => nameInput.focus(), 100);
+                            resetGroupEditMode(); 
                         }}
                     ]
                 });
@@ -384,6 +436,7 @@ function setupSubjectManager() {
                 groupModal.style.display = 'none';
                 renderManager();
                 setTimeout(() => nameInput.focus(), 100);
+                resetGroupEditMode(); 
             }
         };
     }
@@ -456,7 +509,6 @@ function setupSubjectManager() {
             e.preventDefault(); e.stopPropagation();
             resetGroupEditMode();
             
-            // TAKE SNAPSHOT WHEN GROUP MANAGER OPENS
             groupManagerSnapshot = JSON.stringify(getNestedSubjects()); 
             
             renderGroupManager();
@@ -543,6 +595,10 @@ function setupSubjectManager() {
                         colorInput.value = sub.color;
                         if (colorWrapper) colorWrapper.style.backgroundColor = sub.color;
                         
+                        // UX Edit Trigger
+                        const addText = doneBtn?.querySelector('.dynamic-add-text');
+                        if (addText) addText.classList.add('show');
+                        
                         if(actionIcon) {
                             actionIcon.innerHTML = `<polyline points="20 6 9 17 4 12"></polyline>`;
                             actionIcon.style.color = 'var(--color-success)';
@@ -560,6 +616,12 @@ function setupSubjectManager() {
 
     const resetEditMode = () => {
         editingSubjectId = null;
+        nameInput.value = '';
+        
+        // UX Reset
+        const addText = doneBtn?.querySelector('.dynamic-add-text');
+        if (addText) addText.classList.remove('show');
+        
         if(actionIcon) {
             actionIcon.innerHTML = `<line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line>`;
             actionIcon.style.color = 'var(--color-primary)';
@@ -587,12 +649,8 @@ function setupSubjectManager() {
     };
 
     manageBtn.addEventListener('click', () => { 
-        manageBtn.textContent = "Subjects"; 
         resetEditMode();
-        
-        // TAKE SNAPSHOT WHEN SUBJECT MANAGER OPENS
         subjectManagerSnapshot = JSON.stringify(getNestedSubjects());
-        
         renderManager(); 
         modal.style.display = 'flex'; 
     });
@@ -600,8 +658,13 @@ function setupSubjectManager() {
     // SUBJECT MANAGER DONE & CANCEL LOGIC
     if (doneBtn) {
         doneBtn.onclick = () => {
+            // UX UPGRADE: If there's text waiting, add it before closing
+            if (nameInput && nameInput.value.trim()) {
+                executeAddSubject();
+            }
             modal.style.display = 'none'; 
             if (window.AppEvents) AppEvents.emit('SUBJECTS_UPDATED');
+            resetEditMode(); // Reset
         };
     }
 
@@ -615,15 +678,17 @@ function setupSubjectManager() {
                     buttons: [
                         { text: "Keep Editing", type: "ghost" },
                         { text: "Discard", type: "danger", onClick: () => {
-                            saveNestedSubjects(JSON.parse(subjectManagerSnapshot)); // TIME TRAVEL REVERT!
+                            saveNestedSubjects(JSON.parse(subjectManagerSnapshot)); 
                             modal.style.display = 'none';
                             if (window.AppEvents) AppEvents.emit('SUBJECTS_UPDATED');
+                            resetEditMode(); 
                         }}
                     ]
                 });
             } else {
                 modal.style.display = 'none';
                 if (window.AppEvents) AppEvents.emit('SUBJECTS_UPDATED');
+                resetEditMode(); 
             }
         };
     }
@@ -679,6 +744,11 @@ function setupSubjectManager() {
 
         saveNestedSubjects(groups);
         nameInput.value = '';
+        
+        // UX Reset after add
+        const addText = doneBtn?.querySelector('.dynamic-add-text');
+        if (addText) addText.classList.remove('show');
+
         renderManager();
         listContainer.scrollTop = listContainer.scrollHeight;
         
@@ -709,19 +779,21 @@ function setupDataManagement() {
     const importBtn = document.getElementById('importDataBtn');
     const resetBtn = document.getElementById('factoryResetBtn');
 
-    // Backup V2 Modals (Using safe selectors)
+    // Backup V2 Modals
     const restoreModal = document.getElementById('restoreBackupModalOverlay');
     const restoreDropzone = document.getElementById('restoreFileDropzone');
+    const dropzoneContent = document.getElementById('dropzoneContent');
     const v2ImportInput = document.getElementById('v2ImportInput');
     const modeMerge = document.getElementById('restoreModeMerge');
     const modeOverwrite = document.getElementById('restoreModeOverwrite');
-    const scopeSelect = document.getElementById('restoreScopeSelect');
+    const scopePillsContainer = document.getElementById('restoreScopePills');
     const executeRestoreBtn = document.getElementById('executeRestoreBtn');
     const closeRestoreBtn = document.getElementById('closeRestoreModalBtn');
     const restoreDesc = document.getElementById('restoreModeDesc');
 
     let parsedBackupData = null;
-    let selectedMode = 'merge'; // merge | overwrite
+    let selectedMode = 'merge'; 
+    let selectedScopes = new Set(['all']); 
 
     if (!exportBtn || !importBtn || !resetBtn) return;
 
@@ -729,13 +801,13 @@ function setupDataManagement() {
     exportBtn.addEventListener('click', () => {
         try {
             const backup = {
-                metadata: { backup_date: new Date().toISOString(), version: "2.0" },
+                metadata: { app_id: "billus_diary", backup_date: new Date().toISOString(), version: "2.0" },
                 settings: {},
                 momentum: JSON.parse(localStorage.getItem('momentumHabits')) || [],
                 planner: {
                     targets: JSON.parse(localStorage.getItem('plannerTargets')) || {},
                     completed: JSON.parse(localStorage.getItem('plannerCompleted')) || [],
-                    subjects: JSON.parse(localStorage.getItem('appSubjects')) || JSON.parse(localStorage.getItem('plannerSubjects')) || []
+                    subjects: JSON.parse(localStorage.getItem('appSubjects')) || []
                 },
                 todo: {}
             };
@@ -764,12 +836,75 @@ function setupDataManagement() {
         }
     });
 
+    // --- RESTORE TARGET PILLS RENDERER ---
+    const renderScopePills = () => {
+        if (!scopePillsContainer) return;
+        scopePillsContainer.innerHTML = '';
+        const scopes = [
+            { id: 'all', label: 'Complete APP' },
+            { id: 'momentum', label: 'Momentum' },
+            { id: 'planner', label: 'Planner Targets' },
+            { id: 'todo', label: 'TODO Tasks' },
+            { id: 'subjects', label: 'Subjects' },
+            { id: 'colors', label: 'Colors' }
+        ];
+
+        scopes.forEach(s => {
+            const pill = document.createElement('div');
+            const isActive = selectedScopes.has(s.id);
+            
+            pill.className = 'todo-tint-pill';
+            pill.textContent = s.label;
+            
+            if (isActive) {
+                pill.classList.add('selected');
+                pill.style.backgroundColor = 'color-mix(in srgb, var(--color-primary) 20%, transparent)';
+                pill.style.borderColor = 'var(--color-primary)';
+                pill.style.color = 'var(--color-primary)';
+            } else {
+                pill.style.backgroundColor = 'rgba(255,255,255,0.05)';
+                pill.style.borderColor = 'var(--color-glass-border)';
+                pill.style.color = 'var(--color-text)';
+            }
+
+            pill.addEventListener('click', () => {
+                if (s.id === 'all') {
+                    selectedScopes.clear();
+                    selectedScopes.add('all');
+                } else {
+                    selectedScopes.delete('all');
+                    
+                    if (selectedScopes.has(s.id)) {
+                        if (s.id === 'subjects' && (selectedScopes.has('planner') || selectedScopes.has('todo'))) {
+                            if (window.showAppToast) window.showAppToast("Subjects are required for Planner and TODO data.");
+                            return; 
+                        }
+                        
+                        selectedScopes.delete(s.id);
+                        if (selectedScopes.size === 0) selectedScopes.add('all'); 
+                    } else {
+                        selectedScopes.add(s.id);
+                        
+                        if (s.id === 'planner' || s.id === 'todo') {
+                            selectedScopes.add('subjects');
+                        }
+
+                        if (selectedScopes.has('momentum') && selectedScopes.has('planner') && selectedScopes.has('todo') && selectedScopes.has('subjects') && selectedScopes.has('colors')) {
+                            selectedScopes.clear();
+                            selectedScopes.add('all');
+                        }
+                    }
+                }
+                renderScopePills();
+            });
+
+            scopePillsContainer.appendChild(pill);
+        });
+    };
+
     // --- SMART RESTORE UI ---
     importBtn.addEventListener('click', () => {
-        if (!restoreModal) {
-            alert("Error: Restore Modal UI is missing from index.html.");
-            return;
-        }
+        if (!restoreModal) return;
         parsedBackupData = null;
         const fn = document.getElementById('restoreFileName');
         if (fn) fn.textContent = "Select Backup File (.json)";
@@ -777,26 +912,84 @@ function setupDataManagement() {
             executeRestoreBtn.disabled = true;
             executeRestoreBtn.style.opacity = '0.4';
         }
+        selectedScopes = new Set(['all']);
+        renderScopePills();
         restoreModal.style.display = 'flex';
     });
 
     closeRestoreBtn?.addEventListener('click', () => restoreModal.style.display = 'none');
     restoreDropzone?.addEventListener('click', () => v2ImportInput?.click());
 
+    // --- DRAG TO BLUR LOGIC ---
+    if (restoreDropzone) {
+        restoreDropzone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            restoreDropzone.style.background = 'rgba(255,255,255,0.05)';
+            restoreDropzone.style.borderColor = 'var(--color-primary)';
+            if (dropzoneContent) dropzoneContent.style.filter = 'blur(4px)';
+        });
+        const resetDropState = () => {
+            restoreDropzone.style.background = 'rgba(0,0,0,0.2)';
+            restoreDropzone.style.borderColor = 'var(--color-glass-border)';
+            if (dropzoneContent) dropzoneContent.style.filter = 'none';
+        };
+        restoreDropzone.addEventListener('dragleave', resetDropState);
+        restoreDropzone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            resetDropState();
+            if (e.dataTransfer.files && e.dataTransfer.files.length > 0 && v2ImportInput) {
+                v2ImportInput.files = e.dataTransfer.files;
+                v2ImportInput.dispatchEvent(new Event('change'));
+            }
+        });
+    }
+
+    // --- WIRE UP CANCEL BUTTONS ---
+    document.querySelectorAll('.restore-cancel-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.preventDefault();
+            if (restoreModal) restoreModal.style.display = 'none';
+        });
+    });
+
+    // --- MERGE / OVERWRITE TOGGLES ---
     modeMerge?.addEventListener('click', () => {
         selectedMode = 'merge';
-        modeMerge.className = 'btn-primary'; modeMerge.style.border = '1px solid var(--color-glass-border)';
-        if (modeOverwrite) { modeOverwrite.className = 'btn-ghost'; modeOverwrite.style.border = '1px solid transparent'; }
-        if (restoreDesc) { restoreDesc.textContent = "Safe: Fills in missing data. Current items remain untouched."; restoreDesc.style.color = "var(--color-success)"; }
+        
+        modeMerge.classList.remove('btn-ghost', 'btn-danger');
+        modeMerge.classList.add('btn-primary');
+        modeMerge.style.borderColor = 'var(--color-primary)';
+        
+        if (modeOverwrite) { 
+            modeOverwrite.classList.remove('btn-primary', 'btn-danger');
+            modeOverwrite.classList.add('btn-ghost');
+            modeOverwrite.style.borderColor = 'transparent'; 
+        }
+        if (restoreDesc) { 
+            restoreDesc.textContent = "Combines backup with current data safely."; 
+            restoreDesc.style.color = "#4ade80"; 
+        }
     });
 
     modeOverwrite?.addEventListener('click', () => {
         selectedMode = 'overwrite';
-        modeOverwrite.className = 'btn-danger'; modeOverwrite.style.border = '1px solid var(--color-danger-border)';
-        if (modeMerge) { modeMerge.className = 'btn-ghost'; modeMerge.style.border = '1px solid transparent'; }
-        if (restoreDesc) { restoreDesc.textContent = "Destructive: Wipes current app and replaces perfectly with backup."; restoreDesc.style.color = "var(--color-danger)"; }
+        
+        modeOverwrite.classList.remove('btn-ghost', 'btn-primary');
+        modeOverwrite.classList.add('btn-danger');
+        modeOverwrite.style.borderColor = 'var(--color-danger)';
+        
+        if (modeMerge) { 
+            modeMerge.classList.remove('btn-primary', 'btn-danger');
+            modeMerge.classList.add('btn-ghost');
+            modeMerge.style.borderColor = 'transparent'; 
+        }
+        if (restoreDesc) { 
+            restoreDesc.textContent = "Replaces current data. Missing data will be lost."; 
+            restoreDesc.style.color = "var(--color-danger)"; 
+        }
     });
 
+    // --- BACKUP FILE VALIDATOR ---
     v2ImportInput?.addEventListener('change', (e) => {
         const file = e.target.files[0];
         if (!file) return;
@@ -805,7 +998,9 @@ function setupDataManagement() {
         reader.onload = (event) => {
             try {
                 const data = JSON.parse(event.target.result);
-                if (typeof data !== 'object') throw new Error();
+                if (typeof data !== 'object' || !data.metadata || data.metadata.app_id !== "billus_diary") {
+                    throw new Error("Invalid app identifier");
+                }
                 
                 parsedBackupData = data;
                 const fn = document.getElementById('restoreFileName');
@@ -822,19 +1017,24 @@ function setupDataManagement() {
     });
 
     // --- STRICT NON-DESTRUCTIVE MERGE ENGINE ---
+    const hasScope = (target) => selectedScopes.has('all') || selectedScopes.has(target);
+
     executeRestoreBtn?.addEventListener('click', async () => {
         if (!parsedBackupData) return;
 
-        const scope = scopeSelect ? scopeSelect.value : 'all';
         const isV2 = parsedBackupData.metadata && parsedBackupData.metadata.version === "2.0";
         const execute = async () => {
             try {
                 if (selectedMode === 'overwrite') {
-                    if (scope === 'all' || scope === 'momentum') localStorage.removeItem('momentumHabits');
-                    if (scope === 'all' || scope === 'planner') {
-                        localStorage.removeItem('plannerTargets'); localStorage.removeItem('plannerCompleted'); localStorage.removeItem('plannerSubjects'); localStorage.removeItem('appSubjects');
+                    if (hasScope('momentum')) localStorage.removeItem('momentumHabits');
+                    if (hasScope('planner')) {
+                        localStorage.removeItem('plannerTargets'); localStorage.removeItem('plannerCompleted'); 
                     }
-                    if (scope === 'all' || scope === 'todo') {
+                    if (hasScope('subjects')) {
+                        localStorage.removeItem('appSubjects');
+                        localStorage.removeItem('plannerSubjects');
+                    }
+                    if (hasScope('todo')) {
                         const keysToRemove = [];
                         for (let i = 0; i < localStorage.length; i++) {
                             if (localStorage.key(i).startsWith('todo_')) keysToRemove.push(localStorage.key(i));
@@ -844,18 +1044,29 @@ function setupDataManagement() {
                 }
 
                 if (isV2) {
-                    if (scope === 'all') {
-                        Object.keys(parsedBackupData.settings || {}).forEach(k => {
-                            if (selectedMode === 'overwrite' || !localStorage.getItem(k)) localStorage.setItem(k, parsedBackupData.settings[k]);
+                    if (hasScope('colors') || hasScope('all')) {
+                        const colorKeys = ['themeOLED', 'appCustomBg', 'appAccentColor', 'appTextColor'];
+                        colorKeys.forEach(k => {
+                            if (parsedBackupData.settings && parsedBackupData.settings[k]) {
+                                if (selectedMode === 'overwrite' || !localStorage.getItem(k)) localStorage.setItem(k, parsedBackupData.settings[k]);
+                            }
                         });
                     }
-                    if (scope === 'all' || scope === 'momentum') {
+                    if (hasScope('all')) {
+                        const otherKeys = ['userDisplayName', 'userUltimateGoalName', 'userUltimateGoalDate'];
+                        otherKeys.forEach(k => {
+                            if (parsedBackupData.settings && parsedBackupData.settings[k]) {
+                                if (selectedMode === 'overwrite' || !localStorage.getItem(k)) localStorage.setItem(k, parsedBackupData.settings[k]);
+                            }
+                        });
+                    }
+                    if (hasScope('momentum')) {
                         const currentHabits = JSON.parse(localStorage.getItem('momentumHabits')) || [];
                         const backupHabits = parsedBackupData.momentum || [];
                         backupHabits.forEach(bh => { if (!currentHabits.find(ch => ch.id === bh.id)) currentHabits.push(bh); });
                         localStorage.setItem('momentumHabits', JSON.stringify(currentHabits));
                     }
-                    if (scope === 'all' || scope === 'planner') {
+                    if (hasScope('planner')) {
                         const currentTargets = JSON.parse(localStorage.getItem('plannerTargets')) || {};
                         const backupTargets = parsedBackupData.planner.targets || {};
                         Object.keys(backupTargets).forEach(date => { if (!currentTargets[date]) currentTargets[date] = backupTargets[date]; });
@@ -865,16 +1076,48 @@ function setupDataManagement() {
                         const backupComp = parsedBackupData.planner.completed || [];
                         backupComp.forEach(date => { if (!currentComp.includes(date)) currentComp.push(date); });
                         localStorage.setItem('plannerCompleted', JSON.stringify(currentComp));
-                        
-                        const currentSubs = JSON.parse(localStorage.getItem('plannerSubjects')) || [{ id: 'off', name: 'Day Off', color: '#555555' }];
-                        const backupSubs = parsedBackupData.planner.subjects || [];
-                        backupSubs.forEach(bs => { if (!currentSubs.find(cs => cs.id === bs.id)) currentSubs.push(bs); });
-                        localStorage.setItem('plannerSubjects', JSON.stringify(currentSubs));
                     }
-                    if (scope === 'all' || scope === 'todo') {
+                    
+                    if (hasScope('subjects')) {
+                        let currentGroups = JSON.parse(localStorage.getItem('appSubjects'));
+                        if (!currentGroups || !Array.isArray(currentGroups) || currentGroups.length === 0) {
+                            currentGroups = [{ id: 'group_default', name: 'General', isDeletable: false, subjects: [] }];
+                        }
+                        
+                        const backupSubs = parsedBackupData.planner.subjects || [];
+                        
+                        if (backupSubs.length > 0) {
+                            if (backupSubs[0].subjects) {
+                                backupSubs.forEach(bg => {
+                                    const existingGroup = currentGroups.find(cg => cg.id === bg.id);
+                                    if (existingGroup) {
+                                        existingGroup.subjects = existingGroup.subjects || [];
+                                        const incomingSubjects = bg.subjects || [];
+                                        incomingSubjects.forEach(bs => {
+                                            if (!existingGroup.subjects.find(cs => cs.id === bs.id)) existingGroup.subjects.push(bs);
+                                        });
+                                    } else {
+                                        bg.subjects = bg.subjects || [];
+                                        currentGroups.push(bg);
+                                    }
+                                });
+                            } else {
+                                const generalGroup = currentGroups.find(g => g.id === 'group_default') || currentGroups[0];
+                                generalGroup.subjects = generalGroup.subjects || [];
+                                backupSubs.forEach(bs => {
+                                    if (bs.id !== 'off' && !generalGroup.subjects.find(cs => cs.id === bs.id)) {
+                                        generalGroup.subjects.push(bs);
+                                    }
+                                });
+                            }
+                        }
+                        localStorage.setItem('appSubjects', JSON.stringify(currentGroups));
+                    }
+                    
+                    if (hasScope('todo')) {
                         Object.keys(parsedBackupData.todo || {}).forEach(dateKey => {
                             const currentTasks = JSON.parse(localStorage.getItem(dateKey)) || [];
-                            const backupTasks = parsedBackupData.todo[dateKey];
+                            const backupTasks = parsedBackupData.todo[dateKey] || [];
                             backupTasks.forEach(bt => { if (!currentTasks.find(ct => ct.id === bt.id)) currentTasks.push(bt); });
                             localStorage.setItem(dateKey, JSON.stringify(currentTasks));
                         });
@@ -889,12 +1132,17 @@ function setupDataManagement() {
 
                 if (window.AppDB && AppDB.session) await AppDB.forcePushToCloud();
                 
-                window.AppAlert.show({
-                    title: "Success", message: "Data restored successfully. The app will now reload.",
-                    buttons: [{ text: "Reload", type: "primary", onClick: () => window.location.reload() }]
-                });
+                setTimeout(() => {
+                    window.AppAlert.show({
+                        title: "Success", message: "Data restored successfully. The app will now reload.",
+                        buttons: [{ text: "Reload", type: "primary", onClick: () => window.location.reload() }]
+                    });
+                }, 150);
+
             } catch (e) {
-                window.AppAlert.show({ title: "Error", message: "Failed to merge backup.", buttons: [{ text: "OK", type: "primary" }] });
+                setTimeout(() => {
+                    window.AppAlert.show({ title: "Error", message: "Failed to merge backup.", buttons: [{ text: "OK", type: "primary" }] });
+                }, 150);
             }
         };
 
@@ -950,12 +1198,15 @@ function initAuthUI() {
     const authModalTitle = document.getElementById('authModalTitle');
     const authModalSubtitle = document.getElementById('authModalSubtitle');
     const primaryAuthBtn = document.getElementById('primaryAuthBtn');
+    const primaryAuthText = document.getElementById('primaryAuthText');
     const forgotPasswordBtn = document.getElementById('forgotPasswordBtn');
-    const authToggleText = document.getElementById('authToggleText');
-    const toggleAuthModeBtn = document.getElementById('toggleAuthModeBtn');
     const googleAuthBtn = document.getElementById('googleAuthBtn');
     const googleAuthText = document.getElementById('googleAuthText');
     const authFeedback = document.getElementById('authFeedback');
+    
+    // UX UPGRADE: New Explicit Toggle Buttons
+    const modeLoginBtn = document.getElementById('modeLoginBtn');
+    const modeSignupBtn = document.getElementById('modeSignupBtn');
 
     const openUpdatePasswordBtn = document.getElementById('openUpdatePasswordBtn');
     const updatePasswordModalOverlay = document.getElementById('updatePasswordModalOverlay');
@@ -999,42 +1250,63 @@ function initAuthUI() {
 
     let isLoginMode = true;
 
-    const toggleModalMode = () => {
-        isLoginMode = !isLoginMode;
+    // --- UX UPGRADE: Auth Mode Switcher (Crossfade & Spatial Lock) ---
+    const setAuthMode = (toLogin) => {
+        if (isLoginMode === toLogin) return; 
+        isLoginMode = toLogin;
         SettingsUtils.clearFeedback(authFeedback); 
         
+        // 1. Toggle Button Styles
         if (isLoginMode) {
-            if (authModalTitle) authModalTitle.textContent = "Welcome Back";
-            if (authModalSubtitle) authModalSubtitle.textContent = "Log in to sync your diary";
-            if (primaryAuthBtn) primaryAuthBtn.textContent = "Login";
-            if (authToggleText) authToggleText.textContent = "New here?";
-            if (toggleAuthModeBtn) toggleAuthModeBtn.textContent = "Create an account";
-            if (googleAuthText) googleAuthText.textContent = "Log in with Google"; 
-            if (forgotPasswordBtn) forgotPasswordBtn.style.display = 'block';
+            if (modeLoginBtn) { modeLoginBtn.classList.remove('btn-ghost'); modeLoginBtn.classList.add('btn-primary'); modeLoginBtn.style.borderColor = 'var(--color-primary)'; }
+            if (modeSignupBtn) { modeSignupBtn.classList.remove('btn-primary'); modeSignupBtn.classList.add('btn-ghost'); modeSignupBtn.style.borderColor = 'transparent'; }
         } else {
-            if (authModalTitle) authModalTitle.textContent = "Create Account";
-            if (authModalSubtitle) authModalSubtitle.textContent = "Securely back up your data";
-            if (primaryAuthBtn) primaryAuthBtn.textContent = "Sign Up";
-            if (authToggleText) authToggleText.textContent = "Already have an account?";
-            if (toggleAuthModeBtn) toggleAuthModeBtn.textContent = "Log in";
-            if (googleAuthText) googleAuthText.textContent = "Sign up with Google"; 
-            if (forgotPasswordBtn) forgotPasswordBtn.style.display = 'none'; 
+            if (modeLoginBtn) { modeLoginBtn.classList.remove('btn-primary'); modeLoginBtn.classList.add('btn-ghost'); modeLoginBtn.style.borderColor = 'transparent'; }
+            if (modeSignupBtn) { modeSignupBtn.classList.remove('btn-ghost'); modeSignupBtn.classList.add('btn-primary'); modeSignupBtn.style.borderColor = 'var(--color-primary)'; }
         }
+        
+        // 2. Smooth Text & Visibility Crossfade
+        if (authModalTitle) authModalTitle.style.opacity = '0';
+        if (primaryAuthText) primaryAuthText.style.opacity = '0'; 
+        
+        if (forgotPasswordBtn) {
+            if (isLoginMode) {
+                forgotPasswordBtn.style.visibility = 'visible';
+                setTimeout(() => forgotPasswordBtn.style.opacity = '1', 10);
+            } else {
+                forgotPasswordBtn.style.opacity = '0';
+                setTimeout(() => forgotPasswordBtn.style.visibility = 'hidden', 200); 
+            }
+        }
+
+        // Swap text after fade out, then fade back in
+        setTimeout(() => {
+            if (isLoginMode) {
+                if (authModalTitle) authModalTitle.textContent = "Welcome Back";
+                if (primaryAuthText) primaryAuthText.textContent = "Login"; 
+            } else {
+                if (authModalTitle) authModalTitle.textContent = "Create Account";
+                if (primaryAuthText) primaryAuthText.textContent = "Sign Up"; 
+            }
+            
+            if (authModalTitle) authModalTitle.style.opacity = '1';
+            if (primaryAuthText) primaryAuthText.style.opacity = '1'; 
+        }, 150); 
     };
 
-    toggleAuthModeBtn?.addEventListener('click', toggleModalMode);
+    modeLoginBtn?.addEventListener('click', (e) => { e.preventDefault(); setAuthMode(true); });
+    modeSignupBtn?.addEventListener('click', (e) => { e.preventDefault(); setAuthMode(false); });
 
     openAuthModalBtn.addEventListener('click', () => {
-        isLoginMode = true; 
-        toggleModalMode(); toggleModalMode(); 
+        setAuthMode(true); // Default to login when opened
         SettingsUtils.clearFeedback(authFeedback);
         
         const container = document.getElementById('mainAuthInputContainer');
         if (container) {
             container.innerHTML = `
-                <input type="email" id="authEmail" class="auth-input" placeholder="Email address" autocomplete="username" style="margin-bottom: 15px; width: 100%;" />
+                <input type="email" id="authEmail" class="auth-input" placeholder="Email address" autocomplete="username" style="margin-bottom: 15px; width: 100%; padding: 12px var(--pad-md); background: var(--color-bg); border: 1px solid var(--color-glass-border); color: var(--color-text); border-radius: var(--rad-md); outline: none;" />
                 <div class="password-wrapper" style="width: 100%;">
-                    <input type="password" id="authPassword" class="auth-input" placeholder="Password" autocomplete="current-password" style="margin-bottom: 0; padding-right: 40px; width: 100%;" />
+                    <input type="password" id="authPassword" class="auth-input" placeholder="Password" autocomplete="current-password" style="margin-bottom: 0; padding: 12px 40px 12px var(--pad-md); width: 100%; background: var(--color-bg); border: 1px solid var(--color-glass-border); color: var(--color-text); border-radius: var(--rad-md); outline: none;" />
                     <button id="togglePasswordVisBtn" class="password-eye-btn" type="button">
                         <svg id="eyeIconHidden" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/><path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/><line x1="2" y1="2" x2="22" y2="22"/></svg>
                         <svg id="eyeIconVisible" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display: none;"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
@@ -1060,19 +1332,39 @@ function initAuthUI() {
         if (authModalOverlay) authModalOverlay.style.display = 'flex';
     });
     
-    closeAuthModalBtn?.addEventListener('click', () => {
-        const container = document.getElementById('mainAuthInputContainer');
-        if (container) container.innerHTML = '';
-        if (authModalOverlay) authModalOverlay.style.display = 'none';
+    // UX UPGRADE: Attach close logic to BOTH cancel buttons (Desktop & Mobile)
+    document.querySelectorAll('.auth-cancel-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.preventDefault();
+            const container = document.getElementById('mainAuthInputContainer');
+            if (container) container.innerHTML = '';
+            if (authModalOverlay) authModalOverlay.style.display = 'none';
+        });
     });
+
+    // --- UX UPGRADE: Firebase Error Filter ---
+    const filterAuthError = (error) => {
+        const code = error.code;
+        if (code === 'auth/invalid-credential') return "Incorrect email or password.";
+        if (code === 'auth/email-already-in-use') return "This email is already registered.";
+        if (code === 'auth/weak-password') return "Password must be at least 6 characters.";
+        if (code === 'auth/invalid-email') return "Please enter a valid email format.";
+        if (code === 'auth/network-request-failed') return "Network error. Check your connection.";
+        if (code === 'auth/unauthorized-domain') return "App configuration error (Domain unauthorized).";
+        if (code === 'auth/popup-closed-by-user') return "Sign-in was canceled."; 
+        if (code === 'auth/user-not-found') return "No account found with this email.";
+        if (code === 'auth/too-many-requests') return "Too many attempts. Try again later.";
+        
+        return error.message.length > 50 ? "An unexpected authentication error occurred." : error.message;
+    };
 
     primaryAuthBtn?.addEventListener('click', async () => {
         const email = document.getElementById('authEmail')?.value.trim() || '';
         const password = document.getElementById('authPassword')?.value || '';
         if(!email || !password) return SettingsUtils.showFeedback(authFeedback, "Please enter both email and password.", "error");
         
-        const originalText = primaryAuthBtn.textContent;
-        primaryAuthBtn.textContent = isLoginMode ? "Logging in..." : "Creating Account...";
+        const originalText = primaryAuthText ? primaryAuthText.textContent : (isLoginMode ? "Login" : "Sign Up");
+        if (primaryAuthText) primaryAuthText.textContent = isLoginMode ? "Logging in..." : "Creating Account...";
         primaryAuthBtn.disabled = true;
 
         try {
@@ -1080,12 +1372,8 @@ function initAuthUI() {
             else await AppDB.register(email, password);
             window.location.reload(); 
         } catch (error) {
-            let msg = error.message;
-            if (error.code === 'auth/invalid-credential') msg = "Incorrect email or password.";
-            if (error.code === 'auth/email-already-in-use') msg = "This email is already registered.";
-            if (error.code === 'auth/weak-password') msg = "Password must be at least 6 characters.";
-            SettingsUtils.showFeedback(authFeedback, msg, "error");
-            primaryAuthBtn.textContent = originalText;
+            SettingsUtils.showFeedback(authFeedback, filterAuthError(error), "error");
+            if (primaryAuthText) primaryAuthText.textContent = originalText;
             primaryAuthBtn.disabled = false;
         }
     });
@@ -1098,9 +1386,7 @@ function initAuthUI() {
             await AppDB.loginWithGoogle();
             window.location.reload(); 
         } catch (error) {
-            let msg = error.message;
-            if (error.code === 'auth/popup-closed-by-user') msg = "Google sign-in was canceled."; 
-            SettingsUtils.showFeedback(authFeedback, msg, "error");
+            SettingsUtils.showFeedback(authFeedback, filterAuthError(error), "error");
             if (googleAuthText) googleAuthText.textContent = originalText;
             googleAuthBtn.disabled = false;
         }
@@ -1113,9 +1399,7 @@ function initAuthUI() {
             await AppDB.resetPassword(email);
             SettingsUtils.showFeedback(authFeedback, `Reset link sent to ${email}`, "success");
         } catch (error) {
-            let msg = error.message;
-            if (error.code === 'auth/user-not-found') msg = "No account found with this email.";
-            SettingsUtils.showFeedback(authFeedback, msg, "error");
+            SettingsUtils.showFeedback(authFeedback, filterAuthError(error), "error");
         }
     });
 
@@ -1125,7 +1409,7 @@ function initAuthUI() {
         if (container) {
             container.innerHTML = `
                 <div class="password-wrapper" style="width: 100%;">
-                    <input type="password" id="newPasswordInput" class="auth-input" placeholder="Enter new password..." style="margin-bottom: 0; padding-right: 40px; width: 100%;" />
+                    <input type="password" id="newPasswordInput" class="auth-input" placeholder="Enter new password..." style="margin-bottom: 0; padding: 12px 40px 12px var(--pad-md); width: 100%; background: var(--color-bg); border: 1px solid var(--color-glass-border); color: var(--color-text); border-radius: var(--rad-md); outline: none;" />
                     <button id="toggleUpdatePasswordVisBtn" class="password-eye-btn" type="button">
                         <svg id="updateEyeIconHidden" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/><path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/><line x1="2" y1="2" x2="22" y2="22"/></svg>
                         <svg id="updateEyeIconVisible" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display: none;"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
@@ -1164,7 +1448,7 @@ function initAuthUI() {
                 if (container) container.innerHTML = '';
                 if (updatePasswordModalOverlay) updatePasswordModalOverlay.style.display = 'none';
             }, 1500);
-        } catch (error) { SettingsUtils.showFeedback(updateAuthFeedback, error.message, "error"); } 
+        } catch (error) { SettingsUtils.showFeedback(updateAuthFeedback, filterAuthError(error), "error"); } 
         finally { saveNewPasswordBtn.textContent = originalText; saveNewPasswordBtn.disabled = false; }
     });
 
@@ -1182,7 +1466,6 @@ function initAuthUI() {
             if (data && data.sessions && activeDevicesList) {
                 const myDeviceId = localStorage.getItem('appDeviceId');
                 
-                // Determine the Main Device (Automatically falls back to the oldest surviving session)
                 let mainDeviceId = null;
                 let oldestTime = Infinity;
                 
@@ -1191,7 +1474,7 @@ function initAuthUI() {
                     if (sessionData.isMain) {
                         mainDeviceId = id;
                     } else {
-                        const ts = sessionData.timestamp || sessionData.createdAt || Date.now();
+                        const ts = sessionData.createdAt || sessionData.timestamp || Date.now();
                         if (ts < oldestTime) {
                             oldestTime = ts;
                             mainDeviceId = id;
@@ -1199,39 +1482,60 @@ function initAuthUI() {
                     }
                 });
                 
-                // Failsafe
                 if (!mainDeviceId) mainDeviceId = Object.keys(data.sessions)[0];
                 const amIMain = myDeviceId === mainDeviceId;
 
                 Object.keys(data.sessions).forEach(devId => {
+                    const sessionData = data.sessions[devId];
                     const isMe = devId === myDeviceId;
                     const isThisMain = devId === mainDeviceId;
-                    const deviceName = data.sessions[devId].name || 'Unknown Device';
                     
-                    // Create Beautiful Badges
-                    let badges = [];
-                    if (isThisMain) badges.push('Main Device');
-                    if (isMe) badges.push('This Device');
-                    const badgeHTML = badges.length > 0 ? ` <span style="font-size: 0.75rem; color: var(--color-primary); font-weight: bold;">(${badges.join(' • ')})</span>` : '';
+                    let deviceName = 'Linked Device';
+                    const ua = sessionData.userAgent || '';
+                    if (ua) {
+                        let os = 'Unknown OS';
+                        if (ua.includes('Win')) os = 'Windows';
+                        else if (ua.includes('Mac') && !ua.includes('iPhone') && !ua.includes('iPad')) os = 'macOS';
+                        else if (ua.includes('iPhone') || ua.includes('iPad')) os = 'iOS';
+                        else if (ua.includes('Android')) os = 'Android';
+                        else if (ua.includes('Linux')) os = 'Linux';
+                        
+                        let type = 'Desktop';
+                        if (ua.includes('Mobile') || ua.includes('iPhone') || ua.includes('Android')) type = 'Mobile';
+                        else if (ua.includes('Tablet') || ua.includes('iPad')) type = 'Tablet';
+                        
+                        deviceName = `${os} ${type}`;
+                    } else if (sessionData.name && sessionData.name !== 'Unknown Device') {
+                        deviceName = sessionData.name;
+                    }
 
-                    // ONLY the Main Device is authorized to kick OTHER devices
+                    let badgeIcons = '';
+                    if (isThisMain) {
+                        badgeIcons += `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-left: 8px; transform: translateY(-2px);"><polygon points="6.5 21 17.5 21 20 11 15 15 12 6 9 15 4 11"></polygon></svg>`;
+                    }
+                    if (isMe) {
+                        badgeIcons += `<svg width="8" height="8" viewBox="0 0 24 24" fill="var(--color-primary)" style="margin-left: 6px;"><circle cx="12" cy="12" r="10"></circle></svg>`;
+                    }
+
                     const canRemove = amIMain && !isMe;
 
                     const item = document.createElement('div');
                     item.className = 'subject-manager-item';
+                    item.style.cssText = 'display: flex; align-items: center; justify-content: space-between; padding: 12px 15px; background: rgba(255,255,255,0.02); border: 1px solid var(--color-glass-border); border-radius: var(--rad-md); margin-bottom: 8px;';
+                    
                     item.innerHTML = `
-                        <div style="flex: 1;">
-                            <div style="font-weight: 800; color: ${isMe ? 'var(--color-primary)' : 'var(--color-text)'}">${deviceName}${badgeHTML}</div>
-                            <div style="font-size: 0.75rem; color: var(--color-text-muted);">ID: ${devId.substring(0,12)}...</div>
+                        <div style="display: flex; align-items: center; font-weight: 700; color: ${isMe || isThisMain ? 'var(--color-primary)' : 'var(--color-text)'}; font-size: 0.95rem;">
+                            ${deviceName}
+                            ${badgeIcons}
                         </div>
-                        ${canRemove ? `<button class="btn-danger remove-device-btn" style="padding: 5px 15px; font-size: 0.8rem;">Remove</button>` : ''}
+                        ${canRemove ? `<button class="btn-danger remove-device-btn" style="padding: 6px 12px; font-size: 0.8rem; border-radius: var(--rad-sm);">Remove</button>` : ''}
                     `;
                     
                     if (canRemove) {
                         item.querySelector('.remove-device-btn').addEventListener('click', async () => {
                             window.AppAlert.show({
                                 title: "Remove Linked Device?",
-                                message: `Are you sure you want to remotely log out "${deviceName}"?`,
+                                message: `Are you sure you want to remotely log out this ${deviceName}?`,
                                 buttons: [
                                     { text: "Cancel", type: "ghost" },
                                     { text: "Remove", type: "danger", onClick: async () => {

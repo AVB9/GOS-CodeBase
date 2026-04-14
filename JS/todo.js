@@ -1,4 +1,6 @@
-// Global Toast Helper
+// =================================================================
+// 1.0 [GLOBAL UTILITIES]
+// =================================================================
 window.showAppToast = window.showAppToast || function(msg) {
     let toast = document.getElementById('global-toast');
     if (!toast) {
@@ -11,7 +13,6 @@ window.showAppToast = window.showAppToast || function(msg) {
     setTimeout(() => toast.classList.remove('show'), 2500);
 };
 
-// Global Ultimate Completion Checker
 window.checkUltimateCompletion = window.checkUltimateCompletion || function(dateStr) {
     const today = new Date();
     const todayKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
@@ -37,11 +38,15 @@ window.checkUltimateCompletion = window.checkUltimateCompletion || function(date
     }
 };
 
+// =================================================================
+// 2.0 [INITIALIZATION & STATE]
+// =================================================================
 document.addEventListener('DOMContentLoaded', () => {
     initTodoTab();
 });
 
 function initTodoTab() {
+    // --- DOM ELEMENTS ---
     const input = document.getElementById('newTaskInput') || document.getElementById('todoInput');
     const addBtn = document.getElementById('addTaskBtn');
     const listEl = document.getElementById('todoList') || document.getElementById('mobileTodoList');
@@ -57,10 +62,13 @@ function initTodoTab() {
 
     if (!input || !addBtn || !listEl || !dateDisplay) return;
 
+    // --- STATE VARIABLES ---
     let currentDate = new Date();
     let tasks = [];
     let selectedSubjectId = null;
+    let activeTrayFolderId = null; // DYNAMIC TRAY STATE
 
+    // --- DATA & DATE HELPERS ---
     const getDateKey = (date) => {
         if (!(date instanceof Date) || isNaN(date)) date = new Date();
         const y = date.getFullYear();
@@ -87,7 +95,21 @@ function initTodoTab() {
         return true;
     };
 
-    const getSubjects = () => JSON.parse(localStorage.getItem('plannerSubjects')) || [{ id: 'off', name: 'Day Off', color: '#555555' }];
+    // V2 DATABASE PARSERS
+    const getGroups = () => {
+        const groups = JSON.parse(localStorage.getItem('appSubjects'));
+        if (!groups || groups.length === 0) {
+            return [{ id: 'group_default', name: 'General', isDeletable: false, subjects: [] }];
+        }
+        return groups;
+    };
+
+    const getSubjects = () => {
+        const groups = getGroups();
+        let flat = [];
+        groups.forEach(g => { if (g.subjects) flat = flat.concat(g.subjects); });
+        return flat;
+    };
 
     const updateDateDisplay = () => {
         const today = new Date(); today.setHours(0, 0, 0, 0);
@@ -105,8 +127,10 @@ function initTodoTab() {
             if (!t.status) t.status = t.done ? 'done' : 'todo';
             return t;
         });
-        renderTasks();
+        
+        // FIX: Actually update the UI when tasks load!
         updateDateDisplay();
+        if (typeof renderTasks === 'function') renderTasks();
     };
 
     const saveTasks = () => {
@@ -116,9 +140,9 @@ function initTodoTab() {
         } catch (e) { console.error('Storage error', e); }
     };
 
-    // ============================================================================
-    // THE NATIVE TODO SCROLL ENGINE (TSE)
-    // ============================================================================
+// =================================================================
+// 3.0 [NATIVE SCROLL ENGINE (TSE)]
+// =================================================================
     let tseTimer = null; 
 
     const getTargetTaskNode = (isDesktop, container) => {
@@ -126,12 +150,14 @@ function initTodoTab() {
         let target = null;
         
         if (selectedSubjectId) {
+            // Find the last task belonging to the currently selected subject
             const subjectTasks = taskNodes.filter(el => {
                 const taskData = tasks.find(t => t.id === parseInt(el.dataset.taskId || el.dataset.id, 10));
                 return taskData && taskData.subjectId === selectedSubjectId;
             });
             if (subjectTasks.length > 0) target = subjectTasks[subjectTasks.length - 1];
         } else {
+            // Find the last "General" task (no subject)
             const generalTasks = taskNodes.filter(el => {
                 const taskData = tasks.find(t => t.id === parseInt(el.dataset.taskId || el.dataset.id, 10));
                 return taskData && (!taskData.subjectId || taskData.subjectId === 'null');
@@ -139,6 +165,7 @@ function initTodoTab() {
             if (generalTasks.length > 0) target = generalTasks[generalTasks.length - 1];
         }
         
+        // Fallback: If no tasks exist for this subject, scroll to the subject's header
         if (!target) {
             target = Array.from(container.querySelectorAll(isDesktop ? '.kanban-subject-header' : '.todo-subject-header'))
                           .find(el => el.dataset.subjectId === (selectedSubjectId ? selectedSubjectId : 'null'));
@@ -148,18 +175,12 @@ function initTodoTab() {
 
     const runDesktopTSE = (targetNode) => {
         setTimeout(() => {
-            // Pure Math: Calculate absolute position of the task
             const rect = targetNode.getBoundingClientRect();
             const absoluteY = window.scrollY + rect.top;
-            
             // Subtract half the window height to perfectly center it on screen
             const targetY = absoluteY - (window.innerHeight / 2) + (rect.height / 2);
             
-            // Force native mathematical smooth scroll
-            window.scrollTo({
-                top: targetY,
-                behavior: 'smooth'
-            });
+            window.scrollTo({ top: targetY, behavior: 'smooth' });
         }, 50);
     };
 
@@ -167,6 +188,7 @@ function initTodoTab() {
         if (!floatUI) return;
         const nodeRect = targetNode.getBoundingClientRect();
         
+        // Calculate collision with the floating input/tray
         let uiTopEdge = floatUI.getBoundingClientRect().top;
         if (tray && tray.classList.contains('active')) {
             uiTopEdge = tray.getBoundingClientRect().top;
@@ -174,15 +196,15 @@ function initTodoTab() {
 
         const offset = nodeRect.bottom - uiTopEdge + 15;
 
+        // Scroll the window natively if the task is hiding behind the UI
         if (Math.abs(offset) > 5) {
-            // Scroll the window natively
             window.scrollBy({ top: offset, behavior: 'smooth' });
         }
     };
 
     const triggerTSE = (delay = 300) => {
         clearTimeout(tseTimer);
-        window.isAutoScrolling = true; 
+        window.isAutoScrolling = true; // Prevents drag-logic from misfiring during scroll
 
         tseTimer = setTimeout(() => {
             const isDesktop = window.innerWidth >= 768;
@@ -198,14 +220,15 @@ function initTodoTab() {
         }, delay); 
     };
 
-    // ============================================================================
-    // DOM-SAFE SUBJECT TRAY
-    // ============================================================================
+// =================================================================
+// 4.0 [DYNAMIC SUBJECT TRAY]
+// =================================================================   
     const renderSubjectTray = () => {
         if (!tray) return;
-        const subjects = getSubjects().filter(s => s.id !== 'off');
+        const groups = getGroups();
+        const flatSubjects = getSubjects();
 
-        if (subjects.length === 0) {
+        if (flatSubjects.length === 0) {
             tray.innerHTML = '';
             const emptyPill = document.createElement('div');
             emptyPill.className = `todo-tint-pill`;
@@ -218,58 +241,94 @@ function initTodoTab() {
             return;
         }
 
-        if (tray.children.length !== subjects.length || tray.querySelector('.empty-task-text')) {
-            tray.innerHTML = '';
-            subjects.forEach(sub => {
-                const pill = document.createElement('div');
-                pill.className = `todo-tint-pill`;
-                pill.textContent = sub.name;
-                pill.dataset.id = sub.id;
-                
-                const handlePillClick = (e) => {
-                    e.preventDefault(); e.stopPropagation(); 
-                    selectedSubjectId = selectedSubjectId === sub.id ? null : sub.id;
-                    updateTrayColors(subjects);
-                    triggerTSE(100); 
-                };
+        tray.innerHTML = '';
 
-                pill.addEventListener('mousedown', handlePillClick);
-                pill.addEventListener('touchstart', handlePillClick, { passive: false });
-                tray.appendChild(pill);
-            });
-        }
-        
-        updateTrayColors(subjects);
-    };
-
-    const updateTrayColors = (subjects) => {
-        Array.from(tray.children).forEach(pill => {
-            const sub = subjects.find(s => s.id === pill.dataset.id);
-            if (sub && selectedSubjectId === sub.id) {
-                pill.classList.add('selected');
-                pill.style.backgroundColor = `color-mix(in srgb, ${sub.color} 20%, var(--color-surface))`;
-                pill.style.borderColor = sub.color;
-                pill.style.color = sub.color;
-            } else {
-                pill.classList.remove('selected');
-                pill.style.backgroundColor = '';
-                pill.style.borderColor = '';
-                pill.style.color = '';
+        if (activeTrayFolderId === null) {
+            // --- ROOT LEVEL ---
+            const generalGroup = groups.find(g => g.id === 'group_default');
+            if (generalGroup && generalGroup.subjects) {
+                generalGroup.subjects.forEach(sub => renderTrayPill(sub));
             }
-        });
+
+            groups.forEach(group => {
+                if (group.id !== 'group_default' && group.subjects && group.subjects.length > 0) {
+                    const folderPill = document.createElement('div');
+                    folderPill.className = 'todo-tint-pill';
+                    folderPill.style.borderStyle = 'dashed';
+                    folderPill.innerHTML = `📁 ${group.name}`;
+                    
+                    const handleGroupClick = (e) => {
+                        e.preventDefault(); e.stopPropagation();
+                        activeTrayFolderId = group.id; // DRILL DOWN
+                        renderSubjectTray();
+                        triggerTSE(100);
+                    };
+                    folderPill.addEventListener('mousedown', handleGroupClick);
+                    folderPill.addEventListener('touchstart', handleGroupClick, { passive: false });
+                    tray.appendChild(folderPill);
+                }
+            });
+        } else {
+            // --- FOLDER LEVEL ---
+            const backPill = document.createElement('div');
+            backPill.className = 'todo-tint-pill';
+            backPill.innerHTML = `← Back`;
+            
+            const handleBackClick = (e) => {
+                e.preventDefault(); e.stopPropagation();
+                activeTrayFolderId = null; // DRILL UP
+                selectedSubjectId = null; // FIX: Clear the invisible selection!
+                renderSubjectTray();
+                triggerTSE(100);
+            };
+            backPill.addEventListener('mousedown', handleBackClick);
+            backPill.addEventListener('touchstart', handleBackClick, { passive: false });
+            tray.appendChild(backPill);
+
+            const activeGroup = groups.find(g => g.id === activeTrayFolderId);
+            if (activeGroup && activeGroup.subjects) {
+                activeGroup.subjects.forEach(sub => renderTrayPill(sub));
+            }
+        }
     };
 
-    // ============================================================================
-    // FOCUS & BLUR LOGIC
-    // ============================================================================
-    input.addEventListener('focus', () => { 
-        if (tray) tray.classList.add('active'); 
-        triggerTSE();
-    });
+    const renderTrayPill = (sub) => {
+        const pill = document.createElement('div');
+        pill.className = `todo-tint-pill`;
+        pill.textContent = sub.name;
+        pill.dataset.id = sub.id;
+        
+        if (selectedSubjectId === sub.id) {
+            pill.classList.add('selected');
+            pill.style.backgroundColor = `color-mix(in srgb, ${sub.color} 20%, var(--color-surface))`;
+            pill.style.borderColor = sub.color;
+            pill.style.color = sub.color;
+        }
 
-    input.addEventListener('click', () => { if (tray) tray.classList.add('active'); });
+        const handlePillClick = (e) => {
+            e.preventDefault(); e.stopPropagation(); 
+            selectedSubjectId = selectedSubjectId === sub.id ? null : sub.id; // Toggle selection
+            renderSubjectTray(); 
+            triggerTSE(100); 
+        };
+
+        pill.addEventListener('mousedown', handlePillClick);
+        pill.addEventListener('touchstart', handlePillClick, { passive: false });
+        tray.appendChild(pill);
+    };
+
+    // --- FOCUS & BLUR LOGIC ---
+    if (input) {
+        input.addEventListener('focus', () => { 
+            if (tray) tray.classList.add('active'); 
+            triggerTSE();
+        });
+
+        input.addEventListener('click', () => { if (tray) tray.classList.add('active'); });
+    }
 
     document.addEventListener('mousedown', (e) => {
+        if (!input) return;
         if (e.target === input || input.contains(e.target)) return; 
         if (tray && (e.target === tray || tray.contains(e.target))) return; 
         
@@ -283,14 +342,14 @@ function initTodoTab() {
             if (stuckClones.length > 0) {
                 stuckClones.forEach(c => c.remove());
                 document.querySelectorAll('.dragging-placeholder').forEach(el => el.classList.remove('dragging-placeholder'));
-                renderTasks(); 
+                if (typeof renderTasks === 'function') renderTasks(); 
             }
         }
     }, { passive: true });
 
-    // ============================================================================
-    // KANBAN & TASK RENDERING LOGIC
-    // ============================================================================
+// =================================================================
+// 5.0 [TASK RENDERING]
+// =================================================================
     const updateMobileOrder = () => {
         if(!listEl) return;
         const newTasks = [];
@@ -370,13 +429,14 @@ function initTodoTab() {
         if (pcDone) pcDone.innerHTML = '';
 
         if (tasks.length === 0) {
-            if (listEl) listEl.innerHTML = `<li class="empty-task-text" style="text-align: center;">No tasks for this day.</li>`;
+            if (listEl) listEl.innerHTML = `<li class="empty-task-text" style="text-align: center; min-height: 50vh; display: flex; justify-content: center; align-items: center;">No tasks for this day.</li>`;
             return;
         }
 
-        const subjectsList = [{ id: null, name: 'General', color: '#888888' }, ...getSubjects().filter(s => s.id !== 'off')];
+        // Dynamically pull the flattened V2 subjects list
+        const subjectsList = [{ id: null, name: 'General', color: '#888888' }, ...getSubjects()];
 
-        // Mobile Render
+        // --- MOBILE RENDER ---
         if (listEl) {
             subjectsList.forEach(sub => {
                 const subTasks = tasks.filter(t => (t.subjectId || null) === sub.id);
@@ -519,11 +579,9 @@ function initTodoTab() {
                         };
                         
                         editInput.addEventListener('blur', saveEdit);
-                        // Changed to 'keydown' for better mobile support
                         editInput.addEventListener('keydown', (e) => { 
                             if (e.key === 'Enter' && !e.shiftKey) {
                                 const isTouch = window.matchMedia("(pointer: coarse)").matches;
-                                // If on PC, Enter saves. If on Mobile, Enter creates a new line!
                                 if (!isTouch) {
                                     e.preventDefault();
                                     editInput.blur(); 
@@ -687,7 +745,7 @@ function initTodoTab() {
             });
         }
 
-        // Desktop Kanban Render
+        // --- DESKTOP KANBAN RENDER ---
         const columns = [ { el: pcTodo, status: 'todo' }, { el: pcInProgress, status: 'in-progress' }, { el: pcDone, status: 'done' } ];
         
         columns.forEach(col => {
@@ -829,11 +887,9 @@ function initTodoTab() {
                         };
                         
                         editInput.addEventListener('blur', saveEdit);
-                        // Changed to 'keydown' for better mobile support
                         editInput.addEventListener('keydown', (e) => { 
                             if (e.key === 'Enter' && !e.shiftKey) {
                                 const isTouch = window.matchMedia("(pointer: coarse)").matches;
-                                // If on PC, Enter saves. If on Mobile, Enter creates a new line!
                                 if (!isTouch) {
                                     e.preventDefault();
                                     editInput.blur(); 
@@ -870,6 +926,9 @@ function initTodoTab() {
         });
     };
 
+// =================================================================
+// 6.0 [DESKTOP DRAG & DROP SYSTEM]
+// =================================================================
     const setupKanbanDropzones = () => {
         const columns = [pcTodo, pcInProgress, pcDone];
         
@@ -918,6 +977,9 @@ function initTodoTab() {
         }, { offset: Number.NEGATIVE_INFINITY }).element;
     };
 
+// =================================================================
+// 7.0 [CONTROLS & EVENTS]
+// =================================================================
     const todoTitle = document.querySelector('#tab-todo .tab-title');
     if (todoTitle) {
         todoTitle.style.cursor = 'pointer';
@@ -936,7 +998,7 @@ function initTodoTab() {
 
             const statuses = ['todo', 'in-progress', 'done'];
             const statusLabels = { 'todo': 'TODO', 'in-progress': 'IN-PROGRESS', 'done': 'DONE' };
-            const subjects = [{ id: null, name: 'General' }, ...getSubjects().filter(s => s.id !== 'off')];
+            const subjects = [{ id: null, name: 'General' }, ...getSubjects()];
 
             statuses.forEach(status => {
                 const tasksInStatus = tasks.filter(t => t.status === status);
@@ -1004,18 +1066,80 @@ function initTodoTab() {
         }
     };
 
-    addBtn.addEventListener('click', addTask);
-    input.addEventListener('keypress', (e) => { if (e.key === 'Enter') { e.preventDefault(); addTask(); } });
+    if (addBtn) addBtn.addEventListener('click', addTask);
+    if (input) input.addEventListener('keypress', (e) => { if (e.key === 'Enter') { e.preventDefault(); addTask(); } });
 
-    const changeDate = (days) => { currentDate.setDate(currentDate.getDate() + days); loadTasks(); };
+    const changeDate = (days) => { 
+        currentDate.setDate(currentDate.getDate() + days); 
+        loadTasks(); 
+        
+        // FIX: Instantly reset scroll to prevent the browser from panic-snapping the header
+        window.scrollTo(0, 0);
+        const scrollContainer = document.getElementById('todoSwipeContainer');
+        if (scrollContainer) scrollContainer.scrollTop = 0;
+    };
+    
     if (prevBtn) prevBtn.addEventListener('click', () => changeDate(-1));
     if (nextBtn) nextBtn.addEventListener('click', () => changeDate(1));
 
-    dateDisplay.addEventListener('click', () => {
-        if(window.AppEvents) AppEvents.emit('REQUEST_DATE_PICKER', { tab: 'todo', dateStr: getDateKey(currentDate).replace('todo_', '') });
-    });
+    if (dateDisplay) {
+        dateDisplay.addEventListener('click', () => {
+            if(window.AppEvents) AppEvents.emit('REQUEST_DATE_PICKER', { tab: 'todo', dateStr: getDateKey(currentDate).replace('todo_', '') });
+        });
+    }
 
-    if(window.AppEvents) {
+    // --- DAY SWIPE NAVIGATION ENGINE ---
+    let dateSwipeStartX = 0;
+    let dateSwipeStartY = 0;
+    const todoTab = document.getElementById('tab-todo');
+    
+    // 1. Global Screen Swipe (Ignores Inputs/Navs)
+    if (todoTab) {
+        todoTab.addEventListener('touchstart', (e) => {
+            // Ignore if swiping inside the text input, tray, or bottom navigation
+            if (e.target.closest('.todo-input-wrapper') || e.target.closest('.bottom-nav') || e.target.closest('.todo-subject-tray')) return;
+            dateSwipeStartX = e.touches[0].clientX;
+            dateSwipeStartY = e.touches[0].clientY;
+        }, { passive: true });
+
+        todoTab.addEventListener('touchend', (e) => {
+            if (e.target.closest('.todo-input-wrapper') || e.target.closest('.bottom-nav') || e.target.closest('.todo-subject-tray')) return;
+            
+            const diffX = dateSwipeStartX - e.changedTouches[0].clientX;
+            const diffY = Math.abs(dateSwipeStartY - e.changedTouches[0].clientY);
+
+            // Trigger only if horizontal swipe is > 60px and dominant over vertical scrolling
+            if (Math.abs(diffX) > 60 && Math.abs(diffX) > diffY * 1.5) {
+                if (diffX > 0) {
+                    changeDate(1); // Swiped Left -> Next Day
+                } else {
+                    changeDate(-1); // Swiped Right -> Prev Day
+                }
+            }
+        }, { passive: true });
+    }
+
+    // 2. Specific Date Pill Swipe
+    const datePillWrapper = dateDisplay ? dateDisplay.parentElement : null;
+    if (datePillWrapper) {
+        datePillWrapper.addEventListener('touchstart', (e) => {
+            dateSwipeStartX = e.touches[0].clientX;
+            dateSwipeStartY = e.touches[0].clientY;
+        }, { passive: true });
+
+        datePillWrapper.addEventListener('touchend', (e) => {
+            const diffX = dateSwipeStartX - e.changedTouches[0].clientX;
+            const diffY = Math.abs(dateSwipeStartY - e.changedTouches[0].clientY);
+
+            // Lower threshold (40px) specifically for swiping the pill itself
+            if (Math.abs(diffX) > 40 && Math.abs(diffX) > diffY) { 
+                if (diffX > 0) changeDate(1);
+                else changeDate(-1);
+            }
+        }, { passive: true });
+    }
+
+    if (window.AppEvents) {
         AppEvents.on('DATE_CHANGE', ({ tab, direction }) => { if (tab === 'todo') changeDate(direction); });
         AppEvents.on('JUMP_DATE', ({ tab, date }) => { if (tab === 'todo') { currentDate = new Date(date); loadTasks(); } });
         AppEvents.on('SUBJECTS_UPDATED', () => { renderSubjectTray(); renderTasks(); });
@@ -1026,6 +1150,7 @@ function initTodoTab() {
         });
     }
 
+    // --- INITIALIZE TAB ---
     setupKanbanDropzones();
     renderSubjectTray();
     loadTasks();

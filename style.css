@@ -101,6 +101,25 @@ html, body {
     overflow-y: visible; /* Lets the main window handle scrolling! */
 }
 
+/* --- Global Touch Paw Effect --- */
+.touch-paw-effect {
+    position: fixed;
+    width: 45px;
+    height: 45px;
+    pointer-events: none;
+    z-index: 10000;
+    opacity: 0;
+    margin-top: -22px; /* Centers the paw on the cursor */
+    margin-left: -22px;
+    animation: pawFade 0.7s ease-out forwards;
+}
+
+@keyframes pawFade {
+    0% { opacity: 0; transform: scale(0.5); }
+    20% { opacity: 0.5; transform: scale(1.1); }
+    100% { opacity: 0; transform: scale(0.9); }
+}
+
 /* =================================================================
    2. BASE RESET & TYPOGRAPHY
    ================================================================= */
@@ -229,6 +248,97 @@ input, textarea { appearance: none; -webkit-appearance: none; }
 .btn-block { width: 100%; display: flex; justify-content: center; align-items: center; padding: 14px; font-size: 1.05rem; border-radius: 12px; }
 .auth-footer { text-align: center; margin-top: 15px; font-size: 0.85rem; color: var(--color-text-muted); }
 .auth-footer button { background: none; border: none; color: var(--color-primary); font-weight: bold; cursor: pointer; padding: 0 5px; }
+/* --- Landscape Modal Architecture (PC Side-by-Side) --- */
+@media (min-width: 768px) {
+    .modal-box.landscape-modal {
+        display: flex;
+        flex-direction: row;
+        width: 100%;
+        max-width: 750px;
+        align-items: stretch;
+        gap: var(--pad-xl);
+    }
+    .landscape-panel {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        min-width: 0; 
+    }
+    .landscape-panel.side-info {
+        border-right: 1px solid var(--color-glass-border);
+        padding-right: var(--pad-xl);
+        justify-content: center;
+    }
+    .landscape-panel.side-action {
+        justify-content: center;
+    }
+    /* If someone forces it to stack on desktop anyway */
+    .modal-box:not(.landscape-modal) .landscape-panel.side-info {
+        border-right: none;
+        padding-right: 0;
+        margin-bottom: var(--pad-lg);
+        border-bottom: 1px solid var(--color-glass-border);
+        padding-bottom: var(--pad-lg);
+    }
+}
+
+/* Mobile fallback: Stack vertically with a bottom border */
+@media (max-width: 767px) {
+    .modal-box.landscape-modal {
+        display: flex;
+        flex-direction: column;
+    }
+    .landscape-panel.side-info {
+        margin-bottom: var(--pad-lg);
+        border-bottom: 1px solid var(--color-glass-border);
+        padding-bottom: var(--pad-lg);
+    }
+}
+
+/* --- Landscape Modal Architecture (PC Side-by-Side) --- */
+.auth-desktop-element { display: none !important; } /* Hidden by default */
+
+@media (min-width: 768px) {
+    .modal-box.landscape-modal {
+        display: flex;
+        flex-direction: row;
+        width: 100%;
+        max-width: 750px;
+        align-items: stretch;
+        gap: var(--pad-xl);
+    }
+    .landscape-panel {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        min-width: 0; 
+    }
+    .landscape-panel.side-info {
+        border-right: 1px solid var(--color-glass-border);
+        padding-right: var(--pad-xl);
+        justify-content: center;
+    }
+    .landscape-panel.side-action {
+        justify-content: center;
+    }
+    
+    /* Device-specific visibility toggles */
+    .auth-desktop-element { display: flex !important; }
+    .auth-mobile-element { display: none !important; }
+}
+
+/* Mobile fallback */
+@media (max-width: 767px) {
+    .modal-box.landscape-modal {
+        display: flex;
+        flex-direction: column;
+    }
+    .landscape-panel.side-info {
+        margin-bottom: var(--pad-lg);
+        border-bottom: 1px solid var(--color-glass-border);
+        padding-bottom: var(--pad-lg);
+    }
+}
 
 /* PWA Hardware Fix: GPU Accelerated & Notch Aware */
 .bottom-pill-nav { position: fixed; bottom: calc(30px + var(--safe-bottom)); left: 50%; display: flex; gap: 8px; padding: 8px 16px; border-radius: var(--rad-pill); z-index: 1000; background: var(--color-glass-bg); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid var(--color-glass-border); box-shadow: var(--shadow-lg); transform: translateX(-50%) translateZ(0); transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); will-change: transform; }
@@ -308,7 +418,7 @@ input:checked + .slider:before { transform: translateX(24px); background-color: 
 .daily-card { min-width: 85%; min-height: 125px; scroll-snap-align: center; border-radius: 18px; padding: 15px; display: flex; align-items: stretch; gap: 15px; cursor: pointer; transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.3s ease; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2); position: relative; overflow: hidden; background: rgba(10, 10, 10, 0.45); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); border: 1px solid var(--color-glass-border); will-change: transform; -webkit-transform: translateZ(0); transform: translateZ(0); }
 .daily-card:active { transform: scale(0.97) translateZ(0); -webkit-transform: scale(0.97) translateZ(0); }
 .daily-card.today { border-color: var(--color-primary) !important; box-shadow: inset 0 0 0 1px var(--color-primary), 0 0 20px color-mix(in srgb, var(--color-primary) 15%, transparent) !important; }
-.daily-card.overdue { background-color: color-mix(in srgb, var(--color-primary) 8%, var(--color-glass-bg)) !important; border-color: color-mix(in srgb, var(--color-primary) 25%, transparent) !important; }
+.daily-card.overdue { background: linear-gradient(145deg, color-mix(in srgb, var(--color-primary) 20%, var(--color-glass-bg)), var(--color-glass-bg)) !important; border-color: color-mix(in srgb, var(--color-primary) 25%, transparent) !important; }
 .daily-card-date { display: flex; flex-direction: column; align-items: center; justify-content: center; border-right: 1px solid var(--color-glass-border); padding-right: var(--pad-lg); min-width: 80px; height: 100%; }
 .daily-card-day { font-size: 0.9rem; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 1px; }
 .daily-card-num { font-size: 2.2rem; font-weight: 800; line-height: 1; color: var(--color-text); margin-top: 5px; }
@@ -363,7 +473,7 @@ input:checked + .slider:before { transform: translateX(24px); background-color: 
 .day-cell.empty:hover { transform: none; box-shadow: none; }
 .day-cell.today { border: 2px solid var(--color-primary); box-shadow: 0 0 15px color-mix(in srgb, var(--color-primary) 30%, transparent); }
 .day-cell.today .date-num { color: var(--color-primary); }
-.day-cell.overdue { background-color: color-mix(in srgb, var(--color-primary) 8%, var(--color-glass-bg)) !important; border-color: color-mix(in srgb, var(--color-primary) 25%, transparent) !important; }
+.day-cell.overdue { background: linear-gradient(145deg, color-mix(in srgb, var(--color-primary) 20%, var(--color-glass-bg)), var(--color-glass-bg)) !important; border-color: color-mix(in srgb, var(--color-primary) 25%, transparent) !important; }
 
 .day-cell.completed { background-color: rgba(0, 0, 0, 0.4); border-color: rgba(255, 255, 255, 0.05); }
 .day-cell.completed .task-content { opacity: 0.4; text-decoration: line-through; }
@@ -937,4 +1047,74 @@ input[type="search"]::-webkit-search-results-decoration { display: none !importa
 * {
     scrollbar-width: thin;
     scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
+}
+
+/* =================================================================
+   GLOBAL ALERTS OVERRIDE (Nuclear Z-Index Fix)
+   ================================================================= */
+/* 1. Force the Linked Devices Modal to stay at a reasonable level */
+#linkedDevicesModalOverlay {
+    z-index: 9000 !important;
+}
+
+/* 2. Force the AppAlert to the absolute maximum layer */
+.app-alert-overlay, 
+#appAlertOverlay, 
+#customAlertOverlay,
+[class*="alert-overlay"],
+[id*="alertOverlay"] {
+    z-index: 999999 !important; /* Six nines guarantees it wins */
+}
+
+/* =================================================================
+   SMART BUTTON TRANSITIONS
+================================================================= */
+.dynamic-add-text {
+    display: inline-block;
+    max-width: 0;
+    opacity: 0;
+    overflow: hidden;
+    white-space: pre; /* Preserves the space after the ampersand */
+    vertical-align: bottom;
+    transition: max-width 0.4s cubic-bezier(0.34, 1.15, 0.64, 1), opacity 0.3s ease;
+}
+
+.dynamic-add-text.show {
+    max-width: 60px; /* Just enough room to reveal "Add & " */
+    opacity: 1;
+}
+
+/* --- Favicon Paw Glow Animation --- */
+@keyframes softPawGlow {
+    0% { filter: drop-shadow(0 0 2px color-mix(in srgb, var(--color-primary) 30%, transparent)); }
+    50% { filter: drop-shadow(0 0 10px color-mix(in srgb, var(--color-primary) 80%, transparent)); }
+    100% { filter: drop-shadow(0 0 2px color-mix(in srgb, var(--color-primary) 30%, transparent)); }
+}
+
+.glow-paw {
+    animation: softPawGlow 3s ease-in-out infinite;
+    transform-origin: center;
+}
+/* --- Favicon Paw Breathing Glow --- */
+@keyframes softPawGlow {
+    0% { 
+        filter: drop-shadow(0 0 2px var(--color-primary)); 
+        transform: scale(1); 
+        opacity: 0.85; 
+    }
+    50% { 
+        filter: drop-shadow(0 0 12px var(--color-primary)); 
+        transform: scale(1.03); 
+        opacity: 1; 
+    }
+    100% { 
+        filter: drop-shadow(0 0 2px var(--color-primary)); 
+        transform: scale(1); 
+        opacity: 0.85; 
+    }
+}
+
+.glow-paw {
+    animation: softPawGlow 2.5s ease-in-out infinite;
+    transform-origin: 70% 80%; /* Anchors the scale to where the paw actually is */
 }
