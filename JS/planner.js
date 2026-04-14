@@ -44,27 +44,26 @@ function initPlannerTab() {
     const desktopProgressText = document.getElementById('desktopProgressText');
     const desktopProgressBar = document.getElementById('desktopProgressBar');
 
-    // Soft guard: If primary elements are missing, halt gracefully.
     if (!gridEl || !sliderEl || !desktopGrid) return;
 
-    // --- CORE STATE VARIABLES ---
     let currentViewDate = new Date();
     currentViewDate.setDate(1); 
 
     let activeSelectedDateStr = null;
     let currentSheetSubjectId = null; 
-    let activeFolderId = null; // DYNAMIC SUB-TRAY STATE
+    let activeFolderId = null; 
     let todayObserver = null;
     let isFirstTimeOpeningPlanner = true; 
+    
+    // THE NEW ANIMATION STATE TRACKER
+    let justCompletedDateKey = null;
 
-    // --- BULLETPROOF DATABASE PARSERS & SAVERS ---
     const getGroups = () => {
         try {
             const groups = JSON.parse(localStorage.getItem('appSubjects'));
             if (!groups || !Array.isArray(groups) || groups.length === 0) {
                 return [{ id: 'group_default', name: 'General', isDeletable: false, subjects: [] }];
             }
-            // CRITICAL FIX: Guarantee every group has a subjects array to prevent .some() crashes
             return groups.map(g => {
                 g.subjects = Array.isArray(g.subjects) ? g.subjects : [];
                 return g;
@@ -159,6 +158,9 @@ function initPlannerTab() {
         renderMobile(monthData); 
         renderDesktop(monthData);
         updateHomeWidget(); 
+        
+        // RESET THE ANIMATION STATE AFTER RENDER
+        justCompletedDateKey = null;
     };
 
     const toggleCompletion = (dateKey, dateObj, todayObjReal) => {
@@ -174,8 +176,10 @@ function initPlannerTab() {
 
         if (compArr.includes(dateKey)) {
             compArr = compArr.filter(id => id !== dateKey);
+            justCompletedDateKey = null; // Unchecking doesn't trigger animation
         } else { 
             compArr.push(dateKey); 
+            justCompletedDateKey = dateKey; // FLAGS THIS CARD FOR ANIMATION
             if (navigator.vibrate) navigator.vibrate(50);
             setTimeout(() => window.showAppToast("MUUWWAHAAAA!!!"), 100);
         }
@@ -226,7 +230,9 @@ function initPlannerTab() {
             gridEl.appendChild(cell);
 
             const card = document.createElement('div');
-            card.className = `daily-card ${day.isCompleted ? 'completed' : ''} ${day.isOverdue ? 'overdue' : ''} ${day.isToday ? 'today' : ''}`;
+            
+            // INJECTS .just-completed CLASSS IF APPLICABLE
+            card.className = `daily-card ${day.isCompleted ? 'completed' : ''} ${day.dateKey === justCompletedDateKey ? 'just-completed' : ''} ${day.isOverdue ? 'overdue' : ''} ${day.isToday ? 'today' : ''}`;
             card.id = `card-${day.dateKey}`;
             
             const dayName = day.dateObj.toLocaleDateString('en-US', { weekday: 'short' });
@@ -368,7 +374,9 @@ function initPlannerTab() {
             }
 
             const cell = document.createElement('div');
-            cell.className = `day-cell ${day.isToday ? 'today' : ''} ${day.isCompleted ? 'completed' : ''} ${day.isOverdue ? 'overdue' : ''}`;
+            
+            // INJECTS .just-completed CLASSS IF APPLICABLE
+            cell.className = `day-cell ${day.isToday ? 'today' : ''} ${day.isCompleted ? 'completed' : ''} ${day.dateKey === justCompletedDateKey ? 'just-completed' : ''} ${day.isOverdue ? 'overdue' : ''}`;
             
             let contentHTML = `<div class="date-num">${day.dayNum}</div>`;
             
@@ -382,7 +390,6 @@ function initPlannerTab() {
                         <button class="day-edit-btn" title="Edit Plan">✎</button>
                     `;
                 } else {
-                    // NO PILL: Standard natural flow, no extra margins needed
                     contentHTML += `
                         <div class="task-content">
                             <span class="desktop-task-topic">${day.taskTopic}</span>
@@ -425,7 +432,6 @@ function initPlannerTab() {
         const groups = getGroups();
 
         if (activeFolderId === null) {
-            // --- ROOT LEVEL ---
             const generalGroup = groups.find(g => g.id === 'group_default');
             if (generalGroup && Array.isArray(generalGroup.subjects)) {
                 generalGroup.subjects.forEach(sub => renderSubjectPill(container, sub, currentId, onSelect));
@@ -440,7 +446,7 @@ function initPlannerTab() {
                     
                     folderPill.addEventListener('click', (e) => {
                         e.preventDefault(); e.stopPropagation();
-                        activeFolderId = group.id; // OPEN SUB-TRAY
+                        activeFolderId = group.id; 
                         renderDynamicTray(container, currentId, onSelect);
                     });
                     container.appendChild(folderPill);
@@ -448,14 +454,13 @@ function initPlannerTab() {
             });
 
         } else {
-            // --- SUB-TRAY LEVEL ---
             const backPill = document.createElement('div');
             backPill.className = 'todo-tint-pill';
             backPill.innerHTML = `← Back`;
             backPill.addEventListener('click', (e) => {
                 e.preventDefault(); e.stopPropagation();
-                activeFolderId = null; // CLOSE SUB-TRAY
-                onSelect(null); // FIX: Clear the invisible selection!
+                activeFolderId = null; 
+                onSelect(null); 
                 renderDynamicTray(container, null, onSelect);
             });
             container.appendChild(backPill);
@@ -464,7 +469,7 @@ function initPlannerTab() {
             if (activeGroup && Array.isArray(activeGroup.subjects)) {
                 activeGroup.subjects.forEach(sub => renderSubjectPill(container, sub, currentId, onSelect));
             } else {
-                activeFolderId = null; // Failsafe
+                activeFolderId = null; 
             }
         }
     };
@@ -483,10 +488,10 @@ function initPlannerTab() {
         btn.addEventListener('click', (e) => {
             e.preventDefault(); e.stopPropagation();
             if (btn.classList.contains('selected')) {
-                onSelect(null); // Deselect -> General
+                onSelect(null); 
                 renderDynamicTray(container, null, onSelect);
             } else {
-                onSelect(sub.id); // Select
+                onSelect(sub.id); 
                 renderDynamicTray(container, sub.id, onSelect);
             }
         });
@@ -717,7 +722,6 @@ function initPlannerTab() {
                     </div>
                 `;
             } else {
-                // NO PILL: Vertically centered, larger text, neutral border
                 taskContainer.innerHTML = `
                     <div class="task-preview" style="border-left-color: var(--color-glass-border); display: flex; flex-direction: column; justify-content: center; min-height: 60px;">
                         <div class="task-preview-topic" style="font-size: 1.1em; font-weight: 500; margin-top: 0;">${dayTask.topic}</div>

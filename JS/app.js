@@ -394,32 +394,222 @@ function initDateGesturesAndModals() {
     attachSwipe(document.getElementById('todoDateNav'), 'todo');
     attachSwipe(document.getElementById('journalDateNav'), 'journal');
 
-    const dateModal = document.getElementById('datePickerModalOverlay');
-    const dateInput = document.getElementById('globalDatePickerInput');
-    const closeBtn = document.getElementById('closeDatePickerBtn');
-    const confirmBtn = document.getElementById('confirmDatePickerBtn');
-    let activeTabForPicker = null; 
+    
+// --- COMPACT DATE PICKER LOGIC ---
+    const datePicker = document.getElementById('datePicker');
+    const headerBtn = document.getElementById('cdpMonthYearBtn');
+    const prevBtn = document.getElementById('cdpPrevBtn');
+    const nextBtn = document.getElementById('cdpNextBtn');
+    const footer = document.getElementById('cdpFooter');
+    const doneBtn = document.getElementById('cdpDoneBtn');
 
-    AppEvents.on('REQUEST_DATE_PICKER', ({ tab, dateStr }) => {
-        activeTabForPicker = tab;
-        dateInput.value = dateStr; 
-        dateModal.style.display = 'flex';
-        document.body.classList.add('modal-open'); 
+    const viewCalendar = document.getElementById('cdpViewCalendar');
+    const viewDrill = document.getElementById('cdpViewDrill');
+    const gridDays = document.getElementById('cdpGridDays');
+    const gridDrill = document.getElementById('cdpGridDrill');
+
+    let activeTabForPicker = null; 
+    let selectedDate = new Date(); 
+    let viewDate = new Date();     
+    
+    let drillState = 'calendar'; // 'calendar', 'months', 'years'
+    let interactionMode = 'select'; // 'select' (closes on click) or 'jump' (stays open)
+    let isPickerOpening = false; // Prevents instant-close bug
+
+    const fullMonths = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+
+    const renderDays = () => {
+        gridDays.innerHTML = '';
+        headerBtn.innerHTML = `${fullMonths[viewDate.getMonth()]} ${viewDate.getFullYear()} <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-left: 2px;"><path d="m9 18 6-6-6-6"/></svg>`;
+        headerBtn.classList.remove('drill-open');
+
+        const firstDay = new Date(viewDate.getFullYear(), viewDate.getMonth(), 1).getDay();
+        const daysInMonth = new Date(viewDate.getFullYear(), viewDate.getMonth() + 1, 0).getDate();
+        const today = new Date();
+
+        for (let i = 0; i < firstDay; i++) {
+            gridDays.innerHTML += `<div class="cdp-day-cell empty"></div>`;
+        }
+
+        for (let i = 1; i <= daysInMonth; i++) {
+            const cell = document.createElement('div');
+            cell.className = 'cdp-day-cell';
+            cell.textContent = i;
+
+            if (i === today.getDate() && viewDate.getMonth() === today.getMonth() && viewDate.getFullYear() === today.getFullYear()) cell.classList.add('today');
+            if (i === selectedDate.getDate() && viewDate.getMonth() === selectedDate.getMonth() && viewDate.getFullYear() === selectedDate.getFullYear()) cell.classList.add('selected');
+
+            cell.addEventListener('click', () => {
+                selectedDate = new Date(viewDate.getFullYear(), viewDate.getMonth(), i);
+                renderDays(); 
+                
+                // ALWAYS emit the date change
+                window.AppEvents.emit('JUMP_DATE', { tab: activeTabForPicker, date: new Date(selectedDate) });
+                
+                // If in "select" mode, close immediately. If "jump", stay open.
+                if (interactionMode === 'select') closeDatePicker();
+            });
+            gridDays.appendChild(cell);
+        }
+    };
+
+    const renderDrillDown = (type) => {
+        gridDrill.innerHTML = '';
+        headerBtn.classList.add('drill-open');
+        
+        if (type === 'months') {
+            headerBtn.innerHTML = `${viewDate.getFullYear()} <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-left: 2px;"><path d="m9 18 6-6-6-6"/></svg>`;
+            fullMonths.forEach((month, index) => {
+                const cell = document.createElement('div');
+                cell.className = 'cdp-drill-cell';
+                cell.textContent = month.substring(0, 3);
+                if (index === viewDate.getMonth() && viewDate.getFullYear() === selectedDate.getFullYear()) cell.classList.add('selected');
+                
+                cell.addEventListener('click', () => {
+                    viewDate.setMonth(index);
+                    switchDrillState('calendar');
+                });
+                gridDrill.appendChild(cell);
+            });
+        } else if (type === 'years') {
+            const currentYear = viewDate.getFullYear();
+            const startYear = currentYear - 4; 
+            const endYear = startYear + 11;
+            headerBtn.innerHTML = `${startYear} - ${endYear} <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-left: 2px;"><path d="m9 18 6-6-6-6"/></svg>`;
+
+            for (let y = startYear; y <= endYear; y++) {
+                const cell = document.createElement('div');
+                cell.className = 'cdp-drill-cell';
+                cell.textContent = y;
+                if (y === selectedDate.getFullYear()) cell.classList.add('selected');
+                
+                cell.addEventListener('click', () => {
+                    viewDate.setFullYear(y);
+                    switchDrillState('months');
+                });
+                gridDrill.appendChild(cell);
+            }
+        }
+    };
+
+    const switchDrillState = (state) => {
+        drillState = state;
+        viewCalendar.classList.remove('active');
+        viewDrill.classList.remove('active');
+
+        if (state === 'calendar') { viewCalendar.classList.add('active'); renderDays(); }
+        else if (state === 'months') { viewDrill.classList.add('active'); renderDrillDown('months'); }
+        else if (state === 'years') { viewDrill.classList.add('active'); renderDrillDown('years'); }
+    };
+
+    headerBtn.addEventListener('click', () => {
+        if (drillState === 'calendar') switchDrillState('months');
+        else if (drillState === 'months') switchDrillState('years');
+        else switchDrillState('calendar'); 
     });
 
-    const closeDateModal = () => { 
-        dateModal.style.display = 'none'; 
-        document.body.classList.remove('modal-open'); 
+    // --- NAVIGATION & SWIPE LOGIC ---
+    const cdpGoPrev = () => {
+        if (drillState === 'calendar') { viewDate.setMonth(viewDate.getMonth() - 1); renderDays(); }
+        else if (drillState === 'months') { viewDate.setFullYear(viewDate.getFullYear() - 1); renderDrillDown('months'); }
+        else if (drillState === 'years') { viewDate.setFullYear(viewDate.getFullYear() - 12); renderDrillDown('years'); }
     };
-    closeBtn.addEventListener('click', closeDateModal);
-    
-    confirmBtn.addEventListener('click', () => {
-        if (!dateInput.value) return;
-        const [y, m, d] = dateInput.value.split('-');
-        const targetDateObj = new Date(y, m - 1, d);
+
+    const cdpGoNext = () => {
+        if (drillState === 'calendar') { viewDate.setMonth(viewDate.getMonth() + 1); renderDays(); }
+        else if (drillState === 'months') { viewDate.setFullYear(viewDate.getFullYear() + 1); renderDrillDown('months'); }
+        else if (drillState === 'years') { viewDate.setFullYear(viewDate.getFullYear() + 12); renderDrillDown('years'); }
+    };
+
+    prevBtn?.addEventListener('click', cdpGoPrev);
+    nextBtn?.addEventListener('click', cdpGoNext);
+
+    let cdpStartX = 0;
+    let cdpStartY = 0;
+
+    datePicker.addEventListener('touchstart', (e) => {
+        cdpStartX = e.touches[0].clientX;
+        cdpStartY = e.touches[0].clientY;
+    }, { passive: true });
+
+    datePicker.addEventListener('touchend', (e) => {
+        const diffX = cdpStartX - e.changedTouches[0].clientX;
+        const diffY = Math.abs(cdpStartY - e.changedTouches[0].clientY);
+
+        // Check if the swipe was horizontal enough to trigger
+        if (Math.abs(diffX) > 40 && Math.abs(diffX) > diffY) {
+            if (diffX > 0) cdpGoNext(); // Swipe Left -> Go Next Month
+            else cdpGoPrev();           // Swipe Right -> Go Prev Month
+        }
+    }, { passive: true });
+
+
+    // --- TRIGGER & DISMISS LOGIC ---
+    const closeDatePicker = () => { 
+        datePicker.style.display = 'none'; 
+    };
+
+    window.AppEvents.on('REQUEST_DATE_PICKER', ({ tab, dateStr, mode = 'select', targetId }) => {
+        activeTabForPicker = tab;
+        interactionMode = mode;
+        isPickerOpening = true;
         
-        AppEvents.emit('JUMP_DATE', { tab: activeTabForPicker, date: targetDateObj });
-        closeDateModal();
+        if (dateStr) {
+            const [y, m, d] = dateStr.split('-');
+            selectedDate = new Date(y, m - 1, d);
+        } else {
+            selectedDate = new Date();
+        }
+        viewDate = new Date(selectedDate);
+        
+        footer.style.display = (interactionMode === 'jump') ? 'flex' : 'none';
+        
+        switchDrillState('calendar'); 
+        datePicker.style.display = 'block';
+
+        // --- DYNAMIC POSITIONING ---
+        if (targetId) {
+            const targetEl = document.getElementById(targetId);
+            if (targetEl) {
+                const rect = targetEl.getBoundingClientRect();
+                const pickerWidth = 320; 
+                const pickerHeight = 360; 
+                
+                // 1. VERTICAL: Strictly drop it BELOW the entire clicked element
+                let topPos = rect.bottom + 12; 
+                
+                // If it bleeds off the bottom of the screen, flip it ABOVE the element instead
+                if (topPos + pickerHeight > window.innerHeight) {
+                    topPos = rect.top - pickerHeight - 12;
+                }
+
+                // 2. HORIZONTAL: Perfectly center it relative to the clicked element
+                let leftPos = rect.left + (rect.width / 2) - (pickerWidth / 2);
+                
+                // 3. BOUNDARY DETECTION: Keep it on screen
+                if (leftPos + pickerWidth > window.innerWidth - 15) leftPos = window.innerWidth - pickerWidth - 15;
+                if (leftPos < 15) leftPos = 15;
+                
+                datePicker.style.top = `${topPos}px`;
+                datePicker.style.left = `${leftPos}px`;
+                datePicker.style.transform = `none`; 
+            }
+        } else {
+            datePicker.style.top = `50%`;
+            datePicker.style.left = `50%`;
+            datePicker.style.transform = `translate(-50%, -50%)`;
+        }
+        
+        setTimeout(() => isPickerOpening = false, 50);
+    });
+
+    doneBtn?.addEventListener('click', closeDatePicker);
+
+    // Global click listener to close if user taps outside the floating widget
+    document.addEventListener('pointerdown', (e) => {
+        if (!isPickerOpening && datePicker.style.display === 'block' && !datePicker.contains(e.target)) {
+            closeDatePicker();
+        }
     });
 }
 

@@ -1,5 +1,5 @@
 // =================================================================
-// 1.0 [GLOBAL UTILITIES]
+// 1.0 [GLOBAL UTILITIES & BUTTON SINGLETON]
 // =================================================================
 window.showAppToast = window.showAppToast || function(msg) {
     let toast = document.getElementById('global-toast');
@@ -38,6 +38,30 @@ window.checkUltimateCompletion = window.checkUltimateCompletion || function(date
     }
 };
 
+// Global State for Edit Mode to prevent duplication & ghosting
+let activeEditSaveFn = null;
+let globalEditDoneBtn = null;
+
+function initGlobalEditDoneBtn() {
+    if (document.getElementById('globalEditDoneBtn')) {
+        globalEditDoneBtn = document.getElementById('globalEditDoneBtn');
+        return;
+    }
+    globalEditDoneBtn = document.createElement('button');
+    globalEditDoneBtn.id = 'globalEditDoneBtn';
+    globalEditDoneBtn.className = 'mobile-edit-done-btn';
+    globalEditDoneBtn.textContent = 'DONE';
+    document.body.appendChild(globalEditDoneBtn);
+
+    const handleDone = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (activeEditSaveFn) activeEditSaveFn();
+    };
+    globalEditDoneBtn.addEventListener('mousedown', handleDone);
+    globalEditDoneBtn.addEventListener('touchstart', handleDone, { passive: false });
+}
+
 // =================================================================
 // 2.0 [INITIALIZATION & STATE]
 // =================================================================
@@ -62,11 +86,13 @@ function initTodoTab() {
 
     if (!input || !addBtn || !listEl || !dateDisplay) return;
 
+    initGlobalEditDoneBtn(); // Spawns the single global Done button
+
     // --- STATE VARIABLES ---
     let currentDate = new Date();
     let tasks = [];
     let selectedSubjectId = null;
-    let activeTrayFolderId = null; // DYNAMIC TRAY STATE
+    let activeTrayFolderId = null; 
 
     // --- DATA & DATE HELPERS ---
     const getDateKey = (date) => {
@@ -95,7 +121,6 @@ function initTodoTab() {
         return true;
     };
 
-    // V2 DATABASE PARSERS
     const getGroups = () => {
         const groups = JSON.parse(localStorage.getItem('appSubjects'));
         if (!groups || groups.length === 0) {
@@ -128,7 +153,6 @@ function initTodoTab() {
             return t;
         });
         
-        // FIX: Actually update the UI when tasks load!
         updateDateDisplay();
         if (typeof renderTasks === 'function') renderTasks();
     };
@@ -140,6 +164,28 @@ function initTodoTab() {
         } catch (e) { console.error('Storage error', e); }
     };
 
+    dateDisplay.style.cursor = 'pointer'; 
+    dateDisplay.addEventListener('click', () => {
+        const y = currentDate.getFullYear();
+        const m = String(currentDate.getMonth() + 1).padStart(2, '0');
+        const d = String(currentDate.getDate()).padStart(2, '0');
+        const activeDateStr = `${y}-${m}-${d}`;
+
+        window.AppEvents.emit('REQUEST_DATE_PICKER', {
+            tab: 'todo',
+            dateStr: activeDateStr,
+            mode: 'jump',            
+            targetId: 'todoDateNav' 
+        });
+    });
+
+    window.AppEvents.on('JUMP_DATE', ({ tab, date }) => {
+        if (tab === 'todo') {
+            currentDate = new Date(date);
+            loadTasks(); 
+        }
+    });
+
 // =================================================================
 // 3.0 [NATIVE SCROLL ENGINE (TSE)]
 // =================================================================
@@ -150,14 +196,12 @@ function initTodoTab() {
         let target = null;
         
         if (selectedSubjectId) {
-            // Find the last task belonging to the currently selected subject
             const subjectTasks = taskNodes.filter(el => {
                 const taskData = tasks.find(t => t.id === parseInt(el.dataset.taskId || el.dataset.id, 10));
                 return taskData && taskData.subjectId === selectedSubjectId;
             });
             if (subjectTasks.length > 0) target = subjectTasks[subjectTasks.length - 1];
         } else {
-            // Find the last "General" task (no subject)
             const generalTasks = taskNodes.filter(el => {
                 const taskData = tasks.find(t => t.id === parseInt(el.dataset.taskId || el.dataset.id, 10));
                 return taskData && (!taskData.subjectId || taskData.subjectId === 'null');
@@ -165,7 +209,6 @@ function initTodoTab() {
             if (generalTasks.length > 0) target = generalTasks[generalTasks.length - 1];
         }
         
-        // Fallback: If no tasks exist for this subject, scroll to the subject's header
         if (!target) {
             target = Array.from(container.querySelectorAll(isDesktop ? '.kanban-subject-header' : '.todo-subject-header'))
                           .find(el => el.dataset.subjectId === (selectedSubjectId ? selectedSubjectId : 'null'));
@@ -177,9 +220,7 @@ function initTodoTab() {
         setTimeout(() => {
             const rect = targetNode.getBoundingClientRect();
             const absoluteY = window.scrollY + rect.top;
-            // Subtract half the window height to perfectly center it on screen
             const targetY = absoluteY - (window.innerHeight / 2) + (rect.height / 2);
-            
             window.scrollTo({ top: targetY, behavior: 'smooth' });
         }, 50);
     };
@@ -188,7 +229,6 @@ function initTodoTab() {
         if (!floatUI) return;
         const nodeRect = targetNode.getBoundingClientRect();
         
-        // Calculate collision with the floating input/tray
         let uiTopEdge = floatUI.getBoundingClientRect().top;
         if (tray && tray.classList.contains('active')) {
             uiTopEdge = tray.getBoundingClientRect().top;
@@ -196,7 +236,6 @@ function initTodoTab() {
 
         const offset = nodeRect.bottom - uiTopEdge + 15;
 
-        // Scroll the window natively if the task is hiding behind the UI
         if (Math.abs(offset) > 5) {
             window.scrollBy({ top: offset, behavior: 'smooth' });
         }
@@ -204,7 +243,7 @@ function initTodoTab() {
 
     const triggerTSE = (delay = 300) => {
         clearTimeout(tseTimer);
-        window.isAutoScrolling = true; // Prevents drag-logic from misfiring during scroll
+        window.isAutoScrolling = true; 
 
         tseTimer = setTimeout(() => {
             const isDesktop = window.innerWidth >= 768;
@@ -244,7 +283,6 @@ function initTodoTab() {
         tray.innerHTML = '';
 
         if (activeTrayFolderId === null) {
-            // --- ROOT LEVEL ---
             const generalGroup = groups.find(g => g.id === 'group_default');
             if (generalGroup && generalGroup.subjects) {
                 generalGroup.subjects.forEach(sub => renderTrayPill(sub));
@@ -259,7 +297,7 @@ function initTodoTab() {
                     
                     const handleGroupClick = (e) => {
                         e.preventDefault(); e.stopPropagation();
-                        activeTrayFolderId = group.id; // DRILL DOWN
+                        activeTrayFolderId = group.id; 
                         renderSubjectTray();
                         triggerTSE(100);
                     };
@@ -269,15 +307,14 @@ function initTodoTab() {
                 }
             });
         } else {
-            // --- FOLDER LEVEL ---
             const backPill = document.createElement('div');
             backPill.className = 'todo-tint-pill';
             backPill.innerHTML = `← Back`;
             
             const handleBackClick = (e) => {
                 e.preventDefault(); e.stopPropagation();
-                activeTrayFolderId = null; // DRILL UP
-                selectedSubjectId = null; // FIX: Clear the invisible selection!
+                activeTrayFolderId = null; 
+                selectedSubjectId = null; 
                 renderSubjectTray();
                 triggerTSE(100);
             };
@@ -307,7 +344,7 @@ function initTodoTab() {
 
         const handlePillClick = (e) => {
             e.preventDefault(); e.stopPropagation(); 
-            selectedSubjectId = selectedSubjectId === sub.id ? null : sub.id; // Toggle selection
+            selectedSubjectId = selectedSubjectId === sub.id ? null : sub.id; 
             renderSubjectTray(); 
             triggerTSE(100); 
         };
@@ -317,7 +354,6 @@ function initTodoTab() {
         tray.appendChild(pill);
     };
 
-    // --- FOCUS & BLUR LOGIC ---
     if (input) {
         input.addEventListener('focus', () => { 
             if (tray) tray.classList.add('active'); 
@@ -348,7 +384,7 @@ function initTodoTab() {
     }, { passive: true });
 
 // =================================================================
-// 5.0 [TASK RENDERING]
+// 5.0 [TASK RENDERING & EDIT CORE]
 // =================================================================
     const updateMobileOrder = () => {
         if(!listEl) return;
@@ -422,6 +458,129 @@ function initTodoTab() {
         window.checkUltimateCompletion(getDateKey(currentDate).replace('todo_', ''));
     };
 
+    // --- BULLETPROOF UNIFIED EDIT LOGIC (MOBILE + PC) ---
+    const applyEditMode = (taskNode, task) => {
+        if (window.isEditingTask) return; // Hard lock prevents double-firing
+        window.isEditingTask = true;
+        
+        taskNode.classList.add('is-editing');
+        if (globalEditDoneBtn) globalEditDoneBtn.classList.add('active');
+
+        window.isAutoScrolling = true;
+        taskNode.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        setTimeout(() => window.isAutoScrolling = false, 800);
+
+        const textSpan = taskNode.querySelector('.todo-text');
+        const wrapper = document.createElement('div');
+        wrapper.className = 'todo-edit-wrapper';
+        wrapper.style.flex = '1';
+        wrapper.style.minWidth = '0';
+        wrapper.style.display = 'flex';
+        
+        const editInput = document.createElement('textarea');
+        editInput.value = task.text; 
+        editInput.className = 'todo-edit-input';
+        editInput.style.width = '100%';
+        editInput.setAttribute('autocomplete', 'off');
+        editInput.setAttribute('spellcheck', 'false');
+        
+        wrapper.appendChild(editInput);
+        textSpan.replaceWith(wrapper); 
+        
+        requestAnimationFrame(() => {
+            editInput.style.height = 'auto';
+            editInput.style.height = (editInput.scrollHeight) + 'px';
+        });
+
+        editInput.addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = (this.scrollHeight) + 'px';
+        });
+
+        editInput.focus();
+        editInput.setSelectionRange(editInput.value.length, editInput.value.length);
+
+        let tomoBtn = null;
+        if (task.status !== 'done') {
+            tomoBtn = document.createElement('button');
+            tomoBtn.className = 'shift-tomorrow-popup'; 
+            tomoBtn.innerHTML = 'Tomorrow ➔';
+            taskNode.appendChild(tomoBtn);
+        }
+
+        let isSaving = false;
+
+        // The centralized save/exit function
+        activeEditSaveFn = () => {
+            if (isSaving) return;
+            isSaving = true;
+
+            // Start CSS Exit Animations
+            if (globalEditDoneBtn) globalEditDoneBtn.classList.remove('active');
+            if (tomoBtn) tomoBtn.classList.add('closing');
+            editInput.blur(); // Force mobile keyboard to drop
+
+            // Wait 300ms for animations to finish before nuking DOM
+            setTimeout(() => {
+                window.isEditingTask = false;
+                activeEditSaveFn = null; // Clear closure lock
+                
+                const newText = editInput.value.trim();
+                if (newText) { task.text = newText; saveTasks(); }
+                renderTasks(); 
+            }, 300);
+        };
+
+        if (tomoBtn) {
+            const shiftAction = (e) => {
+                e.preventDefault();
+                if (isSaving) return;
+                isSaving = true;
+
+                if (globalEditDoneBtn) globalEditDoneBtn.classList.remove('active');
+                tomoBtn.classList.add('closing');
+                editInput.blur();
+
+                setTimeout(() => {
+                    tasks = tasks.filter(t => t.id !== task.id);
+                    
+                    const tomorrow = new Date(currentDate);
+                    tomorrow.setDate(tomorrow.getDate() + 1);
+                    const targetKey = getDateKey(tomorrow);
+                    
+                    const targetTasks = JSON.parse(localStorage.getItem(targetKey)) || [];
+                    task.status = 'todo'; 
+                    const newText = editInput.value.trim();
+                    if (newText) task.text = newText;
+
+                    targetTasks.unshift(task); 
+                    localStorage.setItem(targetKey, JSON.stringify(targetTasks));
+                    
+                    saveTasks();
+                    window.isEditingTask = false;
+                    activeEditSaveFn = null;
+                    renderTasks(); 
+                    window.checkUltimateCompletion(getDateKey(currentDate).replace('todo_', ''));
+                }, 300);
+            };
+            tomoBtn.addEventListener('mousedown', shiftAction);
+            tomoBtn.addEventListener('touchstart', shiftAction, { passive: false });
+        }
+
+        editInput.addEventListener('blur', () => {
+            setTimeout(() => {
+                if (activeEditSaveFn && !isSaving) activeEditSaveFn();
+            }, 100);
+        });
+        
+        editInput.addEventListener('keydown', (e) => { 
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                if (activeEditSaveFn && !isSaving) activeEditSaveFn();
+            }
+        });
+    };
+
     const renderTasks = () => {
         if (listEl) listEl.innerHTML = '';
         if (pcTodo) pcTodo.innerHTML = '';
@@ -433,7 +592,6 @@ function initTodoTab() {
             return;
         }
 
-        // Dynamically pull the flattened V2 subjects list
         const subjectsList = [{ id: null, name: 'General', color: '#888888' }, ...getSubjects()];
 
         // --- MOBILE RENDER ---
@@ -455,12 +613,7 @@ function initTodoTab() {
                     li.dataset.taskId = task.id; 
                     
                     li.innerHTML = `
-                        <div class="todo-checkbox ${task.status}">
-                            <svg viewBox="0 0 24 24" class="checkbox-svg">
-                                <line x1="6" y1="12" x2="18" y2="12" class="dash-line"></line>
-                                <polyline points="20 6 9 17 4 12" class="tick-path"></polyline>
-                            </svg>
-                        </div>
+                        <div class="todo-checkbox ${task.status}"></div>
                         <span class="todo-text">${task.text}</span>
                         <button class="todo-delete">×</button>
                     `;
@@ -487,108 +640,6 @@ function initTodoTab() {
                             window.checkUltimateCompletion(getDateKey(currentDate).replace('todo_', '')); 
                         }
                     });
-
-                    const textSpan = li.querySelector('.todo-text');
-                    const openEditMode = () => {
-                        const taskNode = li;
-                        if (taskNode.querySelector('.todo-edit-wrapper')) return; 
-                        
-                        taskNode.classList.add('is-editing'); 
-                        window.isEditingTask = true; 
-
-                        window.isAutoScrolling = true;
-                        taskNode.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                        setTimeout(() => window.isAutoScrolling = false, 800);
-
-                        const wrapper = document.createElement('div');
-                        wrapper.className = 'todo-edit-wrapper';
-                        wrapper.style.flex = '1';
-                        wrapper.style.minWidth = '0';
-                        wrapper.style.display = 'flex';
-                        
-                        const editInput = document.createElement('textarea');
-                        editInput.value = task.text; 
-                        editInput.className = 'todo-edit-input';
-                        editInput.style.width = '100%';
-                        editInput.setAttribute('autocomplete', 'off');
-                        editInput.setAttribute('spellcheck', 'false');
-                        
-                        wrapper.appendChild(editInput);
-                        textSpan.replaceWith(wrapper); 
-                        
-                        requestAnimationFrame(() => {
-                            editInput.style.height = 'auto';
-                            editInput.style.height = (editInput.scrollHeight) + 'px';
-                        });
-
-                        editInput.addEventListener('input', function() {
-                            this.style.height = 'auto';
-                            this.style.height = (this.scrollHeight) + 'px';
-                        });
-
-                        editInput.focus();
-                        editInput.setSelectionRange(editInput.value.length, editInput.value.length);
-
-                        let tomoBtn = null;
-                        if (task.status !== 'done') {
-                            tomoBtn = document.createElement('button');
-                            tomoBtn.className = 'shift-tomorrow-popup'; 
-                            tomoBtn.innerHTML = 'Tomorrow ➔';
-                            
-                            const shiftAction = (e) => {
-                                e.preventDefault(); 
-                                window.isEditingTask = false;
-                                tasks = tasks.filter(t => t.id !== task.id);
-                                saveTasks();
-                                
-                                const tomorrow = new Date(currentDate);
-                                tomorrow.setDate(tomorrow.getDate() + 1);
-                                const targetKey = getDateKey(tomorrow);
-                                
-                                const targetTasks = JSON.parse(localStorage.getItem(targetKey)) || [];
-                                task.status = 'todo'; 
-                                targetTasks.unshift(task); 
-                                localStorage.setItem(targetKey, JSON.stringify(targetTasks));
-                                
-                                taskNode.classList.remove('is-editing');
-                                renderTasks(); 
-                                window.checkUltimateCompletion(getDateKey(currentDate).replace('todo_', ''));
-                            };
-                            tomoBtn.addEventListener('mousedown', shiftAction);
-                            tomoBtn.addEventListener('touchstart', shiftAction, { passive: false });
-                            
-                            taskNode.appendChild(tomoBtn); 
-                        }
-                        
-                        const saveEdit = () => {
-                            const executeClose = () => {
-                                window.isEditingTask = false; 
-                                taskNode.classList.remove('is-editing');
-                                if (tomoBtn && tomoBtn.parentNode) tomoBtn.remove();
-                                const newText = editInput.value.trim();
-                                if (newText) { task.text = newText; saveTasks(); }
-                                renderTasks();
-                            };
-
-                            if (tomoBtn && tomoBtn.parentNode) {
-                                tomoBtn.classList.add('closing');
-                                setTimeout(executeClose, 250);
-                            } else {
-                                executeClose();
-                            }
-                        };
-                        
-                        editInput.addEventListener('blur', saveEdit);
-                        editInput.addEventListener('keydown', (e) => { 
-                            if (e.key === 'Enter' && !e.shiftKey) {
-                                const isTouch = window.matchMedia("(pointer: coarse)").matches;
-                                if (!isTouch) {
-                                    e.preventDefault();
-                                    editInput.blur(); 
-                                }
-                            }
-                        });
-                    };
 
                     let holdTimer = null; 
                     let singleTapTimer = null;
@@ -707,7 +758,7 @@ function initTodoTab() {
                             } else if (tapCount === 2) {
                                 clearTimeout(singleTapTimer);
                                 tapCount = 0;
-                                openEditMode(); 
+                                applyEditMode(li, task); 
                             }
                         }
                     });
@@ -736,7 +787,7 @@ function initTodoTab() {
                             }, 250); 
                         } else if (e.detail === 2) { 
                             clearTimeout(pcClickTimer); 
-                            openEditMode(); 
+                            applyEditMode(li, task); 
                         }
                     });
 
@@ -771,12 +822,7 @@ function initTodoTab() {
                     pcCard.dataset.sourceStatus = task.status; 
 
                     pcCard.innerHTML = `
-                        <div class="todo-checkbox ${task.status}">
-                            <svg viewBox="0 0 24 24" class="checkbox-svg">
-                                <line x1="6" y1="12" x2="18" y2="12" class="dash-line"></line>
-                                <polyline points="20 6 9 17 4 12" class="tick-path"></polyline>
-                            </svg>
-                        </div>
+                        <div class="todo-checkbox ${task.status}"></div>
                         <span class="todo-text">${task.text}</span>
                         <button class="todo-delete">×</button>
                     `;
@@ -795,108 +841,7 @@ function initTodoTab() {
                     });
 
                     const textSpan = pcCard.querySelector('.todo-text');
-                    
-                    textSpan.addEventListener('dblclick', () => {
-                        const taskNode = pcCard;
-                        if (taskNode.querySelector('.todo-edit-wrapper')) return; 
-                        taskNode.draggable = false; 
-                        
-                        taskNode.classList.add('is-editing'); 
-                        window.isEditingTask = true; 
-
-                        window.isAutoScrolling = true;
-                        taskNode.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                        setTimeout(() => window.isAutoScrolling = false, 800);
-
-                        const wrapper = document.createElement('div');
-                        wrapper.className = 'todo-edit-wrapper';
-                        wrapper.style.flex = '1';
-                        wrapper.style.minWidth = '0';
-                        wrapper.style.display = 'flex';
-                        
-                        const editInput = document.createElement('textarea');
-                        editInput.value = task.text; 
-                        editInput.className = 'todo-edit-input';
-                        editInput.style.width = '100%';
-                        editInput.setAttribute('autocomplete', 'off');
-                        editInput.setAttribute('spellcheck', 'false');
-                        
-                        wrapper.appendChild(editInput);
-                        textSpan.replaceWith(wrapper); 
-                        
-                        requestAnimationFrame(() => {
-                            editInput.style.height = 'auto';
-                            editInput.style.height = (editInput.scrollHeight) + 'px';
-                        });
-
-                        editInput.addEventListener('input', function() {
-                            this.style.height = 'auto';
-                            this.style.height = (this.scrollHeight) + 'px';
-                        });
-
-                        editInput.focus();
-                        editInput.setSelectionRange(editInput.value.length, editInput.value.length);
-
-                        let tomoBtn = null;
-                        if (task.status !== 'done') {
-                            tomoBtn = document.createElement('button');
-                            tomoBtn.className = 'shift-tomorrow-popup'; 
-                            tomoBtn.innerHTML = 'Tomorrow ➔';
-                            
-                            const shiftAction = (e) => {
-                                e.preventDefault(); 
-                                window.isEditingTask = false;
-                                tasks = tasks.filter(t => t.id !== task.id);
-                                saveTasks();
-                                
-                                const tomorrow = new Date(currentDate);
-                                tomorrow.setDate(tomorrow.getDate() + 1);
-                                const targetKey = getDateKey(tomorrow);
-                                
-                                const targetTasks = JSON.parse(localStorage.getItem(targetKey)) || [];
-                                task.status = 'todo'; 
-                                targetTasks.unshift(task); 
-                                localStorage.setItem(targetKey, JSON.stringify(targetTasks));
-                                
-                                taskNode.classList.remove('is-editing');
-                                renderTasks(); 
-                                window.checkUltimateCompletion(getDateKey(currentDate).replace('todo_', ''));
-                            };
-                            tomoBtn.addEventListener('mousedown', shiftAction);
-                            tomoBtn.addEventListener('touchstart', shiftAction, { passive: false });
-                            
-                            taskNode.appendChild(tomoBtn); 
-                        }
-                        
-                        const saveEdit = () => {
-                            const executeClose = () => {
-                                window.isEditingTask = false;
-                                taskNode.classList.remove('is-editing');
-                                if (tomoBtn && tomoBtn.parentNode) tomoBtn.remove();
-                                const newText = editInput.value.trim();
-                                if (newText) { task.text = newText; saveTasks(); }
-                                renderTasks();
-                            };
-
-                            if (tomoBtn && tomoBtn.parentNode) {
-                                tomoBtn.classList.add('closing');
-                                setTimeout(executeClose, 250);
-                            } else {
-                                executeClose();
-                            }
-                        };
-                        
-                        editInput.addEventListener('blur', saveEdit);
-                        editInput.addEventListener('keydown', (e) => { 
-                            if (e.key === 'Enter' && !e.shiftKey) {
-                                const isTouch = window.matchMedia("(pointer: coarse)").matches;
-                                if (!isTouch) {
-                                    e.preventDefault();
-                                    editInput.blur(); 
-                                }
-                            }
-                        });
-                    });
+                    textSpan.addEventListener('dblclick', () => applyEditMode(pcCard, task));
 
                     pcCard.querySelector('.todo-checkbox').addEventListener('click', (e) => {
                         e.stopPropagation();
@@ -1073,7 +1018,6 @@ function initTodoTab() {
         currentDate.setDate(currentDate.getDate() + days); 
         loadTasks(); 
         
-        // FIX: Instantly reset scroll to prevent the browser from panic-snapping the header
         window.scrollTo(0, 0);
         const scrollContainer = document.getElementById('todoSwipeContainer');
         if (scrollContainer) scrollContainer.scrollTop = 0;
@@ -1082,21 +1026,12 @@ function initTodoTab() {
     if (prevBtn) prevBtn.addEventListener('click', () => changeDate(-1));
     if (nextBtn) nextBtn.addEventListener('click', () => changeDate(1));
 
-    if (dateDisplay) {
-        dateDisplay.addEventListener('click', () => {
-            if(window.AppEvents) AppEvents.emit('REQUEST_DATE_PICKER', { tab: 'todo', dateStr: getDateKey(currentDate).replace('todo_', '') });
-        });
-    }
-
-    // --- DAY SWIPE NAVIGATION ENGINE ---
     let dateSwipeStartX = 0;
     let dateSwipeStartY = 0;
     const todoTab = document.getElementById('tab-todo');
     
-    // 1. Global Screen Swipe (Ignores Inputs/Navs)
     if (todoTab) {
         todoTab.addEventListener('touchstart', (e) => {
-            // Ignore if swiping inside the text input, tray, or bottom navigation
             if (e.target.closest('.todo-input-wrapper') || e.target.closest('.bottom-nav') || e.target.closest('.todo-subject-tray')) return;
             dateSwipeStartX = e.touches[0].clientX;
             dateSwipeStartY = e.touches[0].clientY;
@@ -1108,18 +1043,16 @@ function initTodoTab() {
             const diffX = dateSwipeStartX - e.changedTouches[0].clientX;
             const diffY = Math.abs(dateSwipeStartY - e.changedTouches[0].clientY);
 
-            // Trigger only if horizontal swipe is > 60px and dominant over vertical scrolling
             if (Math.abs(diffX) > 60 && Math.abs(diffX) > diffY * 1.5) {
                 if (diffX > 0) {
-                    changeDate(1); // Swiped Left -> Next Day
+                    changeDate(1); 
                 } else {
-                    changeDate(-1); // Swiped Right -> Prev Day
+                    changeDate(-1); 
                 }
             }
         }, { passive: true });
     }
 
-    // 2. Specific Date Pill Swipe
     const datePillWrapper = dateDisplay ? dateDisplay.parentElement : null;
     if (datePillWrapper) {
         datePillWrapper.addEventListener('touchstart', (e) => {
@@ -1131,7 +1064,6 @@ function initTodoTab() {
             const diffX = dateSwipeStartX - e.changedTouches[0].clientX;
             const diffY = Math.abs(dateSwipeStartY - e.changedTouches[0].clientY);
 
-            // Lower threshold (40px) specifically for swiping the pill itself
             if (Math.abs(diffX) > 40 && Math.abs(diffX) > diffY) { 
                 if (diffX > 0) changeDate(1);
                 else changeDate(-1);
@@ -1150,7 +1082,6 @@ function initTodoTab() {
         });
     }
 
-    // --- INITIALIZE TAB ---
     setupKanbanDropzones();
     renderSubjectTray();
     loadTasks();

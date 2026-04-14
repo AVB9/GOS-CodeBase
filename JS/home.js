@@ -144,6 +144,29 @@ function setupGoalModal() {
             alert('Please enter both a goal name and a target date.');
         }
     });
+
+    // --- NEW: CONNECT TO COMPACT DATE PICKER ---
+    if (goalDateInput) {
+        goalDateInput.addEventListener('click', () => {
+            const currentDateStr = goalDateInput.value || ''; 
+            window.AppEvents.emit('REQUEST_DATE_PICKER', { 
+                tab: 'goal-modal', 
+                dateStr: currentDateStr,
+                mode: 'select', 
+                targetId: 'goalDateInput' 
+            });
+        });
+    }
+
+    // Listen for the date returning from the picker
+    window.AppEvents.on('JUMP_DATE', ({ tab, date }) => {
+        if (tab === 'goal-modal' && goalDateInput) {
+            const y = date.getFullYear();
+            const m = String(date.getMonth() + 1).padStart(2, '0');
+            const d = String(date.getDate()).padStart(2, '0');
+            goalDateInput.value = `${y}-${m}-${d}`;
+        }
+    });
 }
 
 // -----------------------------------------------------------------
