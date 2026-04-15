@@ -214,7 +214,6 @@ function setupSubjectManager() {
     if (!manageBtn || !modal || !pillTray || !listContainer) return;
 
     // --- UX UPGRADE: SMART TRANSITION BUTTONS ---
-    // We inject a hidden span that will smoothly expand when typing
     if (doneBtn) doneBtn.innerHTML = '<span class="dynamic-add-text">Add & </span>Save';
     if (closeGroupBtn) closeGroupBtn.innerHTML = '<span class="dynamic-add-text">Add & </span>Save';
 
@@ -232,7 +231,6 @@ function setupSubjectManager() {
             if (pillTray) pillTray.classList.remove('active'); 
         });
 
-        // UX UPGRADE: Toggle "Add & Save" visibility smoothly
         nameInput.addEventListener('input', () => {
             const addText = doneBtn?.querySelector('.dynamic-add-text');
             if (addText) {
@@ -243,7 +241,6 @@ function setupSubjectManager() {
     }
 
     if (groupNameInput) {
-        // UX UPGRADE: Toggle "Add & Save" visibility smoothly
         groupNameInput.addEventListener('input', () => {
             const addText = closeGroupBtn?.querySelector('.dynamic-add-text');
             if (addText) {
@@ -302,7 +299,6 @@ function setupSubjectManager() {
         editingGroupId = null;
         groupNameInput.value = '';
         
-        // UX Reset
         const addText = closeGroupBtn?.querySelector('.dynamic-add-text');
         if (addText) addText.classList.remove('show');
         
@@ -344,7 +340,6 @@ function setupSubjectManager() {
                 editingGroupId = group.id;
                 groupNameInput.value = group.name;
                 
-                // UX Edit Trigger
                 const addText = closeGroupBtn?.querySelector('.dynamic-add-text');
                 if (addText) addText.classList.add('show');
                 
@@ -399,10 +394,8 @@ function setupSubjectManager() {
         };
     }
 
-    // GROUP MANAGER DONE & CANCEL LOGIC
     if (closeGroupBtn) {
         closeGroupBtn.onclick = () => {
-            // UX UPGRADE: If there's text waiting, add it before closing
             if (groupNameInput && groupNameInput.value.trim()) {
                 executeAddGroup();
             }
@@ -410,7 +403,7 @@ function setupSubjectManager() {
             if (lastModifiedGroupId) { activeGroupId = lastModifiedGroupId; lastModifiedGroupId = null; }
             renderManager();
             setTimeout(() => nameInput.focus(), 100);
-            resetGroupEditMode(); // UX Reset
+            resetGroupEditMode(); 
         };
     }
 
@@ -474,7 +467,8 @@ function setupSubjectManager() {
             pill.addEventListener('mousedown', (e) => e.preventDefault());
             pill.addEventListener('touchstart', (e) => e.preventDefault(), { passive: false });
 
-            pill.addEventListener('click', (e) => {
+            // MOBILE FIX: Added unified handler for click AND touchend
+            const handleGroupTap = (e) => {
                 e.preventDefault(); e.stopPropagation();
                 
                 const now = Date.now();
@@ -488,7 +482,10 @@ function setupSubjectManager() {
                     else { activeGroupId = 'group_default'; }
                     renderManager(); 
                 }
-            });
+            };
+            
+            pill.addEventListener('click', handleGroupTap);
+            pill.addEventListener('touchend', handleGroupTap); 
             
             pillTray.appendChild(pill);
         });
@@ -505,16 +502,19 @@ function setupSubjectManager() {
         addPill.addEventListener('mousedown', (e) => e.preventDefault());
         addPill.addEventListener('touchstart', (e) => e.preventDefault(), { passive: false });
 
-        addPill.addEventListener('click', (e) => {
+        // MOBILE FIX: Added unified handler for click AND touchend
+        const handleAddGroupTap = (e) => {
             e.preventDefault(); e.stopPropagation();
             resetGroupEditMode();
-            
             groupManagerSnapshot = JSON.stringify(getNestedSubjects()); 
-            
             renderGroupManager();
             groupModal.style.display = 'flex';
             setTimeout(() => groupNameInput.focus(), 100);
-        });
+        };
+
+        addPill.addEventListener('click', handleAddGroupTap);
+        addPill.addEventListener('touchend', handleAddGroupTap);
+
         pillTray.appendChild(addPill);
 
         // 2. RENDER UNIFIED PILL LIST
@@ -595,7 +595,6 @@ function setupSubjectManager() {
                         colorInput.value = sub.color;
                         if (colorWrapper) colorWrapper.style.backgroundColor = sub.color;
                         
-                        // UX Edit Trigger
                         const addText = doneBtn?.querySelector('.dynamic-add-text');
                         if (addText) addText.classList.add('show');
                         
@@ -618,7 +617,6 @@ function setupSubjectManager() {
         editingSubjectId = null;
         nameInput.value = '';
         
-        // UX Reset
         const addText = doneBtn?.querySelector('.dynamic-add-text');
         if (addText) addText.classList.remove('show');
         
@@ -658,13 +656,12 @@ function setupSubjectManager() {
     // SUBJECT MANAGER DONE & CANCEL LOGIC
     if (doneBtn) {
         doneBtn.onclick = () => {
-            // UX UPGRADE: If there's text waiting, add it before closing
             if (nameInput && nameInput.value.trim()) {
                 executeAddSubject();
             }
             modal.style.display = 'none'; 
             if (window.AppEvents) AppEvents.emit('SUBJECTS_UPDATED');
-            resetEditMode(); // Reset
+            resetEditMode(); 
         };
     }
 
@@ -745,7 +742,6 @@ function setupSubjectManager() {
         saveNestedSubjects(groups);
         nameInput.value = '';
         
-        // UX Reset after add
         const addText = doneBtn?.querySelector('.dynamic-add-text');
         if (addText) addText.classList.remove('show');
 
