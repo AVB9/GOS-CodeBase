@@ -226,9 +226,12 @@ function setupSubjectManager() {
         });
         
         nameInput.addEventListener('blur', () => {
-            const bottomNav = document.getElementById('bottomNav');
-            if (bottomNav) bottomNav.style.display = 'flex'; 
-            if (pillTray) pillTray.classList.remove('active'); 
+            // FIX 1: Delay the blur hide so mobile taps have time to register!
+            setTimeout(() => {
+                const bottomNav = document.getElementById('bottomNav');
+                if (bottomNav) bottomNav.style.display = 'flex'; 
+                if (pillTray) pillTray.classList.remove('active'); 
+            }, 250); 
         });
 
         nameInput.addEventListener('input', () => {
@@ -434,14 +437,12 @@ function setupSubjectManager() {
         };
     }
 
-
     // --- MAIN SUBJECT MANAGER LOGIC ---
     const renderManager = () => {
         const groups = getNestedSubjects();
         pillTray.innerHTML = '';
         listContainer.innerHTML = '';
 
-        // 1. RENDER SGT (GROUP TRAY)
         groups.forEach(group => {
             if (group.id === 'group_default') return; 
 
@@ -464,11 +465,10 @@ function setupSubjectManager() {
                 pill.style.color = 'var(--color-primary)';
             }
 
-            pill.addEventListener('mousedown', (e) => e.preventDefault());
-            pill.addEventListener('touchstart', (e) => e.preventDefault(), { passive: false });
+            // FIX 2: Use pointerdown to lock focus on mobile
+            pill.addEventListener('pointerdown', (e) => e.preventDefault());
 
-            // MOBILE FIX: Added unified handler for click AND touchend
-            const handleGroupTap = (e) => {
+            pill.addEventListener('click', (e) => {
                 e.preventDefault(); e.stopPropagation();
                 
                 const now = Date.now();
@@ -482,10 +482,7 @@ function setupSubjectManager() {
                     else { activeGroupId = 'group_default'; }
                     renderManager(); 
                 }
-            };
-            
-            pill.addEventListener('click', handleGroupTap);
-            pill.addEventListener('touchend', handleGroupTap); 
+            });
             
             pillTray.appendChild(pill);
         });
@@ -499,21 +496,17 @@ function setupSubjectManager() {
         addPill.style.flexShrink = '0';
         addPill.style.display = 'block';
         
-        addPill.addEventListener('mousedown', (e) => e.preventDefault());
-        addPill.addEventListener('touchstart', (e) => e.preventDefault(), { passive: false });
+        // FIX 2: Use pointerdown to lock focus on mobile
+        addPill.addEventListener('pointerdown', (e) => e.preventDefault());
 
-        // MOBILE FIX: Added unified handler for click AND touchend
-        const handleAddGroupTap = (e) => {
+        addPill.addEventListener('click', (e) => {
             e.preventDefault(); e.stopPropagation();
             resetGroupEditMode();
             groupManagerSnapshot = JSON.stringify(getNestedSubjects()); 
             renderGroupManager();
             groupModal.style.display = 'flex';
             setTimeout(() => groupNameInput.focus(), 100);
-        };
-
-        addPill.addEventListener('click', handleAddGroupTap);
-        addPill.addEventListener('touchend', handleAddGroupTap);
+        });
 
         pillTray.appendChild(addPill);
 
@@ -653,7 +646,6 @@ function setupSubjectManager() {
         modal.style.display = 'flex'; 
     });
     
-    // SUBJECT MANAGER DONE & CANCEL LOGIC
     if (doneBtn) {
         doneBtn.onclick = () => {
             if (nameInput && nameInput.value.trim()) {
@@ -694,7 +686,6 @@ function setupSubjectManager() {
         colorInput.addEventListener('input', (e) => colorWrapper.style.backgroundColor = e.target.value);
     }
 
-    // --- BULLETPROOF SFI ADD / EDIT LOGIC ---
     if (actionIcon) actionIcon.style.pointerEvents = 'none';
 
     const executeAddSubject = (e) => {

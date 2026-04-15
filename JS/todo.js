@@ -363,13 +363,22 @@ function initTodoTab() {
         input.addEventListener('click', () => { if (tray) tray.classList.add('active'); });
     }
 
-    document.addEventListener('mousedown', (e) => {
+    // --- BULLETPROOF OUTSIDE-CLICK LISTENER ---
+    document.addEventListener('pointerdown', (e) => {
         if (!input) return;
-        if (e.target === input || input.contains(e.target)) return; 
-        if (tray && (e.target === tray || tray.contains(e.target))) return; 
         
-        if (document.activeElement === input) input.blur();
-        if (tray && tray.classList.contains('active')) tray.classList.remove('active');
+        // 1. If the user is tapping inside the Input Group or the Tray, do nothing. Let them type/tap!
+        if (e.target.closest('.todo-input-group') || e.target.closest('.todo-subject-tray')) {
+            return;
+        }
+        
+        // 2. If the user tapped ANYWHERE else, safely remove focus and close the tray.
+        if (document.activeElement === input) {
+            input.blur();
+        }
+        if (tray && tray.classList.contains('active')) {
+            tray.classList.remove('active');
+        }
     });
 
     document.addEventListener('touchstart', (e) => {
