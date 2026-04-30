@@ -1,17 +1,35 @@
 // =================================================================
 // 1.0 [FIREBASE KERNEL & CONFIG]
 // =================================================================
-const firebaseConfig = {
-    apiKey: "AIzaSyAxX3iJr--KNulCnYXqpqe6eew8_0A7lEw",
-    authDomain: "gos-backend.firebaseapp.com",
-    projectId: "gos-backend",
-    storageBucket: "gos-backend.firebasestorage.app",
-    messagingSenderId: "806581425030",
-    appId: "1:806581425030:web:4d0d607772f11d03431207",
-    measurementId: "G-12LLL4M7EL"
+// ⚠️ SECURITY: Firebase config is loaded from JS/config.js
+// API keys should be set via environment variables, not hardcoded here
+// See JS/config.js for security setup instructions
+
+// Dynamic config loading with fallback
+const firebaseConfig = window.firebaseConfig || {
+    apiKey: "",
+    authDomain: "",
+    projectId: "",
+    storageBucket: "",
+    messagingSenderId: "",
+    appId: "",
+    measurementId: ""
 };
 
-if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+// Validate config before initializing
+if (!firebaseConfig.apiKey || !firebaseConfig.projectId) {
+    console.error(
+        'Firebase configuration incomplete. Set environment variables: VITE_FIREBASE_* in .env file'
+    );
+}
+
+if (!firebase.apps.length) {
+    try {
+        firebase.initializeApp(firebaseConfig);
+    } catch (error) {
+        console.error('Firebase initialization failed:', error);
+    }
+}
 const auth = firebase.auth();
 const db = firebase.firestore();
 
@@ -22,7 +40,38 @@ window.hasInitialSyncCompleted = false;
 window.syncTimeout = null;
 
 let realTimeListener = null;
-let authPromise = null; 
+let authPromise = null;
+
+// ===== SYNC QUEUE MANAGEMENT (FIX: Race Condition) =====
+const syncQueue = {
+    isPending: false,
+    queue: [],
+    
+    add(fn) {
+        this.queue.push(fn);
+        this.process();
+    },
+    
+    async process() {
+        if (this.isPending || this.queue.length === 0) return;
+        this.isPending = true;
+        
+        while (this.queue.length > 0) {
+            const fn = this.queue.shift();
+            try {
+                await fn();
+            } catch (e) {
+                console.error('[Sync Queue] Error:', e);
+            }
+        }
+        this.isPending = false;
+    },
+    
+    clear() {
+        this.queue = [];
+        this.isPending = false;
+    }
+}; 
 
 const SYNC_CONFIG = {
     staticKeys: [
@@ -90,7 +139,21 @@ const AppDB = {
     },
 
     localWipeAndReload() {
-        if (realTimeListener) { realTimeListener(); realTimeListener = null; }
+        // FIX: Properly unsubscribe real-time listener to prevent memory leak
+        if (realTimeListener) {
+            try {
+                realTimeListener(); // Call unsubscribe function
+                realTimeListener = null;
+            } catch (e) {
+                console.warn('[DB] Listener cleanup error:', e);
+                realTimeListener = null;
+            }
+        }
+        
+        // Clear sync queue to avoid pending operations
+        syncQueue.clear();
+        
+        // Clear all local data
         SYNC_CONFIG.staticKeys.forEach(k => localStorage.removeItem(k));
         const keysToRemove = [];
         for (let i = 0; i < localStorage.length; i++) {
@@ -117,8 +180,9 @@ const AppDB = {
     async updatePassword(newPassword) { if (this.session) await this.session.updatePassword(newPassword); },
 
     async pushToCloud() {
-        if (!this.session || !window.hasInitialSyncCompleted) return;
-        this.forcePushToCloud();
+        // FIX: Queue sync operations to prevent race conditions
+        if (!this.session) return;
+        syncQueue.add(() => this.forcePushToCloud());
     },
 
     async forcePushToCloud() {
@@ -162,7 +226,17 @@ const AppDB = {
     },
 
     startRealTimeSync() {
-        if (!this.session || realTimeListener) return;
+        // FIX: Prevent multiple listeners from accumulating
+        if (!this.session) return;
+        
+        // Unsubscribe old listener if it exists
+        if (realTimeListener) {
+            try {
+                realTimeListener();
+            } catch (e) {}
+        }
+        
+        realTimeListener = null; // Reset before creating new listener
 
         realTimeListener = db.collection('users').doc(this.session.uid)
             .onSnapshot((doc) => {
@@ -227,7 +301,7 @@ const AppDB = {
                         window.AppEvents.emit('SUBJECTS_UPDATED');
                         window.AppEvents.emit('PLANNER_UPDATED');
                         window.AppEvents.emit('DATE_CHANGE', { tab: 'todo', direction: 0 });
-                        window.AppEvents.emit('DATE_CHANGE', { tab: 'journal', direction: 0 });
+                        // FIX: Removed non-existent 'journal' tab reference
                         window.AppEvents.emit('MOMENTUM_SYNCED'); 
                     }
                     if (typeof window.forcePlannerRefresh === 'function') window.forcePlannerRefresh();

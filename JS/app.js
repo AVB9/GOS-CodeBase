@@ -122,7 +122,8 @@ function initNavigation() {
 
     if (!navButtons.length || !tabs.length) return;
 
-    const tabOrder = ['tab-journal', 'tab-planner', 'tab-home', 'tab-todo', 'tab-settings'];
+    // Fixed: Removed 'tab-journal' which doesn't exist in HTML
+    const tabOrder = ['tab-momentum', 'tab-planner', 'tab-home', 'tab-todo', 'tab-settings'];
 
     navButtons.forEach(button => {
         button.addEventListener('click', (event) => {
@@ -390,9 +391,8 @@ function initDateGesturesAndModals() {
     };
 
     attachSwipe(document.getElementById('tab-todo'), 'todo', () => isGlobalSwipeEnabled);
-    attachSwipe(document.getElementById('tab-journal'), 'journal', () => isGlobalSwipeEnabled);
+    attachSwipe(document.getElementById('tab-momentum'), 'momentum', () => isGlobalSwipeEnabled);
     attachSwipe(document.getElementById('todoDateNav'), 'todo');
-    attachSwipe(document.getElementById('journalDateNav'), 'journal');
 
     
 // --- COMPACT DATE PICKER LOGIC ---
@@ -567,7 +567,7 @@ function initDateGesturesAndModals() {
         switchDrillState('calendar'); 
         datePicker.style.display = 'block';
 
-        // --- DYNAMIC POSITIONING ---
+        // --- DYNAMIC POSITIONING (FIX: Account for scrolling & transforms) ---
         if (targetId) {
             const targetEl = document.getElementById(targetId);
             if (targetEl) {
@@ -575,26 +575,36 @@ function initDateGesturesAndModals() {
                 const pickerWidth = 320; 
                 const pickerHeight = 360; 
                 
+                // Account for scroll position (getBoundingClientRect is relative to viewport)
+                const scrollX = window.scrollX || window.pageXOffset;
+                const scrollY = window.scrollY || window.pageYOffset;
+                
                 // 1. VERTICAL: Strictly drop it BELOW the entire clicked element
-                let topPos = rect.bottom + 12; 
+                let topPos = rect.bottom + scrollY + 12; 
                 
                 // If it bleeds off the bottom of the screen, flip it ABOVE the element instead
-                if (topPos + pickerHeight > window.innerHeight) {
-                    topPos = rect.top - pickerHeight - 12;
+                if (topPos - scrollY + pickerHeight > window.innerHeight) {
+                    topPos = rect.top + scrollY - pickerHeight - 12;
                 }
 
                 // 2. HORIZONTAL: Perfectly center it relative to the clicked element
-                let leftPos = rect.left + (rect.width / 2) - (pickerWidth / 2);
+                let leftPos = rect.left + scrollX + (rect.width / 2) - (pickerWidth / 2);
                 
                 // 3. BOUNDARY DETECTION: Keep it on screen
-                if (leftPos + pickerWidth > window.innerWidth - 15) leftPos = window.innerWidth - pickerWidth - 15;
-                if (leftPos < 15) leftPos = 15;
+                if (leftPos + pickerWidth > window.innerWidth + scrollX - 15) {
+                    leftPos = window.innerWidth + scrollX - pickerWidth - 15;
+                }
+                if (leftPos < scrollX + 15) {
+                    leftPos = scrollX + 15;
+                }
                 
-                datePicker.style.top = `${topPos}px`;
-                datePicker.style.left = `${leftPos}px`;
+                datePicker.style.position = 'fixed';
+                datePicker.style.top = `${topPos - scrollY}px`;
+                datePicker.style.left = `${leftPos - scrollX}px`;
                 datePicker.style.transform = `none`; 
             }
         } else {
+            datePicker.style.position = 'fixed';
             datePicker.style.top = `50%`;
             datePicker.style.left = `50%`;
             datePicker.style.transform = `translate(-50%, -50%)`;
@@ -614,34 +624,101 @@ function initDateGesturesAndModals() {
 }
 
 // =================================================================
-// 6. GLOBAL MODAL "CLICK OUTSIDE TO CLOSE" LOGIC
+// 6. GLOBAL MODAL MANAGER (FIX: Modal Stacking Chaos)
 // =================================================================
+
+// Centralized modal stack management instead of individual observers
+const modalManager = {
+    stack: [],
+    
+    register(overlay) {
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) {
+                this.closeModal(overlay);
+            }
+        });
+    },
+    
+    openModal(overlay) {
+        if (!overlay) return;
+        overlay.style.display = 'flex';
+        
+        if (!this.stack.includes(overlay)) {
+            this.stack.push(overlay);
+        }
+        
+        // Update body class
+        if (this.stack.length > 0) {
+            document.body.classList.add('modal-open');
+        }
+        
+        // Update z-index: later modals appear on top
+        this.stack.forEach((modal, index) => {
+            modal.style.zIndex = 1000 + index;
+        });
+    },
+    
+    closeModal(overlay) {
+        if (!overlay) return;
+        overlay.style.display = 'none';
+        
+        // Remove from stack
+        const index = this.stack.indexOf(overlay);
+        if (index > -1) {
+            this.stack.splice(index, 1);
+        }
+        
+        // Update z-index for remaining modals
+        this.stack.forEach((modal, idx) => {
+            modal.style.zIndex = 1000 + idx;
+        });
+        
+        // Remove body class if no modals open
+        if (this.stack.length === 0) {
+            document.body.classList.remove('modal-open');
+        }
+    },
+    
+    closeAll() {
+        while (this.stack.length > 0) {
+            const overlay = this.stack[0];
+            overlay.style.display = 'none';
+            this.stack.shift();
+        }
+        document.body.classList.remove('modal-open');
+    },
+    
+    isAnyOpen() {
+        return this.stack.length > 0;
+    }
+};
+
 function initGlobalModals() {
     document.querySelectorAll('.modal-overlay').forEach(overlay => {
+        // Register each modal with the manager
+        modalManager.register(overlay);
+        
+        // Override setters to use modal manager
+        const originalDisplay = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'style');
+        
+        // Monitor display property changes
         const observer = new MutationObserver((mutations) => {
             mutations.forEach((mutation) => {
                 if (mutation.attributeName === 'style') {
-                    if (overlay.style.display === 'flex' || overlay.style.display === 'block') {
-                        document.body.classList.add('modal-open');
+                    const isVisible = overlay.style.display === 'flex' || overlay.style.display === 'block';
+                    if (isVisible) {
+                        modalManager.openModal(overlay);
                     } else {
-                        const anyOpen = Array.from(document.querySelectorAll('.modal-overlay')).some(o => o.style.display === 'flex' || o.style.display === 'block');
-                        if (!anyOpen) document.body.classList.remove('modal-open');
+                        const index = modalManager.stack.indexOf(overlay);
+                        if (index > -1) {
+                            modalManager.closeModal(overlay);
+                        }
                     }
                 }
             });
         });
-        observer.observe(overlay, { attributes: true });
-
-        overlay.addEventListener('click', (e) => {
-            if (e.target === overlay) {
-                const closeBtn = overlay.querySelector('.btn-secondary, .btn-ghost, .close-x');
-                if (closeBtn) closeBtn.click();
-                else {
-                    overlay.style.display = 'none';
-                    document.body.classList.remove('modal-open');
-                }
-            }
-        });
+        
+        observer.observe(overlay, { attributes: true, attributeFilter: ['style'] });
     });
 }
 

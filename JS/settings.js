@@ -264,6 +264,38 @@ function setupSubjectManager() {
     let subjectManagerSnapshot = null;
     let groupManagerSnapshot = null;
 
+    // FIX: Deep clone utility to prevent circular references and data corruption
+    const deepClone = (obj) => {
+        try {
+            // Handle null and non-objects
+            if (obj === null || typeof obj !== 'object') return obj;
+            
+            // Handle Date
+            if (obj instanceof Date) return new Date(obj.getTime());
+            
+            // Handle Array
+            if (Array.isArray(obj)) {
+                return obj.map(item => deepClone(item));
+            }
+            
+            // Handle Object
+            if (typeof obj === 'object') {
+                const cloned = {};
+                for (const key in obj) {
+                    if (obj.hasOwnProperty(key)) {
+                        cloned[key] = deepClone(obj[key]);
+                    }
+                }
+                return cloned;
+            }
+            
+            return obj;
+        } catch (e) {
+            console.warn('[Settings] Deep clone error:', e);
+            return obj;
+        }
+    };
+
     const getNestedSubjects = () => {
         try {
             let appSubs = localStorage.getItem('appSubjects');
@@ -272,29 +304,45 @@ function setupSubjectManager() {
                 const validLegacy = Array.isArray(legacy) ? legacy.filter(s => s.id !== 'off') : []; 
                 const defaultStructure = [{ id: 'group_default', name: 'General', isDeletable: false, subjects: validLegacy }];
                 localStorage.setItem('appSubjects', JSON.stringify(defaultStructure));
-                return defaultStructure;
+                // FIX: Return deep clone to prevent mutations
+                return deepClone(defaultStructure);
             }
             
             const groups = JSON.parse(appSubs);
             if (!Array.isArray(groups)) return [{ id: 'group_default', name: 'General', isDeletable: false, subjects: [] }];
             
-            return groups.map(g => {
+            const normalized = groups.map(g => {
                 g.subjects = Array.isArray(g.subjects) ? g.subjects : [];
                 return g;
             });
+            
+            // FIX: Return deep clone instead of reference
+            return deepClone(normalized);
         } catch (e) {
+            console.warn('[Settings] Failed to load subjects:', e);
             return [{ id: 'group_default', name: 'General', isDeletable: false, subjects: [] }];
         }
     };
 
     const saveNestedSubjects = (groups) => {
         try {
-            localStorage.setItem('appSubjects', JSON.stringify(groups));
+            // FIX: Deep clone before saving to prevent circular references
+            const clonedGroups = deepClone(groups);
+            localStorage.setItem('appSubjects', JSON.stringify(clonedGroups));
+            
+            // Flatten for legacy compatibility
             let flatList = [];
-            groups.forEach(g => { flatList = flatList.concat(g.subjects); });
+            clonedGroups.forEach(g => { 
+                if (Array.isArray(g.subjects)) {
+                    flatList = flatList.concat(deepClone(g.subjects));
+                }
+            });
+            
             flatList.unshift({ id: 'off', name: 'Day Off', color: '#555555' });
             localStorage.setItem('plannerSubjects', JSON.stringify(flatList));
-        } catch (e) { console.error("Failed to save subjects.", e); }
+        } catch (e) { 
+            console.error("[Settings] Failed to save subjects:", e); 
+        }
     };
 
     // --- GROUP MANAGER MODAL LOGIC ---

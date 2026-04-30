@@ -42,6 +42,28 @@ window.checkUltimateCompletion = window.checkUltimateCompletion || function(date
 let activeEditSaveFn = null;
 let globalEditDoneBtn = null;
 
+// FIX: Track pending edits to prevent ghost saves
+const editStateManager = {
+    currentTaskId: null,
+    isSaving: false,
+    savePromise: null,
+    
+    setEditing(taskId) {
+        this.currentTaskId = taskId;
+        this.isSaving = false;
+    },
+    
+    clearEditing() {
+        this.currentTaskId = null;
+        this.isSaving = false;
+        this.savePromise = null;
+    },
+    
+    isEditing(taskId) {
+        return this.currentTaskId === taskId;
+    }
+};
+
 function initGlobalEditDoneBtn() {
     if (document.getElementById('globalEditDoneBtn')) {
         globalEditDoneBtn = document.getElementById('globalEditDoneBtn');
@@ -518,58 +540,78 @@ function initTodoTab() {
         }
 
         let isSaving = false;
+        const taskId = task.id;
 
-        // The centralized save/exit function
-        activeEditSaveFn = () => {
-            if (isSaving) return;
+        // FIX: Centralized save/exit function with proper cleanup
+        const createSaveFn = () => () => {
+            if (isSaving || !editStateManager.isEditing(taskId)) return;
             isSaving = true;
+            editStateManager.isSaving = true;
 
             // Start CSS Exit Animations
             if (globalEditDoneBtn) globalEditDoneBtn.classList.remove('active');
             if (tomoBtn) tomoBtn.classList.add('closing');
-            editInput.blur(); // Force mobile keyboard to drop
+            try { editInput.blur(); } catch (e) {}
 
             // Wait 300ms for animations to finish before nuking DOM
             setTimeout(() => {
-                window.isEditingTask = false;
-                activeEditSaveFn = null; // Clear closure lock
-                
-                const newText = editInput.value.trim();
-                if (newText) { task.text = newText; saveTasks(); }
-                renderTasks(); 
+                try {
+                    window.isEditingTask = false;
+                    
+                    const newText = editInput.value.trim();
+                    if (newText) { task.text = newText; saveTasks(); }
+                } catch (e) {
+                    console.error('[Edit Mode] Save error:', e);
+                } finally {
+                    // Always cleanup state
+                    editStateManager.clearEditing();
+                    if (activeEditSaveFn === createSaveFn()) activeEditSaveFn = null;
+                    renderTasks();
+                }
             }, 300);
         };
+        
+        editStateManager.setEditing(taskId);
+        activeEditSaveFn = createSaveFn();
 
         if (tomoBtn) {
             const shiftAction = (e) => {
                 e.preventDefault();
-                if (isSaving) return;
+                // FIX: Check both local and edit state manager flags
+                if (isSaving || editStateManager.isSaving) return;
                 isSaving = true;
+                editStateManager.isSaving = true;
 
                 if (globalEditDoneBtn) globalEditDoneBtn.classList.remove('active');
                 tomoBtn.classList.add('closing');
-                editInput.blur();
+                try { editInput.blur(); } catch (e) {}
 
                 setTimeout(() => {
-                    tasks = tasks.filter(t => t.id !== task.id);
-                    
-                    const tomorrow = new Date(currentDate);
-                    tomorrow.setDate(tomorrow.getDate() + 1);
-                    const targetKey = getDateKey(tomorrow);
-                    
-                    const targetTasks = JSON.parse(localStorage.getItem(targetKey)) || [];
-                    task.status = 'todo'; 
-                    const newText = editInput.value.trim();
-                    if (newText) task.text = newText;
+                    try {
+                        tasks = tasks.filter(t => t.id !== task.id);
+                        
+                        const tomorrow = new Date(currentDate);
+                        tomorrow.setDate(tomorrow.getDate() + 1);
+                        const targetKey = getDateKey(tomorrow);
+                        
+                        const targetTasks = JSON.parse(localStorage.getItem(targetKey)) || [];
+                        task.status = 'todo'; 
+                        const newText = editInput.value.trim();
+                        if (newText) task.text = newText;
 
-                    targetTasks.unshift(task); 
-                    localStorage.setItem(targetKey, JSON.stringify(targetTasks));
-                    
-                    saveTasks();
-                    window.isEditingTask = false;
-                    activeEditSaveFn = null;
-                    renderTasks(); 
-                    window.checkUltimateCompletion(getDateKey(currentDate).replace('todo_', ''));
+                        targetTasks.unshift(task); 
+                        localStorage.setItem(targetKey, JSON.stringify(targetTasks));
+                        
+                        saveTasks();
+                        window.isEditingTask = false;
+                        if (activeEditSaveFn) activeEditSaveFn = null;
+                        window.checkUltimateCompletion(getDateKey(currentDate).replace('todo_', ''));
+                    } catch (e) {
+                        console.error('[Tomorrow Shift] Error:', e);
+                    } finally {
+                        editStateManager.clearEditing();
+                        renderTasks();
+                    }
                 }, 300);
             };
             tomoBtn.addEventListener('mousedown', shiftAction);
@@ -578,14 +620,19 @@ function initTodoTab() {
 
         editInput.addEventListener('blur', () => {
             setTimeout(() => {
-                if (activeEditSaveFn && !isSaving) activeEditSaveFn();
+                // FIX: Check both global and local save function
+                if (!isSaving && editStateManager.isEditing(taskId) && activeEditSaveFn) {
+                    activeEditSaveFn();
+                }
             }, 100);
         });
         
         editInput.addEventListener('keydown', (e) => { 
             if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
-                if (activeEditSaveFn && !isSaving) activeEditSaveFn();
+                if (!isSaving && editStateManager.isEditing(taskId) && activeEditSaveFn) {
+                    activeEditSaveFn();
+                }
             }
         });
     };

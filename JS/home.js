@@ -54,7 +54,9 @@ function setupGreeting() {
     if (!greetingEl || !iconEl || !subGreetingEl) return; 
 
     const savedName = localStorage.getItem('userDisplayName') || 'jiruuuu';
-    const messages = HOME_ASSETS.greetings(savedName);
+    // SECURITY: Sanitize user name to prevent XSS
+    const cleanName = window.AppSanitize?.sanitizeName(savedName) || savedName;
+    const messages = HOME_ASSETS.greetings(cleanName);
     const currentHour = new Date().getHours();
     
     greetingEl.textContent = messages[Math.floor(Math.random() * messages.length)];
